@@ -26,6 +26,7 @@ struct ContentView: View {
             }
 
             CustomTabBar(selectedIndex: $selectedIndex)
+            
         }
         
     }
@@ -72,6 +73,7 @@ struct CustomTabBar: View {
             .background(.ultraThinMaterial)
         }
     }
+
 }
 
 #Preview {
