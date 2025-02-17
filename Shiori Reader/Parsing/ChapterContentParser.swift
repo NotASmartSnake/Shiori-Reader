@@ -17,18 +17,13 @@ class ChapterContentParser: NSObject, XMLParserDelegate {
     private var rawXML = "" // Store raw XML structure
     
     func parseChapterContent(_ xmlString: String) -> String {
-        print("🔄 Starting chapter content parse")
-        print("📝 Sample of input XML: \(xmlString.prefix(500))")
         
         // Instead of using XMLParser which might strip tags,
         // let's try to extract just the body content while preserving tags
         if let bodyContent = extractBodyContent(from: xmlString) {
-            print("✅ Successfully extracted body content")
-            print("📝 Sample of output: \(bodyContent.prefix(500))")
             return bodyContent
         }
         
-        print("❌ Failed to extract body content")
         return xmlString // Return original content as fallback
     }
     

@@ -14,6 +14,7 @@ struct BookReaderView: View {
     @State private var errorMessage: String?
     @State private var currentChapterIndex: Int = 8
     @State private var showTableOfContents: Bool = true
+    @State private var epubBaseURL: URL?
     
     var body: some View {
         VStack {
@@ -95,7 +96,7 @@ struct BookReaderView: View {
                                     .padding(.bottom)
                                 
                                 // Chapter Content
-                                WebView(htmlContent: chapter.content)
+                                WebView(htmlContent: chapter.content, baseURL: epubBaseURL)
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     .frame(minHeight: 500)
                             }
@@ -134,55 +135,73 @@ struct BookReaderView: View {
         
         do {
             let parser = EPUBParser()
-            epubContent = try parser.parseEPUB(at: epubPath)
+            let (content, baseURL) = try parser.parseEPUB(at: epubPath)
+            epubContent = content
+            self.epubBaseURL = baseURL  // Store base URL as a property
+            
+            // Debug: Print image information
+            print("Total images extracted: \(epubContent?.images.count ?? 0)")
+            epubContent?.images.keys.forEach { imagePath in
+                print("Image path: \(imagePath)")
+            }
         } catch {
             errorMessage = "Failed to parse EPUB: \(error.localizedDescription)"
+            print("EPUB Parsing Error: \(error)")
         }
     }
     
-    private func stripHTML(from string: String) -> String {
-            do {
-                // Create a regular expression pattern to match HTML tags
-                let pattern = "<[^>]+>"
-                let regex = try NSRegularExpression(pattern: pattern, options: [])
-                let range = NSRange(string.startIndex..., in: string)
-                
-                // Replace HTML tags with empty string
-                let stripped = regex.stringByReplacingMatches(
-                    in: string,
-                    options: [],
-                    range: range,
-                    withTemplate: ""
-                )
-                
-                // Replace common HTML entities
-                return stripped
-                    .replacingOccurrences(of: "&nbsp;", with: " ")
-                    .replacingOccurrences(of: "&amp;", with: "&")
-                    .replacingOccurrences(of: "&lt;", with: "<")
-                    .replacingOccurrences(of: "&gt;", with: ">")
-                    .replacingOccurrences(of: "&quot;", with: "\"")
-                    .replacingOccurrences(of: "&#39;", with: "'")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-            } catch {
-                return string
-            }
-        }
 }
 
 struct WebView: UIViewRepresentable {
     let htmlContent: String
+    let baseURL: URL?
+    
+    init(htmlContent: String, baseURL: URL? = nil) {
+        self.htmlContent = htmlContent
+        self.baseURL = baseURL
+    }
     
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.backgroundColor = .clear
         webView.isOpaque = false
+        
         return webView
     }
     
     func updateUIView(_ uiView: WKWebView, context: Context) {
-        print("HTML Content sample: \(htmlContent.prefix(500))")
+        print("Base URL: \(baseURL?.path ?? "nil")")
+        
+        // Find and log all image sources, including SVG
+        let svgImageRegex = try? NSRegularExpression(pattern: "xlink:href=\"([^\"]+)\"", options: [.caseInsensitive])
+        let svgMatches = svgImageRegex?.matches(in: htmlContent, range: NSRange(htmlContent.startIndex..., in: htmlContent))
+        
+        svgMatches?.forEach { match in
+            if let range = Range(match.range(at: 1), in: htmlContent) {
+                let imageSrc = String(htmlContent[range])
+                print("🖼️ SVG Image Source: \(imageSrc)")
+                
+                // Try to resolve full path
+                if let baseURL = baseURL {
+                    let strategies = [
+                        URL(fileURLWithPath: imageSrc, relativeTo: baseURL).path,
+                        baseURL.appendingPathComponent(imageSrc).path,
+                        baseURL.appendingPathComponent(imageSrc.replacingOccurrences(of: "../", with: "")).path
+                    ]
+                    
+                    strategies.forEach { fullPath in
+                        print("🔎 Checking SVG path: \(fullPath)")
+                        if FileManager.default.fileExists(atPath: fullPath) {
+                            print("✅ SVG File exists: \(fullPath)")
+                        } else {
+                            print("❌ SVG File does not exist: \(fullPath)")
+                        }
+                    }
+                }
+            }
+        }
+        
         let styledHTML = """
         <!DOCTYPE html>
         <html>
@@ -197,6 +216,14 @@ struct WebView: UIViewRepresentable {
                     padding: 16px;
                     background-color: transparent;
                     color: #333333;
+                }
+                
+                /* Responsive images */
+                img, svg image {
+                    max-width: 100%;
+                    height: auto;
+                    display: block;
+                    margin: 1em auto;
                 }
                 
                 /* General paragraph styling */
@@ -251,8 +278,58 @@ struct WebView: UIViewRepresentable {
         </html>
         """
         
-        uiView.loadHTMLString(styledHTML, baseURL: nil)
+        uiView.loadHTMLString(styledHTML, baseURL: baseURL)
     }
+    
+    private func resolveImagePath(_ imagePath: String, baseURL: URL) -> URL {
+        // Handle relative paths with '../'
+        let cleanPath = imagePath.replacingOccurrences(of: "../", with: "")
+        let resolvedURL = baseURL.appendingPathComponent(cleanPath)
+        return resolvedURL.standardizedFileURL
+    }
+    
+    private func modifyImageSources(_ html: String, baseURL: URL?) -> String {
+        guard let baseURL = baseURL else { return html }
+        
+        do {
+            // Regex for both <img src="..."> and SVG xlink:href="../images/..."
+            let patterns = [
+                "src=\"([^\"]+)\"",
+                "xlink:href=\"([^\"]+)\""
+            ]
+            
+            var mutableHTML = html
+            
+            for pattern in patterns {
+                let regex = try NSRegularExpression(pattern: pattern, options: [])
+                let matches = regex.matches(in: mutableHTML, range: NSRange(location: 0, length: mutableHTML.utf16.count))
+                
+                // Iterate in reverse to avoid changing ranges
+                for match in matches.reversed() {
+                    if let range = Range(match.range(at: 1), in: mutableHTML) {
+                        let imagePath = String(mutableHTML[range])
+                        
+                        // Resolve full file URL
+                        let fullImageURL = resolveImagePath(imagePath, baseURL: baseURL)
+                        
+                        // Replace src/href attribute
+                        mutableHTML = (mutableHTML as NSString).replacingCharacters(
+                            in: match.range,
+                            with: fullImageURL.path
+                        )
+                        
+                        print("🔗 Replaced image path: \(imagePath) -> \(fullImageURL.path)")
+                    }
+                }
+            }
+            
+            return mutableHTML
+        } catch {
+            print("🚨 Image source modification error: \(error)")
+            return html
+        }
+    }
+    
 }
 
 #Preview {
