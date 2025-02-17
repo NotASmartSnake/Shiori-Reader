@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		51811C942D5EDE5F00E2D973 /* Heuristica-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */; };
 		51811C992D5EE48900E2D973 /* 21519.epub in Resources */ = {isa = PBXBuildFile; fileRef = 51811C982D5EE48900E2D973 /* 21519.epub */; };
+		51811CA42D5F1CBA00E2D973 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 51811CA32D5F1CBA00E2D973 /* ZIPFoundation */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +60,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				51811CA42D5F1CBA00E2D973 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -88,6 +90,7 @@
 				51811C402D5E4D2C00E2D973 /* Products */,
 				51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */,
 				51811C982D5EE48900E2D973 /* 21519.epub */,
+				51811CA22D5F1CB400E2D973 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -99,6 +102,13 @@
 				51811C592D5E4D2D00E2D973 /* Shiori ReaderUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		51811CA22D5F1CB400E2D973 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -121,6 +131,7 @@
 			);
 			name = "Shiori Reader";
 			packageProductDependencies = (
+				51811CA32D5F1CBA00E2D973 /* ZIPFoundation */,
 			);
 			productName = "Shiori Reader";
 			productReference = 51811C3F2D5E4D2C00E2D973 /* Shiori Reader.app */;
@@ -204,6 +215,9 @@
 			);
 			mainGroup = 51811C362D5E4D2C00E2D973;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				51811CA02D5F1BD300E2D973 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 51811C402D5E4D2C00E2D973 /* Products */;
 			projectDirPath = "";
@@ -567,6 +581,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		51811CA02D5F1BD300E2D973 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.19;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		51811CA32D5F1CBA00E2D973 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 51811CA02D5F1BD300E2D973 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 51811C372D5E4D2C00E2D973 /* Project object */;
 }
