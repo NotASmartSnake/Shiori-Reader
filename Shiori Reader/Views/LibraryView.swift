@@ -14,7 +14,7 @@ struct LibraryView: View {
         Book(title: "Danmachi", coverImage: "DanmachiCover", readingProgress: 0.1, filePath: "cote.epub"),
         Book(title: "3 Days", coverImage: "3DaysCover", readingProgress: 0.56, filePath: ""),
         Book(title: "86", coverImage: "86Cover", readingProgress: 0.2, filePath: ""),
-        Book(title: "AOA", coverImage: "AOABCover", readingProgress: 0.3, filePath: ""),
+        Book(title: "AOAB", coverImage: "AOABCover", readingProgress: 0.3, filePath: ""),
         Book(title: "COTE", coverImage: "COTECover", readingProgress: 0.4, filePath: ""),
         Book(title: "Hakomari", coverImage: "HakomariCover", readingProgress: 0.6, filePath: "hakomari.epub"),
         Book(title: "Konosuba", coverImage: "KonosubaCover", readingProgress: 0.7, filePath: ""),

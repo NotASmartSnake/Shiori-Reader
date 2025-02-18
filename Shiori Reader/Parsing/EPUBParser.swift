@@ -13,12 +13,14 @@ struct EPUBContent: Codable {
     var chapters: [Chapter]
     var metadata: EPUBMetadata
     var images: [String: Data]
+    var spineOrder: [String]
 }
 
 struct Chapter: Codable {
     var title: String
     var content: String
     var images: [String]
+    var filePath: String
 }
 
 struct EPUBMetadata: Codable {
@@ -30,9 +32,10 @@ struct EPUBMetadata: Codable {
 //// MARK: - EPUB Parser
 class EPUBParser {
     private let fileManager = FileManager.default
+    private var imageDirs: [String] = []
     
     func parseEPUB(at filePath: String) throws -> (content: EPUBContent, baseURL: URL) {
-        // Get documents directory
+        // Create a persistent directory
         let documentsURL = try fileManager.url(
             for: .documentDirectory,
             in: .userDomainMask,
@@ -40,26 +43,33 @@ class EPUBParser {
             create: true
         )
         
-        // Create a unique directory for this book
-        let bookName = (filePath as NSString).lastPathComponent
-        let bookHash = abs(bookName.hash) // Use absolute value to avoid negative numbers
+        let bookHash = abs((filePath as NSString).lastPathComponent.hash)
         let extractionDir = documentsURL.appendingPathComponent("books/\(bookHash)", isDirectory: true)
         
-        print("📚 Extraction directory:", extractionDir.path)
-        
-        // Ensure clean directory
+        // Clean existing directory
         try? fileManager.removeItem(at: extractionDir)
-        try fileManager.createDirectory(
-            at: extractionDir,
-            withIntermediateDirectories: true,
-            attributes: nil
-        )
+        try fileManager.createDirectory(at: extractionDir, withIntermediateDirectories: true)
         
         // Extract EPUB contents
-        let fileURL = URL(fileURLWithPath: filePath)
-        let archive = try Archive(url: fileURL, accessMode: .read)
+        let archive = try Archive(url: URL(fileURLWithPath: filePath), accessMode: .read)
         
-        // Extract images and other files
+        // First pass: identify image directories
+        for entry in archive {
+            let components = entry.path.components(separatedBy: "/")
+            let fileExtension = (entry.path as NSString).pathExtension.lowercased()
+            let imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "svg"]
+            
+            if imageExtensions.contains(fileExtension) {
+                if let dirIndex = components.dropLast().lastIndex(where: { $0 == "image" || $0 == "images" }) {
+                    let imageDir = components[0...dirIndex].joined(separator: "/")
+                    if !imageDirs.contains(imageDir) {
+                        imageDirs.append(imageDir)
+                    }
+                }
+            }
+        }
+        
+        // Second pass: extract files
         var images: [String: Data] = [:]
         for entry in archive {
             let entryURL = extractionDir.appendingPathComponent(entry.path)
@@ -71,44 +81,26 @@ class EPUBParser {
                 attributes: nil
             )
             
-            // Extract the file
-            try archive.extract(entry, to: entryURL)
+            // Extract file
+            _ = try archive.extract(entry, to: entryURL)
+            print("📄 Extracted:", entry.path)
             
             // If it's an image, store its data
             let fileExtension = (entry.path as NSString).pathExtension.lowercased()
             let imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "svg"]
             
             if imageExtensions.contains(fileExtension) {
-                print("🖼️ Found image:", entry.path)
                 let imageData = try Data(contentsOf: entryURL)
                 images[entry.path] = imageData
                 print("✅ Stored image data (\(imageData.count) bytes):", entry.path)
             }
         }
         
-        // Find and parse chapters
-        let chapters = try findAndParseChapters(in: extractionDir, images: images)
-        
-        // Extract metadata
+        // Find and parse chapters with spine order
+        let (chapters, spineOrder) = try findAndParseChapters(in: extractionDir, images: images)
         let metadata = try extractMetadata(from: extractionDir)
         
-        // Verify files
-        var allFilesExist = true
-        for (path, _) in images {
-            let fullPath = extractionDir.appendingPathComponent(path)
-            if fileManager.fileExists(atPath: fullPath.path) {
-                print("✅ Verified file exists:", path)
-            } else {
-                print("❌ File missing:", path)
-                allFilesExist = false
-            }
-        }
-        
-        if !allFilesExist {
-            print("⚠️ Some files are missing, but continuing...")
-        }
-        
-        return (EPUBContent(chapters: chapters, metadata: metadata, images: images), extractionDir)
+        return (EPUBContent(chapters: chapters, metadata: metadata, images: images, spineOrder: spineOrder), extractionDir)
     }
     
     private func extractImages(from archive: Archive, to directory: URL) throws -> [String: Data] {
@@ -143,38 +135,132 @@ class EPUBParser {
         return images
     }
     
-    private func findAndParseChapters(in directory: URL, images: [String: Data]) throws -> [Chapter] {
-        print("🔍 Finding chapters in:", directory.path)
-        var chapters: [Chapter] = []
+    private func findAndParseChapters(in directory: URL, images: [String: Data]) throws -> (chapters: [Chapter], spineOrder: [String]) {
+            print("🔍 Finding OPF file and parsing spine...")
+            
+            // First find the OPF file
+            let opfURL = try findOPFFile(in: directory)
+            
+            // Parse the OPF to get spine order
+            let opfContent = try String(contentsOf: opfURL, encoding: .utf8)
+            let spineOrder = try parseSpineOrder(from: opfContent, baseDirectory: opfURL.deletingLastPathComponent())
+            
+            // Create a dictionary to store chapters by their file path
+            var chapterDict: [String: Chapter] = [:]
+            
+            // Parse all HTML/XHTML files
+            let enumerator = fileManager.enumerator(
+                at: directory,
+                includingPropertiesForKeys: [.isRegularFileKey],
+                options: [.skipsHiddenFiles]
+            )
+            
+            while let fileURL = enumerator?.nextObject() as? URL {
+                guard fileURL.pathExtension.lowercased() == "html" ||
+                      fileURL.pathExtension.lowercased() == "xhtml" else {
+                    continue
+                }
+                
+                print("📄 Processing chapter:", fileURL.lastPathComponent)
+                
+                let htmlContent = try String(contentsOf: fileURL, encoding: .utf8)
+                let chapterImgRefs = findImageReferences(in: htmlContent)
+                
+                chapterDict[fileURL.lastPathComponent] = Chapter(
+                    title: extractTitle(from: htmlContent) ?? "Untitled Chapter",
+                    content: htmlContent,
+                    images: chapterImgRefs,
+                    filePath: fileURL.lastPathComponent
+                )
+                
+                print("✅ Processed chapter:", fileURL.lastPathComponent)
+            }
+            
+            // Create ordered chapter array based on spine
+            var orderedChapters: [Chapter] = []
+            for href in spineOrder {
+                if let fileName = href.components(separatedBy: "/").last,
+                   let chapter = chapterDict[fileName] {
+                    orderedChapters.append(chapter)
+                    print("➕ Added chapter in spine order:", fileName)
+                }
+            }
+            
+            // Append any remaining chapters not in spine (should be rare)
+            for (fileName, chapter) in chapterDict {
+                if !spineOrder.contains(where: { $0.contains(fileName) }) {
+                    orderedChapters.append(chapter)
+                    print("⚠️ Added chapter not in spine:", fileName)
+                }
+            }
+            
+            return (orderedChapters, spineOrder)
+        }
         
-        let enumerator = fileManager.enumerator(
-            at: directory,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        )
+        private func findOPFFile(in directory: URL) throws -> URL {
+            // First look for container.xml in META-INF
+            let containerURL = directory.appendingPathComponent("META-INF/container.xml")
+            let containerContent = try String(contentsOf: containerURL, encoding: .utf8)
+            
+            // Extract root file path from container.xml
+            let rootFilePattern = "rootfile[^>]+full-path=\"([^\"]+)\""
+            guard let regex = try? NSRegularExpression(pattern: rootFilePattern),
+                  let match = regex.firstMatch(in: containerContent, range: NSRange(containerContent.startIndex..., in: containerContent)),
+                  let range = Range(match.range(at: 1), in: containerContent) else {
+                throw EPUBError.invalidArchive
+            }
+            
+            let opfPath = String(containerContent[range])
+            return directory.appendingPathComponent(opfPath)
+        }
         
-        while let fileURL = enumerator?.nextObject() as? URL {
-            guard fileURL.pathExtension.lowercased() == "html" ||
-                  fileURL.pathExtension.lowercased() == "xhtml" else {
+    private func parseSpineOrder(from opfContent: String, baseDirectory: URL) throws -> [String] {
+        var spineOrder: [String] = []
+        
+        // First get manifest to map IDs to hrefs
+        var manifestMap: [String: String] = [:]
+        
+        // More flexible pattern that matches item tags with id and href in any order
+        let manifestPattern = "<item[^>]*(?:href=\"([^\"]+)\"[^>]*id=\"([^\"]+)\"|id=\"([^\"]+)\"[^>]*href=\"([^\"]+)\")[^>]*>"
+        let manifestRegex = try NSRegularExpression(pattern: manifestPattern)
+        let manifestMatches = manifestRegex.matches(in: opfContent, range: NSRange(opfContent.startIndex..., in: opfContent))
+        
+        for match in manifestMatches {
+            // Check both possible orders (href-then-id and id-then-href)
+            let href: String
+            let id: String
+            
+            if let hrefRange = Range(match.range(at: 1), in: opfContent),
+               let idRange = Range(match.range(at: 2), in: opfContent) {
+                // href comes before id
+                href = String(opfContent[hrefRange])
+                id = String(opfContent[idRange])
+            } else if let idRange = Range(match.range(at: 3), in: opfContent),
+                      let hrefRange = Range(match.range(at: 4), in: opfContent) {
+                // id comes before href
+                id = String(opfContent[idRange])
+                href = String(opfContent[hrefRange])
+            } else {
                 continue
             }
             
-            print("📄 Processing chapter:", fileURL.lastPathComponent)
-            
-            let htmlContent = try String(contentsOf: fileURL, encoding: .utf8)
-            let chapterImgRefs = findImageReferences(in: htmlContent)
-            
-            chapters.append(Chapter(
-                title: extractTitle(from: htmlContent) ?? "Untitled Chapter",
-                content: htmlContent,
-                images: chapterImgRefs
-            ))
-            
-            print("✅ Processed chapter with \(chapterImgRefs.count) images")
+            manifestMap[id] = href
         }
         
-        chapters.sort { $0.title < $1.title }
-        return chapters
+        // Then get spine order
+        let spinePattern = "<itemref[^>]+idref=\"([^\"]+)\""
+        let spineRegex = try NSRegularExpression(pattern: spinePattern)
+        let spineMatches = spineRegex.matches(in: opfContent, range: NSRange(opfContent.startIndex..., in: opfContent))
+        
+        for match in spineMatches {
+            guard let idRange = Range(match.range(at: 1), in: opfContent) else { continue }
+            let id = String(opfContent[idRange])
+            if let href = manifestMap[id] {
+                spineOrder.append(href)
+            }
+        }
+        
+        return spineOrder
     }
     
     private func findImageReferences(in htmlContent: String) -> [String] {

@@ -13,6 +13,7 @@
 		51BB5EDF2D63C24100EA3E25 /* konosuba.epub in Resources */ = {isa = PBXBuildFile; fileRef = 51BB5EDE2D63C24100EA3E25 /* konosuba.epub */; };
 		51BB5EE12D63C30500EA3E25 /* honzuki.epub in Resources */ = {isa = PBXBuildFile; fileRef = 51BB5EE02D63C30500EA3E25 /* honzuki.epub */; };
 		51BB5EE32D63C37600EA3E25 /* hakomari.epub in Resources */ = {isa = PBXBuildFile; fileRef = 51BB5EE22D63C37600EA3E25 /* hakomari.epub */; };
+		51BB5EE82D641E0100EA3E25 /* 3Days.epub in Resources */ = {isa = PBXBuildFile; fileRef = 51BB5EE72D641E0100EA3E25 /* 3Days.epub */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,6 +42,7 @@
 		51BB5EDE2D63C24100EA3E25 /* konosuba.epub */ = {isa = PBXFileReference; lastKnownFileType = file; path = konosuba.epub; sourceTree = "<group>"; };
 		51BB5EE02D63C30500EA3E25 /* honzuki.epub */ = {isa = PBXFileReference; lastKnownFileType = file; path = honzuki.epub; sourceTree = "<group>"; };
 		51BB5EE22D63C37600EA3E25 /* hakomari.epub */ = {isa = PBXFileReference; lastKnownFileType = file; path = hakomari.epub; sourceTree = "<group>"; };
+		51BB5EE72D641E0100EA3E25 /* 3Days.epub */ = {isa = PBXFileReference; lastKnownFileType = file; path = 3Days.epub; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -99,6 +101,7 @@
 				51BB5EDE2D63C24100EA3E25 /* konosuba.epub */,
 				51811C982D5EE48900E2D973 /* cote.epub */,
 				51BB5EE22D63C37600EA3E25 /* hakomari.epub */,
+				51BB5EE72D641E0100EA3E25 /* 3Days.epub */,
 				51811CA22D5F1CB400E2D973 /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -244,6 +247,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				51BB5EE82D641E0100EA3E25 /* 3Days.epub in Resources */,
 				51BB5EDF2D63C24100EA3E25 /* konosuba.epub in Resources */,
 				51BB5EE12D63C30500EA3E25 /* honzuki.epub in Resources */,
 				51BB5EE32D63C37600EA3E25 /* hakomari.epub in Resources */,
