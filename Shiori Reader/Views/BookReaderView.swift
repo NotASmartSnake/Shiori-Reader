@@ -6,150 +6,213 @@
 //
 
 import SwiftUI
-import WebKit
+@preconcurrency import WebKit
 
 struct BookReaderView: View {
     let book: Book
     @State private var epubContent: EPUBContent?
     @State private var errorMessage: String?
-    @State private var currentChapterIndex: Int = 8
+    @State private var currentChapterIndex: Int = 0
     @State private var showTableOfContents: Bool = true
     @State private var epubBaseURL: URL?
+    @State private var isLoading: Bool = true
     
     var body: some View {
         VStack {
-            if let error = errorMessage {
-                Text("Error: \(error)")
-                    .foregroundColor(.red)
-                    .padding()
-            }
-            
-            if let content = epubContent {
-                ScrollView {
-                    // Table of Contents / Chapter Content
-                    if showTableOfContents {
-                        // TOC Button Row
-                        HStack {
-                            Text("Table of Contents")
-                                .font(.headline)
-                            Spacer()
-                            Button("Start Reading") {
-                                showTableOfContents = false
-                            }
-                        }
-                        .padding()
-                        
-                        // Chapter List
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(content.chapters.indices, id: \.self) { index in
-                                let chapter = content.chapters[index]
-                                Button(action: {
-                                    currentChapterIndex = index
-                                    showTableOfContents = false
-                                }) {
-                                    Text("Chapter \(index + 1): \(chapter.title)")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding()
-                                        .background(Color.gray.opacity(0.1))
-                                        .cornerRadius(8)
-                                }
-                            }
-                        }
-                        .padding()
-                        
-                    } else {
-                        // Chapter Reading View
-                        VStack(alignment: .leading, spacing: 16) {
-                            // Navigation Header
-                            HStack {
-                                Button(action: { showTableOfContents = true }) {
-                                    HStack {
-                                        Image(systemName: "list.bullet")
-                                        Text("Contents")
-                                    }
-                                }
-                                
-                                Spacer()
-                                
-                                // Chapter Navigation
-                                HStack(spacing: 20) {
-                                    Button(action: previousChapter) {
-                                        Image(systemName: "chevron.left")
-                                    }
-                                    .disabled(currentChapterIndex <= 0)
-                                    
-                                    Button(action: nextChapter) {
-                                        Image(systemName: "chevron.right")
-                                    }
-                                    .disabled(currentChapterIndex >= content.chapters.count - 1)
-                                }
-                            }
-                            .padding()
-                            
-                            if content.chapters.indices.contains(currentChapterIndex) {
-                                let chapter = content.chapters[currentChapterIndex]
-                                let _ = print("Chapter content sample: \(chapter.content.prefix(500))")
-                                
-                                // Chapter Title
-                                Text(chapter.title)
-                                    .font(.title)
-                                    .padding(.bottom)
-                                
-                                // Chapter Content
-                                WebView(htmlContent: chapter.content, baseURL: epubBaseURL)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .frame(minHeight: 500)
-                            }
-                        }
-                        .padding()
-                    }
+            if isLoading {
+                ProgressView("Loading book...")
+            } else if let error = errorMessage {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.largeTitle)
+                        .foregroundColor(.red)
+                    Text("Error loading book")
+                        .font(.headline)
+                    Text(error)
+                        .foregroundColor(.gray)
                 }
-            } else {
-                ProgressView("Loading...")
+                .padding()
+            } else if let content = epubContent {
+                bookContent(content)
             }
         }
         .onAppear {
+            // Configure WKWebView globally
+            let webViewConfig = WKWebViewConfiguration()
+            webViewConfig.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
+            if let dataContainer = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                try? FileManager.default.createDirectory(at: dataContainer, withIntermediateDirectories: true)
+            }
+            
             loadEPUB()
+        }
+    }
+    
+    private func bookContent(_ content: EPUBContent) -> some View {
+        VStack {
+            if showTableOfContents {
+                tableOfContents(content)
+            } else {
+                chapterView(content)
+            }
+        }
+    }
+    
+    private func tableOfContents(_ content: EPUBContent) -> some View {
+        VStack {
+            // Header
+            HStack {
+                Text("Table of Contents")
+                    .font(.headline)
+                Spacer()
+                Button("Start Reading") {
+                    withAnimation {
+                        showTableOfContents = false
+                    }
+                }
+            }
+            .padding()
+            
+            // Chapter List
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(content.chapters.indices, id: \.self) { index in
+                        let chapter = content.chapters[index]
+                        Button(action: {
+                            currentChapterIndex = index
+                            withAnimation {
+                                showTableOfContents = false
+                            }
+                        }) {
+                            HStack {
+                                Text(chapter.title)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.gray)
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                .padding()
+            }
+        }
+    }
+    
+    private func chapterView(_ content: EPUBContent) -> some View {
+        VStack {
+            // Navigation Header
+            HStack {
+                Button(action: {
+                    withAnimation {
+                        showTableOfContents = true
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "list.bullet")
+                        Text("Contents")
+                    }
+                }
+                
+                Spacer()
+                
+                // Chapter Navigation
+                HStack(spacing: 20) {
+                    Button(action: previousChapter) {
+                        Image(systemName: "chevron.left")
+                    }
+                    .disabled(currentChapterIndex <= 0)
+                    
+                    Button(action: nextChapter) {
+                        Image(systemName: "chevron.right")
+                    }
+                    .disabled(currentChapterIndex >= content.chapters.count - 1)
+                }
+            }
+            .padding()
+            
+            if content.chapters.indices.contains(currentChapterIndex) {
+                let chapter = content.chapters[currentChapterIndex]
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Chapter Title
+                        if !chapter.title.isEmpty {
+                            Text(chapter.title)
+                                .font(.title)
+                                .padding(.bottom)
+                        }
+                        
+                        // Chapter Content
+                        WebView(htmlContent: chapter.content, baseURL: epubBaseURL)
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 500)
+                    }
+                    .padding()
+                }
+            }
         }
     }
     
     private func nextChapter() {
         guard let content = epubContent else { return }
         if currentChapterIndex < content.chapters.count - 1 {
-            currentChapterIndex += 1
+            withAnimation {
+                currentChapterIndex += 1
+            }
         }
     }
     
     private func previousChapter() {
         if currentChapterIndex > 0 {
-            currentChapterIndex -= 1
+            withAnimation {
+                currentChapterIndex -= 1
+            }
         }
     }
     
     private func loadEPUB() {
-        // Get the EPUB file path from the bundle
+        isLoading = true
+        
         guard let epubPath = Bundle.main.path(forResource: book.filePath, ofType: nil) else {
             errorMessage = "Could not find EPUB file in bundle"
+            isLoading = false
             return
         }
         
-        do {
-            let parser = EPUBParser()
-            let (content, baseURL) = try parser.parseEPUB(at: epubPath)
-            epubContent = content
-            self.epubBaseURL = baseURL  // Store base URL as a property
-            
-            // Debug: Print image information
-            print("Total images extracted: \(epubContent?.images.count ?? 0)")
-            epubContent?.images.keys.forEach { imagePath in
-                print("Image path: \(imagePath)")
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let parser = EPUBParser()
+                let (content, baseURL) = try parser.parseEPUB(at: epubPath)
+                
+                // Verify image files exist
+                for (path, _) in content.images {
+                    let fullPath = baseURL.appendingPathComponent(path)
+                    if FileManager.default.fileExists(atPath: fullPath.path) {
+                        print("✅ Verified image exists:", fullPath.path)
+                    } else {
+                        print("❌ Image missing:", fullPath.path)
+                    }
+                }
+                
+                DispatchQueue.main.async {
+                    self.epubContent = content
+                    self.epubBaseURL = baseURL
+                    self.isLoading = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Failed to load EPUB: \(error.localizedDescription)"
+                    self.isLoading = false
+                }
             }
-        } catch {
-            errorMessage = "Failed to parse EPUB: \(error.localizedDescription)"
-            print("EPUB Parsing Error: \(error)")
         }
     }
-    
 }
 
 struct WebView: UIViewRepresentable {
@@ -163,39 +226,98 @@ struct WebView: UIViewRepresentable {
     
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+        config.allowsInlineMediaPlayback = true
+        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
+        
         let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
         webView.backgroundColor = .clear
         webView.isOpaque = false
+        webView.scrollView.backgroundColor = .clear
         
         return webView
     }
     
-    func updateUIView(_ uiView: WKWebView, context: Context) {
-        print("Base URL: \(baseURL?.path ?? "nil")")
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, WKNavigationDelegate {
+        var parent: WebView
         
-        // Find and log all image sources, including SVG
-        let svgImageRegex = try? NSRegularExpression(pattern: "xlink:href=\"([^\"]+)\"", options: [.caseInsensitive])
-        let svgMatches = svgImageRegex?.matches(in: htmlContent, range: NSRange(htmlContent.startIndex..., in: htmlContent))
+        init(_ parent: WebView) {
+            self.parent = parent
+        }
         
-        svgMatches?.forEach { match in
-            if let range = Range(match.range(at: 1), in: htmlContent) {
-                let imageSrc = String(htmlContent[range])
-                print("🖼️ SVG Image Source: \(imageSrc)")
-                
-                // Try to resolve full path
-                if let baseURL = baseURL {
-                    let strategies = [
-                        URL(fileURLWithPath: imageSrc, relativeTo: baseURL).path,
-                        baseURL.appendingPathComponent(imageSrc).path,
-                        baseURL.appendingPathComponent(imageSrc.replacingOccurrences(of: "../", with: "")).path
-                    ]
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            webView.evaluateJavaScript("""
+                document.querySelectorAll('img, svg image').forEach(img => {
+                    const src = img.src || img.getAttribute('xlink:href');
+                    console.log('🔍 Found image:', src);
                     
-                    strategies.forEach { fullPath in
-                        print("🔎 Checking SVG path: \(fullPath)")
+                    img.onerror = () => {
+                        console.error('❌ Failed to load image:', src);
+                    };
+                    
+                    img.onload = () => {
+                        console.log('✅ Successfully loaded image:', src);
+                    };
+                });
+            """)
+        }
+        
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            if let url = navigationAction.request.url {
+                print("🔗 Navigation request to:", url.absoluteString)
+            }
+            decisionHandler(.allow)
+        }
+    }
+    
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        guard let baseURL = baseURL else { return }
+        
+        var processedContent = htmlContent
+        
+        // Process both types of image references
+        let imagePatterns = [
+            // SVG images
+            ("xlink:href=\"[^\"]*?/?images/([^\"]+)\"", { (imagePath: String) -> String in
+                "xlink:href=\"file://\(baseURL.path)/images/\(imagePath)\""
+            }),
+            // Regular images with ../images/
+            ("src=\"\\.\\.?/images/([^\"]+)\"", { (imagePath: String) -> String in
+                "src=\"file://\(baseURL.path)/images/\(imagePath)\""
+            }),
+            // Root-level images
+            ("src=\"([^\"]+\\.(?:jpg|jpeg|png|gif))\"", { (imagePath: String) -> String in
+                if !imagePath.contains("/") {
+                    return "src=\"file://\(baseURL.path)/\(imagePath)\""
+                }
+                return "src=\"\(imagePath)\""
+            })
+        ]
+        
+        for (pattern, replacement) in imagePatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern) {
+                let range = NSRange(processedContent.startIndex..., in: processedContent)
+                let matches = regex.matches(in: processedContent, range: range)
+                
+                for match in matches.reversed() {
+                    if let matchRange = Range(match.range(at: 1), in: processedContent) {
+                        let imagePath = String(processedContent[matchRange])
+                        let fullPath = baseURL.appendingPathComponent("images").appendingPathComponent(imagePath).path
+                        
                         if FileManager.default.fileExists(atPath: fullPath) {
-                            print("✅ SVG File exists: \(fullPath)")
+                            print("✅ Image exists at path:", fullPath)
                         } else {
-                            print("❌ SVG File does not exist: \(fullPath)")
+                            print("❌ Image not found at path:", fullPath)
+                        }
+                        
+                        if let fullRange = Range(match.range(at: 0), in: processedContent) {
+                            let newValue = replacement(imagePath)
+                            processedContent = processedContent.replacingCharacters(in: fullRange, with: newValue)
+                            print("🔄 Replaced path:", imagePath, "with:", newValue)
                         }
                     }
                 }
@@ -217,13 +339,46 @@ struct WebView: UIViewRepresentable {
                     background-color: transparent;
                     color: #333333;
                 }
-                
+        
                 /* Responsive images */
-                img, svg image {
-                    max-width: 100%;
-                    height: auto;
+                img {
+                    max-width: 100% !important;
+                    height: auto !important;
                     display: block;
                     margin: 1em auto;
+                }
+        
+                /* SVG handling */
+                svg {
+                    max-width: 100% !important;
+                    height: auto !important;
+                    display: block;
+                    margin: 1em auto;
+                }
+        
+                svg image {
+                    max-width: 100% !important;
+                    height: auto !important;
+                }
+        
+                /* Handle fit class */
+                .fit {
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    object-fit: contain;
+                }
+        
+                /* Main container */
+                .main {
+                    max-width: 100%;
+                    margin: 0 auto;
+                    overflow-x: hidden;
+                }
+                
+                /* Kobo specific */
+                .koboSpan img {
+                    max-width: 100% !important;
+                    height: auto !important;
                 }
                 
                 /* General paragraph styling */
@@ -273,11 +428,21 @@ struct WebView: UIViewRepresentable {
             </style>
         </head>
         <body>
-            \(htmlContent)
+            \(processedContent)
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    console.log('🔍 Content loaded, checking images...');
+                    document.querySelectorAll('img, svg image').forEach(img => {
+                        const src = img.src || img.getAttribute('xlink:href');
+                        console.log('Found image:', src);
+                    });
+                });
+            </script>
         </body>
         </html>
         """
         
+        print("📝 Loading content with base URL:", baseURL.path)
         uiView.loadHTMLString(styledHTML, baseURL: baseURL)
     }
     
@@ -333,5 +498,6 @@ struct WebView: UIViewRepresentable {
 }
 
 #Preview {
-    BookReaderView(book: Book(title: "Danmachi", coverImage: "DanmachiCover", readingProgress: 0.1, filePath: "21519.epub"))
+    BookReaderView(book: Book(title: "Classroom of the Elite", coverImage: "COTECover", readingProgress: 0.1, filePath: "hakomari.epub"))
+//    BookReaderView(book: Book(title: "Danmachi", coverImage: "DanmachiCover", readingProgress: 0.1, filePath: "konosuba.epub"))
 }

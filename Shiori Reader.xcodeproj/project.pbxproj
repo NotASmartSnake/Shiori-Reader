@@ -8,8 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		51811C942D5EDE5F00E2D973 /* Heuristica-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */; };
-		51811C992D5EE48900E2D973 /* 21519.epub in Resources */ = {isa = PBXBuildFile; fileRef = 51811C982D5EE48900E2D973 /* 21519.epub */; };
+		51811C992D5EE48900E2D973 /* cote.epub in Resources */ = {isa = PBXBuildFile; fileRef = 51811C982D5EE48900E2D973 /* cote.epub */; };
 		51811CA42D5F1CBA00E2D973 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 51811CA32D5F1CBA00E2D973 /* ZIPFoundation */; };
+		51BB5EDF2D63C24100EA3E25 /* konosuba.epub in Resources */ = {isa = PBXBuildFile; fileRef = 51BB5EDE2D63C24100EA3E25 /* konosuba.epub */; };
+		51BB5EE12D63C30500EA3E25 /* honzuki.epub in Resources */ = {isa = PBXBuildFile; fileRef = 51BB5EE02D63C30500EA3E25 /* honzuki.epub */; };
+		51BB5EE32D63C37600EA3E25 /* hakomari.epub in Resources */ = {isa = PBXBuildFile; fileRef = 51BB5EE22D63C37600EA3E25 /* hakomari.epub */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,7 +37,10 @@
 		51811C4F2D5E4D2D00E2D973 /* Shiori ReaderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Shiori ReaderTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		51811C592D5E4D2D00E2D973 /* Shiori ReaderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Shiori ReaderUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Heuristica-Bold.otf"; sourceTree = "<group>"; };
-		51811C982D5EE48900E2D973 /* 21519.epub */ = {isa = PBXFileReference; lastKnownFileType = file; path = 21519.epub; sourceTree = "<group>"; };
+		51811C982D5EE48900E2D973 /* cote.epub */ = {isa = PBXFileReference; lastKnownFileType = file; path = cote.epub; sourceTree = "<group>"; };
+		51BB5EDE2D63C24100EA3E25 /* konosuba.epub */ = {isa = PBXFileReference; lastKnownFileType = file; path = konosuba.epub; sourceTree = "<group>"; };
+		51BB5EE02D63C30500EA3E25 /* honzuki.epub */ = {isa = PBXFileReference; lastKnownFileType = file; path = honzuki.epub; sourceTree = "<group>"; };
+		51BB5EE22D63C37600EA3E25 /* hakomari.epub */ = {isa = PBXFileReference; lastKnownFileType = file; path = hakomari.epub; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -89,7 +95,10 @@
 				51811C5C2D5E4D2D00E2D973 /* Shiori ReaderUITests */,
 				51811C402D5E4D2C00E2D973 /* Products */,
 				51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */,
-				51811C982D5EE48900E2D973 /* 21519.epub */,
+				51BB5EE02D63C30500EA3E25 /* honzuki.epub */,
+				51BB5EDE2D63C24100EA3E25 /* konosuba.epub */,
+				51811C982D5EE48900E2D973 /* cote.epub */,
+				51BB5EE22D63C37600EA3E25 /* hakomari.epub */,
 				51811CA22D5F1CB400E2D973 /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -235,8 +244,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				51BB5EDF2D63C24100EA3E25 /* konosuba.epub in Resources */,
+				51BB5EE12D63C30500EA3E25 /* honzuki.epub in Resources */,
+				51BB5EE32D63C37600EA3E25 /* hakomari.epub in Resources */,
 				51811C942D5EDE5F00E2D973 /* Heuristica-Bold.otf in Resources */,
-				51811C992D5EE48900E2D973 /* 21519.epub in Resources */,
+				51811C992D5EE48900E2D973 /* cote.epub in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
