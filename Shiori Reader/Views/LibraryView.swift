@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct LibraryView: View {
+    @EnvironmentObject var isReadingBook: IsReadingBook
     
     let booksArray: [Book] = [
         Book(title: "COTE", coverImage: "COTECover", readingProgress: 0.4, filePath: "cote.epub"),
@@ -43,7 +44,11 @@ struct LibraryView: View {
                             ForEach(booksArray, id: \.self) { book in
                                 
                                     VStack {
-                                        NavigationLink(destination: BookReaderView(book: book)) {
+                                        NavigationLink(destination:
+                                            BookReaderView(book: book)
+                                                .onAppear { isReadingBook.isReading = true }
+                                                .onDisappear { isReadingBook.isReading = false }
+                                        ) {
                                             Image(book.coverImage)
                                                 .resizable()
                                                 .scaledToFit()
@@ -92,4 +97,5 @@ struct LibraryView: View {
 
 #Preview {
     LibraryView()
+        .environmentObject(IsReadingBook(isReading: .constant(false)))
 }

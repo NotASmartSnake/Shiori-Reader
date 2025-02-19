@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct ContentView: View {
-    
     @State private var selectedIndex = 0
+    @State private var isReadingBook = false // Add this state variable
     
     var body: some View {
         
@@ -17,7 +17,7 @@ struct ContentView: View {
 
             VStack {
                 switch selectedIndex {
-                    case 0: LibraryView()
+                    case 0: LibraryView().environmentObject(IsReadingBook(isReading: $isReadingBook))
                     case 1: SavedWordsView()
                     case 2: SearchView()
                     case 3: SettingsView()
@@ -25,10 +25,20 @@ struct ContentView: View {
                 }
             }
 
-            CustomTabBar(selectedIndex: $selectedIndex)
-            
+            if !isReadingBook {
+                CustomTabBar(selectedIndex: $selectedIndex)
+            }
         }
         
+    }
+}
+
+// Create an environment object to track reading state
+class IsReadingBook: ObservableObject {
+    @Binding var isReading: Bool
+    
+    init(isReading: Binding<Bool>) {
+        _isReading = isReading
     }
 }
 
