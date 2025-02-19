@@ -24,9 +24,25 @@ struct Chapter: Codable {
 }
 
 struct EPUBMetadata: Codable {
-    var title: String
-    var author: String
-    var language: String
+    let title: String
+    let author: String
+    let language: String
+    var publisher: String?
+    var publicationDate: String?
+    var rights: String?
+    var identifier: String?
+    
+    init(title: String, author: String, language: String,
+         publisher: String? = nil, publicationDate: String? = nil,
+         rights: String? = nil, identifier: String? = nil) {
+        self.title = title
+        self.author = author
+        self.language = language
+        self.publisher = publisher
+        self.publicationDate = publicationDate
+        self.rights = rights
+        self.identifier = identifier
+    }
 }
 
 //// MARK: - EPUB Parser
@@ -355,12 +371,77 @@ class EPUBParser {
     }
     
     private func extractMetadata(from directory: URL) throws -> EPUBMetadata {
-        return EPUBMetadata(
-            title: "Unknown Title",
-            author: "Unknown Author",
-            language: "en"
-        )
-    }
+            // Find the OPF file
+            let opfURL = try findOPFFile(in: directory)
+            let opfContent = try String(contentsOf: opfURL, encoding: .utf8)
+            
+            var title = "Unknown Title"
+            var author = "Unknown Author"
+            var language = "en"
+            
+            // Extract title
+            if let titleRegex = try? NSRegularExpression(pattern: "<dc:title[^>]*>([^<]+)</dc:title>", options: [.caseInsensitive]),
+               let titleMatch = titleRegex.firstMatch(in: opfContent, range: NSRange(opfContent.startIndex..., in: opfContent)),
+               let titleRange = Range(titleMatch.range(at: 1), in: opfContent) {
+                title = String(opfContent[titleRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            
+            // Extract author (checking multiple possible tags)
+            let authorPatterns = [
+                "<dc:creator[^>]*>([^<]+)</dc:creator>",
+                "<dc:contributor[^>]*role=\"aut\"[^>]*>([^<]+)</dc:contributor>"
+            ]
+            
+            for pattern in authorPatterns {
+                if let authorRegex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+                   let authorMatch = authorRegex.firstMatch(in: opfContent, range: NSRange(opfContent.startIndex..., in: opfContent)),
+                   let authorRange = Range(authorMatch.range(at: 1), in: opfContent) {
+                    author = String(opfContent[authorRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    break
+                }
+            }
+            
+            // Extract language
+            if let langRegex = try? NSRegularExpression(pattern: "<dc:language[^>]*>([^<]+)</dc:language>", options: [.caseInsensitive]),
+               let langMatch = langRegex.firstMatch(in: opfContent, range: NSRange(opfContent.startIndex..., in: opfContent)),
+               let langRange = Range(langMatch.range(at: 1), in: opfContent) {
+                language = String(opfContent[langRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            
+            // Try to extract additional metadata if available
+            let additionalMetadataPatterns = [
+                "publisher": "<dc:publisher[^>]*>([^<]+)</dc:publisher>",
+                "date": "<dc:date[^>]*>([^<]+)</dc:date>",
+                "rights": "<dc:rights[^>]*>([^<]+)</dc:rights>",
+                "identifier": "<dc:identifier[^>]*>([^<]+)</dc:identifier>"
+            ]
+            
+            var additionalMetadata: [String: String] = [:]
+            
+            for (key, pattern) in additionalMetadataPatterns {
+                if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+                   let match = regex.firstMatch(in: opfContent, range: NSRange(opfContent.startIndex..., in: opfContent)),
+                   let range = Range(match.range(at: 1), in: opfContent) {
+                    let value = String(opfContent[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+                    additionalMetadata[key] = value
+                }
+            }
+            
+            // For debugging
+            print("📚 Extracted Metadata:")
+            print("Title:", title)
+            print("Author:", author)
+            print("Language:", language)
+            for (key, value) in additionalMetadata {
+                print("\(key.capitalized):", value)
+            }
+            
+            return EPUBMetadata(
+                title: title,
+                author: author,
+                language: language
+            )
+        }
     
 }
 
