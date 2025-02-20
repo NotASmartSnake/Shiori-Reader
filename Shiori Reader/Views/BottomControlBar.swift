@@ -9,10 +9,12 @@ import SwiftUI
 
 struct BottomControlBar: View {
     @Binding var progress: Double
+    @Binding var showThemes: Bool
     @State private var showingContents = false
     
     var body: some View {
         VStack(spacing: 0) {
+            
             // Progress slider
             Slider(value: $progress, in: 0...1)
                 .padding(.horizontal)
@@ -36,7 +38,11 @@ struct BottomControlBar: View {
                             .imageScale(.large)
                     }
                     
-                    Button(action: {}) {
+                    Button(action: {
+                        withAnimation(.spring(duration: 0.25)) {
+                            showThemes.toggle()
+                        }
+                    }) {
                         Image(systemName: "textformat.size")
                             .imageScale(.large)
                     }
@@ -49,8 +55,10 @@ struct BottomControlBar: View {
                 .padding(.trailing)
             }
             .padding(.vertical, 8)
+                
         }
         .background(.ultraThinMaterial)
+        .padding(.bottom, 30)
     }
 }
 
