@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct BottomControlBar: View {
-    let book: Book
+    @ObservedObject var viewModel: BookViewModel
     @Binding var progress: Double
     @Binding var showThemes: Bool
     @Binding var showSearch: Bool
@@ -33,7 +33,7 @@ struct BottomControlBar: View {
                 }
                 .padding(.leading)
                 .sheet(isPresented: $showTableOfContents) {
-                    TableOfContentsSheet(book: book, showTableOfContents: $showTableOfContents)
+                    TableOfContentsSheet(viewModel: viewModel, showTableOfContents: $showTableOfContents)
                 }
                 
                 Spacer()

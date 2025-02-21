@@ -8,42 +8,13 @@
 import Foundation
 import ZIPFoundation
 
-// MARK: - Models
-struct Chapter: Codable {
-    var title: String
-    var content: String
-    var images: [String]
-    var filePath: String
-}
-
-struct EPUBMetadata: Codable {
-    let title: String
-    let author: String
-    let language: String
-    var publisher: String?
-    var publicationDate: String?
-    var rights: String?
-    var identifier: String?
-    
-    init(title: String, author: String, language: String,
-         publisher: String? = nil, publicationDate: String? = nil,
-         rights: String? = nil, identifier: String? = nil) {
-        self.title = title
-        self.author = author
-        self.language = language
-        self.publisher = publisher
-        self.publicationDate = publicationDate
-        self.rights = rights
-        self.identifier = identifier
-    }
-}
-
-//// MARK: - EPUB Parser
 class EPUBParser {
     private let fileManager = FileManager.default
     private var imageDirs: [String] = []
     
     func parseEPUB(at filePath: String) throws -> (content: EPUBContent, baseURL: URL) {
+        print("📚 Starting EPUB parsing for file: \(filePath)")
+        
         // Create a persistent directory
         let documentsURL = try fileManager.url(
             for: .documentDirectory,
@@ -54,6 +25,7 @@ class EPUBParser {
         
         let bookHash = abs((filePath as NSString).lastPathComponent.hash)
         let extractionDir = documentsURL.appendingPathComponent("books/\(bookHash)", isDirectory: true)
+        print("📂 Extraction directory: \(extractionDir)")
         
         // Clean existing directory
         try? fileManager.removeItem(at: extractionDir)
@@ -105,8 +77,15 @@ class EPUBParser {
         
         // Find and parse chapters with spine order
         let (chapters, spineOrder) = try findAndParseChapters(in: extractionDir, images: images)
+        print("📖 Found \(chapters.count) chapters")
+        print("📑 First few chapters:")
+        chapters.prefix(3).forEach { chapter in
+                print("  - Title: \(chapter.title)")
+                print("  - Content length: \(chapter.content.prefix(100))...")
+        }
         let metadata = try extractMetadata(from: extractionDir)
         
+        print("✅ EPUB parsing complete")
         return (EPUBContent(chapters: chapters, metadata: metadata, images: images, spineOrder: spineOrder), extractionDir)
     }
     

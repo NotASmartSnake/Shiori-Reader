@@ -37,8 +37,8 @@ struct BookReaderView: View {
                         .foregroundColor(.gray)
                 }
                 .padding()
-            } else if let content = viewModel.book.epubContent {
-                SingleWebView(content: content, baseURL: viewModel.book.epubBaseURL)
+            } else if let content = viewModel.state.epubContent {
+                SingleWebView(content: content, baseURL: viewModel.state.epubBaseURL)
                     .ignoresSafeArea(.all)
                     .simultaneousGesture(
                         DragGesture()
@@ -90,7 +90,7 @@ struct BookReaderView: View {
                         Spacer()
                         
                         // Bottom control bar
-                        BottomControlBar(book: viewModel.book, progress: $readingProgress, showThemes: $showThemes, showSearch: $showSearch, showTableOfContents: $showTableofContents)
+                        BottomControlBar(viewModel: viewModel, progress: $readingProgress, showThemes: $showThemes, showSearch: $showSearch, showTableOfContents: $showTableofContents)
                     }
                     .transition(.opacity)
                 }

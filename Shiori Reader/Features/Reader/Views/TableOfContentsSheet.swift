@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct TableOfContentsSheet: View {
-    let book: Book
+    @ObservedObject var viewModel: BookViewModel
     @Binding var showTableOfContents: Bool
     
     var body: some View {
@@ -17,7 +17,7 @@ struct TableOfContentsSheet: View {
             HStack (spacing: 0) {
                 
                 VStack (alignment: .leading) {
-                    Image(book.coverImage)
+                    Image(viewModel.book.coverImage)
                         .resizable()
                         .scaledToFit()
                         .frame(height: 100)
@@ -27,12 +27,12 @@ struct TableOfContentsSheet: View {
                 }
                 
                 VStack (alignment: .leading) {
-                    Text(book.title)
+                    Text(viewModel.book.title)
                         .font(.title3.bold())
                         .padding(.trailing, 15)
                         .padding(.bottom, 3)
                     
-                    Text("\(String(format: "%.1f", book.readingProgress * 100))%")
+                    Text("\(String(format: "%.1f", viewModel.book.readingProgress * 100))%")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         
@@ -56,7 +56,31 @@ struct TableOfContentsSheet: View {
             }
             .frame(height: 150)
             
+            if let chapters = viewModel.state.epubContent?.chapters {
+                List {
+                    ForEach(chapters, id: \.self) { chapter in
+                        Text(chapter.title)
+                            .onAppear {
+                                print("📖 Rendering chapter: \(chapter.title)")
+                            }
+                    }
+                }
+            } else {
+                // Show placeholder when no chapters are available
+                Text("No chapters available")
+                    .foregroundStyle(.secondary)
+                    .padding()
+            }
+            
             Spacer()
+        }
+        .onAppear {
+            print("📱 TableOfContentsSheet appeared")
+            print("📚 Book title: \(viewModel.book.title)")
+            print("📚 Has EPUB content: \(viewModel.state.epubContent != nil)")
+            if let chapCount = viewModel.state.epubContent?.chapters.count {
+                print("📚 Number of chapters: \(chapCount)")
+            }
         }
     }
     
