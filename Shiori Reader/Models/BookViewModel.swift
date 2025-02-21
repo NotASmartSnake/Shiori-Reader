@@ -28,7 +28,6 @@ class BookViewModel: ObservableObject {
     // MARK: - Public Methods
     func loadEPUB() async {
         guard state.epubContent == nil else {
-            print("📝 EPUB content already loaded")
             return
         }
         
@@ -39,7 +38,6 @@ class BookViewModel: ObservableObject {
             state.epubBaseURL = baseURL
             isLoading = false
         } catch {
-            print("❌ Error loading EPUB: \(error)")
             errorMessage = error.localizedDescription
             isLoading = false
         }

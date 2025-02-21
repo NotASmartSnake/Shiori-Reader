@@ -13,8 +13,6 @@ class EPUBParser {
     private var imageDirs: [String] = []
     
     func parseEPUB(at filePath: String) throws -> (content: EPUBContent, baseURL: URL) {
-        print("📚 Starting EPUB parsing for file: \(filePath)")
-        
         // Create a persistent directory
         let documentsURL = try fileManager.url(
             for: .documentDirectory,
@@ -25,7 +23,6 @@ class EPUBParser {
         
         let bookHash = abs((filePath as NSString).lastPathComponent.hash)
         let extractionDir = documentsURL.appendingPathComponent("books/\(bookHash)", isDirectory: true)
-        print("📂 Extraction directory: \(extractionDir)")
         
         // Clean existing directory
         try? fileManager.removeItem(at: extractionDir)
@@ -77,16 +74,16 @@ class EPUBParser {
         
         // Find and parse chapters with spine order
         let (chapters, spineOrder) = try findAndParseChapters(in: extractionDir, images: images)
-        print("📖 Found \(chapters.count) chapters")
-        print("📑 First few chapters:")
-        chapters.prefix(3).forEach { chapter in
-                print("  - Title: \(chapter.title)")
-                print("  - Content length: \(chapter.content.prefix(100))...")
-        }
         let metadata = try extractMetadata(from: extractionDir)
+        let tableOfContents = try parseTOC(in: extractionDir)
         
-        print("✅ EPUB parsing complete")
-        return (EPUBContent(chapters: chapters, metadata: metadata, images: images, spineOrder: spineOrder), extractionDir)
+        return (EPUBContent(
+            chapters: chapters,
+            metadata: metadata,
+            images: images,
+            spineOrder: spineOrder,
+            tableOfContents: tableOfContents
+        ), extractionDir)
     }
     
     private func extractImages(from archive: Archive, to directory: URL) throws -> [String: Data] {
@@ -393,6 +390,99 @@ class EPUBParser {
                 language: language
             )
         }
+    
+    private func parseTOC(in directory: URL) throws -> [TOCEntry] {
+        // First try to find the NCX file
+        let ncxURL = try findNCXFile(in: directory)
+        let ncxContent = try String(contentsOf: ncxURL, encoding: .utf8)
+        
+        return try parseNCXContent(ncxContent)
+    }
+    
+    private func findNCXFile(in directory: URL) throws -> URL {
+        // First check common locations
+        let commonPaths = [
+            "toc.ncx",
+            "OEBPS/toc.ncx",
+            "OPS/toc.ncx"
+        ]
+        
+        for path in commonPaths {
+            let ncxURL = directory.appendingPathComponent(path)
+            if FileManager.default.fileExists(atPath: ncxURL.path) {
+                return ncxURL
+            }
+        }
+        
+        // If not found in common locations, look for it in the OPF file
+        let opfURL = try findOPFFile(in: directory)
+        let opfContent = try String(contentsOf: opfURL, encoding: .utf8)
+        
+        if let ncxRegex = try? NSRegularExpression(pattern: "href=\"([^\"]+\\.ncx)\""),
+           let match = ncxRegex.firstMatch(in: opfContent, range: NSRange(opfContent.startIndex..., in: opfContent)),
+           let range = Range(match.range(at: 1), in: opfContent) {
+            let ncxPath = String(opfContent[range])
+            let ncxURL = opfURL.deletingLastPathComponent().appendingPathComponent(ncxPath)
+            if FileManager.default.fileExists(atPath: ncxURL.path) {
+                return ncxURL
+            }
+        }
+        
+        throw EPUBError.fileNotFound
+    }
+    
+    private func parseNCXContent(_ content: String) throws -> [TOCEntry] {
+        var entries: [TOCEntry] = []
+        
+        // Parse navMap entries
+        let navPointPattern = "<navPoint[^>]*>([\\s\\S]*?)</navPoint>"
+        let navPointRegex = try NSRegularExpression(pattern: navPointPattern)
+        let navPointMatches = navPointRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
+        
+        for match in navPointMatches {
+            if let range = Range(match.range(at: 1), in: content) {
+                let navPointContent = String(content[range])
+                if let entry = parseNavPoint(navPointContent, level: 1) {
+                    entries.append(entry)
+                }
+            }
+        }
+        
+        return entries
+    }
+    
+    private func parseNavPoint(_ content: String, level: Int) -> TOCEntry? {
+        // Extract label
+        guard let labelRegex = try? NSRegularExpression(pattern: "<text>([^<]+)</text>"),
+              let labelMatch = labelRegex.firstMatch(in: content, range: NSRange(content.startIndex..., in: content)),
+              let labelRange = Range(labelMatch.range(at: 1), in: content) else {
+            return nil
+        }
+        let label = String(content[labelRange])
+        
+        // Extract href
+        guard let contentRegex = try? NSRegularExpression(pattern: "src=\"([^\"]+)\""),
+              let contentMatch = contentRegex.firstMatch(in: content, range: NSRange(content.startIndex..., in: content)),
+              let contentRange = Range(contentMatch.range(at: 1), in: content) else {
+            return nil
+        }
+        let href = String(content[contentRange])
+        
+        // Parse child navPoints recursively
+        var children: [TOCEntry] = []
+        let childPattern = "<navPoint[^>]*>([\\s\\S]*?)</navPoint>"
+        if let childRegex = try? NSRegularExpression(pattern: childPattern) {
+            let childMatches = childRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
+            for match in childMatches {
+                if let range = Range(match.range(at: 1), in: content),
+                   let child = parseNavPoint(String(content[range]), level: level + 1) {
+                    children.append(child)
+                }
+            }
+        }
+        
+        return TOCEntry(label: label, href: href, level: level, children: children)
+    }
     
 }
 

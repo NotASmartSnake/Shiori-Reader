@@ -12,4 +12,5 @@ struct EPUBContent: Codable {
     var metadata: EPUBMetadata
     var images: [String: Data]
     var spineOrder: [String]
+    var tableOfContents: [TOCEntry]
 }

@@ -60,11 +60,9 @@ struct TableOfContentsSheet: View {
                 List {
                     ForEach(chapters, id: \.self) { chapter in
                         Text(chapter.title)
-                            .onAppear {
-                                print("📖 Rendering chapter: \(chapter.title)")
-                            }
                     }
                 }
+                .listStyle(PlainListStyle())
             } else {
                 // Show placeholder when no chapters are available
                 Text("No chapters available")
@@ -73,14 +71,6 @@ struct TableOfContentsSheet: View {
             }
             
             Spacer()
-        }
-        .onAppear {
-            print("📱 TableOfContentsSheet appeared")
-            print("📚 Book title: \(viewModel.book.title)")
-            print("📚 Has EPUB content: \(viewModel.state.epubContent != nil)")
-            if let chapCount = viewModel.state.epubContent?.chapters.count {
-                print("📚 Number of chapters: \(chapCount)")
-            }
         }
     }
     

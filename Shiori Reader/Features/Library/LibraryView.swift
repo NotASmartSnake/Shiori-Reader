@@ -5,7 +5,6 @@
 //  Created by Russell Graviet on 2/13/25.
 //
 
-
 import SwiftUI
 
 struct LibraryView: View {
@@ -13,12 +12,12 @@ struct LibraryView: View {
     
     let booksArray: [Book] = [
         Book(title: "COTE", coverImage: "COTECover", readingProgress: 0.4, filePath: "cote.epub"),
-        Book(title: "Danmachi", coverImage: "DanmachiCover", readingProgress: 0.1, filePath: "cote.epub"),
-        Book(title: "3 Days", coverImage: "3DaysCover", readingProgress: 0.56, filePath: ""),
-        Book(title: "86", coverImage: "86Cover", readingProgress: 0.2, filePath: ""),
-        Book(title: "AOAB", coverImage: "AOABCover", readingProgress: 0.3, filePath: ""),
+        Book(title: "3 Days", coverImage: "3DaysCover", readingProgress: 0.56, filePath: "3Days.epub"),
+        Book(title: "AOAB", coverImage: "AOABCover", readingProgress: 0.3, filePath: "honzuki.epub"),
+        Book(title: "Konosuba", coverImage: "KonosubaCover", readingProgress: 0.7, filePath: "konosuba.epub"),
         Book(title: "Hakomari", coverImage: "HakomariCover", readingProgress: 0.6, filePath: "hakomari.epub"),
-        Book(title: "Konosuba", coverImage: "KonosubaCover", readingProgress: 0.7, filePath: ""),
+        Book(title: "Danmachi", coverImage: "DanmachiCover", readingProgress: 0.1, filePath: "cote.epub"),
+        Book(title: "86", coverImage: "86Cover", readingProgress: 0.2, filePath: ""),
         Book(title: "Love", coverImage: "LoveCover", readingProgress: 0.8, filePath: ""),
         Book(title: "Mushoku", coverImage: "MushokuCover", readingProgress: 0.9, filePath: ""),
         Book(title: "Oregairu", coverImage: "OregairuCover", readingProgress: 1.0, filePath: ""),

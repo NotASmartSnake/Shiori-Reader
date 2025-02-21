@@ -30,20 +30,17 @@ struct SingleWebView: UIViewRepresentable {
             self.parent = parent
         }
         
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            // JavaScript to calculate content height and monitor images
-            let monitorScript = """
-                document.querySelectorAll('img').forEach(img => {
-                    img.addEventListener('load', () => {
-                        console.log('Image loaded:', img.src);
-                    });
-                    img.addEventListener('error', () => {
-                        console.log('Image failed to load:', img.src);
-                    });
-                });
-            """
-            
-            webView.evaluateJavaScript(monitorScript)
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            if let url = navigationAction.request.url,
+               url.scheme == "file",
+               let fragment = url.fragment {
+                // Handle internal navigation
+                let script = "document.getElementById('\(fragment)').scrollIntoView();"
+                webView.evaluateJavaScript(script)
+                decisionHandler(.cancel)
+                return
+            }
+            decisionHandler(.allow)
         }
     }
     
