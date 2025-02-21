@@ -8,9 +8,11 @@
 import SwiftUI
 
 struct BottomControlBar: View {
+    let book: Book
     @Binding var progress: Double
     @Binding var showThemes: Bool
-    @State private var showingContents = false
+    @Binding var showSearch: Bool
+    @Binding var showTableOfContents: Bool
     
     var body: some View {
         VStack(spacing: 0) {
@@ -23,19 +25,29 @@ struct BottomControlBar: View {
             // Control buttons
             HStack {
                 // Left-aligned contents button
-                Button(action: { showingContents.toggle() }) {
+                Button(action: {
+                    showTableOfContents.toggle() }
+                ) {
                     Image(systemName: "list.bullet")
                         .imageScale(.large)
                 }
                 .padding(.leading)
+                .sheet(isPresented: $showTableOfContents) {
+                    TableOfContentsSheet(book: book, showTableOfContents: $showTableOfContents)
+                }
                 
                 Spacer()
                 
                 // Right-aligned buttons
                 HStack(spacing: 20) {
-                    Button(action: {}) {
+                    Button(action: {
+                        showSearch.toggle()
+                    }) {
                         Image(systemName: "magnifyingglass")
                             .imageScale(.large)
+                    }
+                    .sheet(isPresented: $showSearch) {
+                        SearchSheet(showSearch: $showSearch)
                     }
                     
                     Button(action: {
@@ -63,5 +75,5 @@ struct BottomControlBar: View {
 }
 
 #Preview {
-    BookReaderView(book: Book(title: "Classroom of the Elite", coverImage: "COTECover", readingProgress: 0.1, filePath: "konosuba.epub"))
+    BookReaderView(book: Book(title: "ようこそ実力至上主義の教室へ (Additional Title Text)", coverImage: "COTECover", readingProgress: 0.1, filePath: "konosuba.epub"))
 }

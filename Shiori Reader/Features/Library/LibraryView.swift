@@ -35,46 +35,18 @@ struct LibraryView: View {
     ]
     
     var body: some View {
-        NavigationStack{
-            ZStack{
+        NavigationStack {
+            ZStack {
                 Color("BackgroundColor").ignoresSafeArea(edges: .all)
-                ScrollView{
+                
+                ScrollView {
                     VStack {
-                        LazyVGrid(columns: columns, spacing: 20) {
-                            ForEach(booksArray, id: \.self) { book in
-                                
-                                    VStack {
-                                        NavigationLink(destination:
-                                            BookReaderView(book: book)
-                                                .onAppear { isReadingBook.isReading = true }
-                                                .onDisappear { isReadingBook.isReading = false }
-                                        ) {
-                                            Image(book.coverImage)
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: 200,  height: 250)
-                                                .cornerRadius(8)
-                                                .shadow(radius: 4)
-                                        }
-                                        HStack{
-                                            Text("\(Int(book.readingProgress * 100))%")
-                                                .font(.caption)
-                                                .foregroundStyle(.gray)
-                                            Spacer()
-                                            Image(systemName: "ellipsis")
-                                                .foregroundStyle(.gray)
-                                        }
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 3)
-                                    }
-                                
-                            }
-                        }
-                        .padding(.horizontal, 10)
+                        // Extract grid to separate view
+                        BookGrid(books: booksArray, isReadingBook: isReadingBook)
                         
                         Rectangle()
-                            .frame(width:0, height: 85)
-                            
+                            .frame(width: 0, height: 85)
+                            .foregroundStyle(.clear)
                     }
                 }
             }
@@ -90,7 +62,60 @@ struct LibraryView: View {
             .toolbarBackground(Color.black, for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)
             .navigationTitle("Library")
-        
+        }
+    }
+}
+
+// Separate view for the grid
+struct BookGrid: View {
+    let books: [Book]
+    @ObservedObject var isReadingBook: IsReadingBook
+    
+    let columns = [
+        GridItem(.flexible()),
+        GridItem(.flexible())
+    ]
+    
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 20) {
+            ForEach(books) { book in
+                BookCell(book: book, isReadingBook: isReadingBook)
+            }
+        }
+        .padding(.horizontal, 10)
+    }
+}
+
+// Separate view for each cell
+struct BookCell: View {
+    let book: Book
+    @ObservedObject var isReadingBook: IsReadingBook
+    
+    var body: some View {
+        VStack {
+            NavigationLink(destination:
+                BookReaderView(book: book)
+                    .onAppear { isReadingBook.isReading = true }
+                    .onDisappear { isReadingBook.isReading = false }
+            ) {
+                Image(book.coverImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 200, height: 250)
+                    .cornerRadius(8)
+                    .shadow(radius: 4)
+            }
+            
+            HStack {
+                Text("\(Int(book.readingProgress * 100))%")
+                    .font(.caption)
+                    .foregroundStyle(.gray)
+                Spacer()
+                Image(systemName: "ellipsis")
+                    .foregroundStyle(.gray)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
         }
     }
 }

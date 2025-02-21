@@ -9,13 +9,6 @@ import Foundation
 import ZIPFoundation
 
 // MARK: - Models
-struct EPUBContent: Codable {
-    var chapters: [Chapter]
-    var metadata: EPUBMetadata
-    var images: [String: Data]
-    var spineOrder: [String]
-}
-
 struct Chapter: Codable {
     var title: String
     var content: String
@@ -99,7 +92,6 @@ class EPUBParser {
             
             // Extract file
             _ = try archive.extract(entry, to: entryURL)
-            print("📄 Extracted:", entry.path)
             
             // If it's an image, store its data
             let fileExtension = (entry.path as NSString).pathExtension.lowercased()
@@ -108,7 +100,6 @@ class EPUBParser {
             if imageExtensions.contains(fileExtension) {
                 let imageData = try Data(contentsOf: entryURL)
                 images[entry.path] = imageData
-                print("✅ Stored image data (\(imageData.count) bytes):", entry.path)
             }
         }
         
@@ -127,7 +118,6 @@ class EPUBParser {
             let imageExtensions = ["jpg", "jpeg", "png", "gif", "webp", "svg"]
             
             if imageExtensions.contains(fileExtension) {
-                print("🖼️ Found image:", entry.path)
                 
                 let imageURL = directory.appendingPathComponent(entry.path)
                 
@@ -143,7 +133,6 @@ class EPUBParser {
                 if fileManager.fileExists(atPath: imageURL.path) {
                     let imageData = try Data(contentsOf: imageURL)
                     images[entry.path] = imageData
-                    print("✅ Extracted image (\(imageData.count) bytes):", entry.path)
                 }
             }
         }
@@ -152,7 +141,6 @@ class EPUBParser {
     }
     
     private func findAndParseChapters(in directory: URL, images: [String: Data]) throws -> (chapters: [Chapter], spineOrder: [String]) {
-            print("🔍 Finding OPF file and parsing spine...")
             
             // First find the OPF file
             let opfURL = try findOPFFile(in: directory)
@@ -177,8 +165,6 @@ class EPUBParser {
                     continue
                 }
                 
-                print("📄 Processing chapter:", fileURL.lastPathComponent)
-                
                 let htmlContent = try String(contentsOf: fileURL, encoding: .utf8)
                 let chapterImgRefs = findImageReferences(in: htmlContent)
                 
@@ -189,7 +175,6 @@ class EPUBParser {
                     filePath: fileURL.lastPathComponent
                 )
                 
-                print("✅ Processed chapter:", fileURL.lastPathComponent)
             }
             
             // Create ordered chapter array based on spine
@@ -198,7 +183,6 @@ class EPUBParser {
                 if let fileName = href.components(separatedBy: "/").last,
                    let chapter = chapterDict[fileName] {
                     orderedChapters.append(chapter)
-                    print("➕ Added chapter in spine order:", fileName)
                 }
             }
             
@@ -206,7 +190,6 @@ class EPUBParser {
             for (fileName, chapter) in chapterDict {
                 if !spineOrder.contains(where: { $0.contains(fileName) }) {
                     orderedChapters.append(chapter)
-                    print("⚠️ Added chapter not in spine:", fileName)
                 }
             }
             
@@ -327,8 +310,6 @@ class EPUBParser {
                 
                 let originalSrc = String(modifiedContent[range])
                 
-                print("🖼️ Original image source in chapter: \(originalSrc)")
-                
                 // Simply replace the path, keeping the relative structure
                 // We'll rely on BookReaderView to do the final resolution
                 let cleanPath = originalSrc
@@ -425,15 +406,6 @@ class EPUBParser {
                     let value = String(opfContent[range]).trimmingCharacters(in: .whitespacesAndNewlines)
                     additionalMetadata[key] = value
                 }
-            }
-            
-            // For debugging
-            print("📚 Extracted Metadata:")
-            print("Title:", title)
-            print("Author:", author)
-            print("Language:", language)
-            for (key, value) in additionalMetadata {
-                print("\(key.capitalized):", value)
             }
             
             return EPUBMetadata(

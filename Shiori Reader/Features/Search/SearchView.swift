@@ -11,7 +11,6 @@ import SwiftUI
 struct SearchView: View {
     var body: some View {
         VStack {
-                
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.gray)

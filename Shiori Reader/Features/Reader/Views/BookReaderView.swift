@@ -9,32 +9,24 @@ import SwiftUI
 @preconcurrency import WebKit
 
 struct BookReaderView: View {
-    let book: Book
-    @State private var epubContent: EPUBContent?
-    @State private var errorMessage: String?
-    @State private var isLoading: Bool = true
-    @State private var epubBaseURL: URL?
     @State private var showControls: Bool = true
     @State private var readingProgress: Double = 0.0
     @State private var showThemes: Bool = false
+    @State private var showSearch: Bool = false
+    @State private var showTableofContents: Bool = true
+    @StateObject private var viewModel: BookViewModel
     @Environment(\.dismiss) private var dismiss
+    
+    init(book: Book) {
+        _viewModel = StateObject(wrappedValue: BookViewModel(book: book))
+    }
     
     var body: some View {
         ZStack (alignment: .bottom) {
-            // Detect taps anywhere on the screen
-            Color.clear
-                .onTapGesture {
-                    if showControls {
-                        withAnimation {
-                            showControls = false
-                        }
-                    }
-                }
-                .zIndex(0)
             
-            if isLoading {
+            if viewModel.isLoading {
                 ProgressView("Loading book...")
-            } else if let error = errorMessage {
+            } else if let error = viewModel.errorMessage {
                 VStack(spacing: 16) {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.largeTitle)
@@ -45,8 +37,8 @@ struct BookReaderView: View {
                         .foregroundColor(.gray)
                 }
                 .padding()
-            } else if let content = epubContent {
-                SingleWebView(content: content, baseURL: epubBaseURL)
+            } else if let content = viewModel.book.epubContent {
+                SingleWebView(content: content, baseURL: viewModel.book.epubBaseURL)
                     .ignoresSafeArea(.all)
                     .simultaneousGesture(
                         DragGesture()
@@ -91,20 +83,20 @@ struct BookReaderView: View {
                 if showControls {
                     VStack {
                         // Top control bar
-                        TopControlBar(title: book.title) {
+                        TopControlBar(title: viewModel.book.title) {
                             dismiss()
                         }
-
+                        
                         Spacer()
-
+                        
                         // Bottom control bar
-                        BottomControlBar(progress: $readingProgress, showThemes: $showThemes)
+                        BottomControlBar(book: viewModel.book, progress: $readingProgress, showThemes: $showThemes, showSearch: $showSearch, showTableOfContents: $showTableofContents)
                     }
                     .transition(.opacity)
                 }
                 
             }
-    
+            
             // Theme panel overlay
             if showThemes {
                 Group {
@@ -126,48 +118,24 @@ struct BookReaderView: View {
                         .zIndex(2)
                 }
                 
-            
+                
             }
             
         }
-        .onAppear {
-            loadEPUB()
+        .task {
+            await viewModel.loadEPUB()
         }
         .toolbar(.hidden)
         .ignoresSafeArea(edges: .bottom)
         
     }
-
-        
-    private func loadEPUB() {
-        isLoading = true
-        
-        guard let epubPath = Bundle.main.path(forResource: book.filePath, ofType: nil) else {
-            errorMessage = "Could not find EPUB file in bundle"
-            isLoading = false
-            return
-        }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            do {
-                let parser = EPUBParser()
-                let (content, baseURL) = try parser.parseEPUB(at: epubPath)
-                
-                DispatchQueue.main.async {
-                    self.epubContent = content
-                    self.epubBaseURL = baseURL
-                    self.isLoading = false
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.errorMessage = "Failed to load EPUB: \(error.localizedDescription)"
-                    self.isLoading = false
-                }
-            }
-        }
-    }
 }
 
 #Preview {
-    BookReaderView(book: Book(title: "実力至上主義者の教室", coverImage: "COTECover", readingProgress: 0.1, filePath: "konosuba.epub"))
+    BookReaderView(book: Book(
+        title: "実力至上主義者の教室",
+        coverImage: "COTECover",
+        readingProgress: 0.1,
+        filePath: "konosuba.epub"
+    ))
 }

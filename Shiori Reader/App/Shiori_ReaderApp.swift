@@ -11,7 +11,7 @@ import SwiftUI
 struct Shiori_ReaderApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainView()
         }
     }
 }
