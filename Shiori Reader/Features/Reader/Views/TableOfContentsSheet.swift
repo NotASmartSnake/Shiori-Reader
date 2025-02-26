@@ -56,10 +56,16 @@ struct TableOfContentsSheet: View {
             }
             .frame(height: 150)
             
-            if let chapters = viewModel.state.epubContent?.chapters {
+            if let entries = viewModel.state.epubContent?.tableOfContents {
                 List {
-                    ForEach(chapters, id: \.self) { chapter in
-                        Text(chapter.title)
+                    ForEach(entries, id: \.self) { entry in
+                        Button(action: {
+                            viewModel.navigateToTOCEntry(entry.href)
+                            showTableOfContents = false
+                        }) {
+                            Text(entry.label)
+                                .foregroundColor(.primary)
+                        }
                     }
                 }
                 .listStyle(PlainListStyle())

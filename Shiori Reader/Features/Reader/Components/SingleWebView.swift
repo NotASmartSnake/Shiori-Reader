@@ -2,6 +2,7 @@ import SwiftUI
 @preconcurrency import WebKit
 
 struct SingleWebView: UIViewRepresentable {
+    @ObservedObject var viewModel: BookViewModel
     let content: EPUBContent
     let baseURL: URL?
     
@@ -16,6 +17,7 @@ struct SingleWebView: UIViewRepresentable {
         webView.isOpaque = false
         webView.scrollView.backgroundColor = .clear
         
+        viewModel.setWebView(webView)
         return webView
     }
     
@@ -48,6 +50,10 @@ struct SingleWebView: UIViewRepresentable {
         guard let baseURL = baseURL else { return }
         
         let processedChapters = content.chapters.enumerated().map { index, chapter -> String in
+            // Extract filename without extension for better ID matching
+            let filename = URL(fileURLWithPath: chapter.filePath).deletingPathExtension().lastPathComponent
+            let filenameWithoutExt = URL(fileURLWithPath: chapter.filePath).deletingPathExtension().lastPathComponent
+            
             // Clean up chapter content
             var processedContent = cleanupContent(chapter.content)
             
@@ -60,7 +66,7 @@ struct SingleWebView: UIViewRepresentable {
             processedContent = processImagePaths(processedContent, baseURL: baseURL)
             
             return """
-                <div class='chapter' id='chapter-\(index + 1)'>
+                <div class='chapter' id='chapter-\(index + 1)' data-filename='\(filename)'>
                     <div class='chapter-content'>\(processedContent)</div>
                 </div>
             """
@@ -190,7 +196,6 @@ struct SingleWebView: UIViewRepresentable {
         </html>
         """
         
-        print("Combined HTML: \(combinedHTML.prefix(1000))")
         webView.loadHTMLString(combinedHTML, baseURL: baseURL)
     }
     

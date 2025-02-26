@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import WebKit
 
 struct BookState {
     var epubContent: EPUBContent?

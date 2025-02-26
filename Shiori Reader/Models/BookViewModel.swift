@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import WebKit
 
 @MainActor
 class BookViewModel: ObservableObject {
@@ -14,6 +15,8 @@ class BookViewModel: ObservableObject {
     @Published private(set) var state: BookState
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var currentTOCHref: String?
+    private var webView: WKWebView?
     
     // MARK: - Private Properties
     private let repository: BookRepository
@@ -66,4 +69,148 @@ class BookViewModel: ObservableObject {
         }
         state.currentChapterIndex = index
     }
+    
+    func setWebView(_ webView: WKWebView) {
+        self.webView = webView
+    }
+    
+    func navigateToTOCEntry(_ href: String) {
+        guard let webView = webView else {
+            return
+        }
+        
+        // Extract the file path and fragment identifier
+        let components = href.components(separatedBy: "#")
+        let filePath = components.first ?? ""
+        let fragmentId = components.count > 1 ? components[1] : ""
+        
+        let inspectionScript = """
+            function inspectDOM() {
+                let result = {
+                    chapterElements: [],
+                    fragmentElement: null,
+                    allIds: []
+                };
+                
+                // Get all chapter elements
+                let chapters = document.querySelectorAll('.chapter');
+                for (let i = 0; i < chapters.length; i++) {
+                    result.chapterElements.push({
+                        id: chapters[i].id,
+                        dataFilename: chapters[i].getAttribute('data-filename') || '',
+                        offsetTop: chapters[i].offsetTop
+                    });
+                }
+                
+                // Check if fragment exists
+                if ('\(fragmentId)' !== '') {
+                    let elem = document.getElementById('\(fragmentId)');
+                    if (elem) {
+                        result.fragmentElement = {
+                            id: elem.id,
+                            tagName: elem.tagName,
+                            offsetTop: elem.offsetTop
+                        };
+                    }
+                }
+                
+                // Get all elements with IDs to see what's available
+                let allWithIds = document.querySelectorAll('[id]');
+                for (let i = 0; i < allWithIds.length; i++) {
+                    if (i < 20) { // Limit to first 20 to avoid excessive logging
+                        result.allIds.push(allWithIds[i].id);
+                    }
+                }
+                
+                return JSON.stringify(result);
+            }
+            inspectDOM();
+        """
+        
+        // After the DOM inspection, add this revised navigation code
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let navigationScript = """
+            function navigateToContent() {
+                console.log('Navigation script running');
+                
+                // Try to find chapter based on filename in filePath
+                let foundChapter = false;
+                if ('\(filePath)' !== '') {
+                    const chapters = document.querySelectorAll('.chapter');
+                    for (let i = 0; i < chapters.length; i++) {
+                        const filename = chapters[i].getAttribute('data-filename') || '';
+                        const chapterId = chapters[i].id;
+                        console.log(`Checking chapter ${i}: ${filename} (id: ${chapterId})`);
+                        
+                        if (filename && '\(filePath)'.includes(filename)) {
+                            console.log(`Found matching chapter: ${filename}`);
+                            chapters[i].scrollIntoView();
+                            foundChapter = true;
+                            
+                            // Now try to find the fragment within this chapter
+                            if ('\(fragmentId)' !== '') {
+                                const fragment = document.getElementById('\(fragmentId)');
+                                if (fragment) {
+                                    console.log(`Found fragment: ${fragment.id}`);
+                                    setTimeout(() => fragment.scrollIntoView(), 100);
+                                    return true;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                // If we couldn't match by filename, try direct fragment navigation
+                if (!foundChapter && '\(fragmentId)' !== '') {
+                    const fragment = document.getElementById('\(fragmentId)');
+                    if (fragment) {
+                        console.log(`Found fragment directly: ${fragment.id}`);
+                        fragment.scrollIntoView();
+                        return true;
+                    }
+                }
+                
+                // If all else fails, use index-based navigation
+                if (!foundChapter) {
+                    const chapterIndex = \(self.state.currentChapterIndex);
+                    const chapterElement = document.getElementById('chapter-' + (chapterIndex + 1));
+                    if (chapterElement) {
+                        console.log(`Falling back to index navigation: chapter-${chapterIndex + 1}`);
+                        chapterElement.scrollIntoView();
+                        return true;
+                    }
+                }
+                
+                console.log('Navigation failed to find a target');
+                return false;
+            }
+            navigateToContent();
+            """
+            
+        }
+        
+        currentTOCHref = href
+    }
+    
+    func debugWebViewState() {
+        guard let webView = webView else {
+            return
+        }
+        
+        let script = """
+        (function() {
+            var debug = {
+                url: window.location.href,
+                documentTitle: document.title,
+                chapterCount: document.querySelectorAll('.chapter').length,
+                allIds: Array.from(document.querySelectorAll('[id]')).map(el => el.id).slice(0, 20),
+                bodyContent: document.body.innerHTML.substring(0, 500) + '...'
+            };
+            return JSON.stringify(debug);
+        })();
+        """
+        
+    }
+    
 }

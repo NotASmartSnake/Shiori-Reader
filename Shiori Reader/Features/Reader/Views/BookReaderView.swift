@@ -13,7 +13,7 @@ struct BookReaderView: View {
     @State private var readingProgress: Double = 0.0
     @State private var showThemes: Bool = false
     @State private var showSearch: Bool = false
-    @State private var showTableofContents: Bool = true
+    @State private var showTableofContents: Bool = false
     @StateObject private var viewModel: BookViewModel
     @Environment(\.dismiss) private var dismiss
     
@@ -38,7 +38,7 @@ struct BookReaderView: View {
                 }
                 .padding()
             } else if let content = viewModel.state.epubContent {
-                SingleWebView(content: content, baseURL: viewModel.state.epubBaseURL)
+                SingleWebView(viewModel: viewModel, content: content, baseURL: viewModel.state.epubBaseURL)
                     .ignoresSafeArea(.all)
                     .simultaneousGesture(
                         DragGesture()

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct MainView: View {
     @State private var selectedIndex = 0
-    @State private var isReadingBook = false // Add this state variable
+    @State private var isReadingBook = false
     
     var body: some View {
         
