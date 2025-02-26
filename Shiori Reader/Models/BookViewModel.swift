@@ -76,13 +76,31 @@ class BookViewModel: ObservableObject {
     
     func navigateToTOCEntry(_ href: String) {
         guard let webView = webView else {
+            print("DEBUG: WebView is nil when trying to navigate to \(href)")
             return
         }
+        
+        print("DEBUG: Navigating to TOC entry with href: \(href)")
         
         // Extract the file path and fragment identifier
         let components = href.components(separatedBy: "#")
         let filePath = components.first ?? ""
         let fragmentId = components.count > 1 ? components[1] : ""
+        
+        print("DEBUG: Parsed filePath: \(filePath), fragmentId: \(fragmentId)")
+        
+        // Log content of TOC entries and chapters to understand the structure
+        if let epubContent = state.epubContent {
+            print("DEBUG: Available TOC entries:")
+            for (index, entry) in epubContent.tableOfContents.enumerated() {
+                print("  \(index): \(entry.label) -> \(entry.href)")
+            }
+            
+            print("DEBUG: Available chapters:")
+            for (index, chapter) in epubContent.chapters.enumerated() {
+                print("  \(index): \(chapter.title) (filePath: \(chapter.filePath))")
+            }
+        }
         
         let inspectionScript = """
             function inspectDOM() {
@@ -126,6 +144,16 @@ class BookViewModel: ObservableObject {
             }
             inspectDOM();
         """
+
+        webView.evaluateJavaScript(inspectionScript) { result, error in
+            if let error = error {
+                print("DEBUG: Error inspecting DOM: \(error)")
+            } else if let jsonString = result as? String,
+                      let data = jsonString.data(using: .utf8),
+                      let json = try? JSONSerialization.jsonObject(with: data) {
+                print("DEBUG: DOM inspection result: \(json)")
+            }
+        }
         
         // After the DOM inspection, add this revised navigation code
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -188,29 +216,16 @@ class BookViewModel: ObservableObject {
             navigateToContent();
             """
             
+            webView.evaluateJavaScript(navigationScript) { result, error in
+                if let error = error {
+                    print("DEBUG: Navigation script error: \(error)")
+                } else if let success = result as? Bool {
+                    print("DEBUG: Navigation result: \(success ? "successful" : "failed")")
+                }
+            }
         }
         
         currentTOCHref = href
     }
-    
-    func debugWebViewState() {
-        guard let webView = webView else {
-            return
-        }
         
-        let script = """
-        (function() {
-            var debug = {
-                url: window.location.href,
-                documentTitle: document.title,
-                chapterCount: document.querySelectorAll('.chapter').length,
-                allIds: Array.from(document.querySelectorAll('[id]')).map(el => el.id).slice(0, 20),
-                bodyContent: document.body.innerHTML.substring(0, 500) + '...'
-            };
-            return JSON.stringify(debug);
-        })();
-        """
-        
-    }
-    
 }

@@ -52,7 +52,6 @@ struct SingleWebView: UIViewRepresentable {
         let processedChapters = content.chapters.enumerated().map { index, chapter -> String in
             // Extract filename without extension for better ID matching
             let filename = URL(fileURLWithPath: chapter.filePath).deletingPathExtension().lastPathComponent
-            let filenameWithoutExt = URL(fileURLWithPath: chapter.filePath).deletingPathExtension().lastPathComponent
             
             // Clean up chapter content
             var processedContent = cleanupContent(chapter.content)
