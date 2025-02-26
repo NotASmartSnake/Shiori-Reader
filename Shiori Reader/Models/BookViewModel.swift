@@ -80,27 +80,10 @@ class BookViewModel: ObservableObject {
             return
         }
         
-        print("DEBUG: Navigating to TOC entry with href: \(href)")
-        
         // Extract the file path and fragment identifier
         let components = href.components(separatedBy: "#")
         let filePath = components.first ?? ""
         let fragmentId = components.count > 1 ? components[1] : ""
-        
-        print("DEBUG: Parsed filePath: \(filePath), fragmentId: \(fragmentId)")
-        
-        // Log content of TOC entries and chapters to understand the structure
-        if let epubContent = state.epubContent {
-            print("DEBUG: Available TOC entries:")
-            for (index, entry) in epubContent.tableOfContents.enumerated() {
-                print("  \(index): \(entry.label) -> \(entry.href)")
-            }
-            
-            print("DEBUG: Available chapters:")
-            for (index, chapter) in epubContent.chapters.enumerated() {
-                print("  \(index): \(chapter.title) (filePath: \(chapter.filePath))")
-            }
-        }
         
         let inspectionScript = """
             function inspectDOM() {
