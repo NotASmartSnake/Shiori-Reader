@@ -22,7 +22,8 @@ struct BookReaderView: View {
     }
     
     var body: some View {
-        ZStack (alignment: .bottom) {
+        
+        ZStack {
             
             if viewModel.isLoading {
                 ProgressView("Loading book...")
@@ -95,30 +96,29 @@ struct BookReaderView: View {
                     .transition(.opacity)
                 }
                 
-            }
-            
-            // Theme panel overlay
-            if showThemes {
-                Group {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                        .transition(.opacity)
-                        .onTapGesture {
-                            withAnimation {
-                                showThemes.toggle()
+                // Theme panel overlay
+                if showThemes {
+                    Group {
+                        Color.black.opacity(0.3)
+                            .ignoresSafeArea()
+                            .transition(.opacity)
+                            .onTapGesture {
+                                withAnimation {
+                                    showThemes.toggle()
+                                }
                             }
-                        }
-                        .zIndex(1)
-                    
-                    Spacer()
-                    
-                    ThemePanel()
-                        .shadow(radius: 10)
-                        .transition(.move(edge: .bottom))
-                        .zIndex(2)
+                            .zIndex(1)
+                        
+                        Spacer()
+                        
+                        ThemePanel()
+                            .shadow(radius: 10)
+                            .transition(.move(edge: .bottom))
+                            .zIndex(2)
+                    }
                 }
-                
-                
+            
+
             }
             
         }
@@ -136,6 +136,6 @@ struct BookReaderView: View {
         title: "実力至上主義者の教室",
         coverImage: "COTECover",
         readingProgress: 0.1,
-        filePath: "konosuba.epub"
+        filePath: "honzuki.epub"
     ))
 }
