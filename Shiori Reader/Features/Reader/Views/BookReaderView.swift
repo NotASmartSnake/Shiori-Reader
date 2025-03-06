@@ -16,6 +16,7 @@ struct BookReaderView: View {
     @State private var showTableofContents: Bool = false
     @StateObject private var viewModel: BookViewModel
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var isReadingBook: IsReadingBook
     
     init(book: Book) {
         _viewModel = StateObject(wrappedValue: BookViewModel(book: book))
@@ -105,6 +106,8 @@ struct BookReaderView: View {
                         TopControlBar(
                             title: viewModel.book.title,
                             onBack: {
+                                let readingState = self.isReadingBook
+                                readingState.setReading(false)
                                 // Save progress before dismissing
                                 Task {
                                     await viewModel.saveCurrentProgress()
@@ -203,10 +206,12 @@ struct BookReaderView: View {
 }
 
 #Preview {
-    BookReaderView(book: Book(
+    let isReadingBook = IsReadingBook()
+    return BookReaderView(book: Book(
         title: "実力至上主義者の教室",
         coverImage: "COTECover",
         readingProgress: 0.1,
         filePath: "honzuki.epub"
     ))
+    .environmentObject(isReadingBook)
 }

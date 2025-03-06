@@ -27,12 +27,10 @@ struct MainView: View {
 
             if !isReadingBookState.isReading {
                 CustomTabBar(selectedIndex: $selectedIndex)
-                    .animation(.none, value: isReadingBookState.isReading)
+                    .transition(.opacity.animation(.none))
             }
         }
-        .onAppear {
-            isReadingBookState.isReading = false
-        }
+        .animation(.none, value: isReadingBookState.isReading)
         
     }
 }
