@@ -27,7 +27,11 @@ struct MainView: View {
 
             if !isReadingBookState.isReading {
                 CustomTabBar(selectedIndex: $selectedIndex)
+                    .animation(.none, value: isReadingBookState.isReading)
             }
+        }
+        .onAppear {
+            isReadingBookState.isReading = false
         }
         
     }
@@ -36,12 +40,6 @@ struct MainView: View {
 // Create an environment object to track reading state
 class IsReadingBook: ObservableObject {
     @Published var isReading: Bool = false
-    
-    init(isReading: Binding<Bool>? = nil) {
-        if let binding = isReading {
-            self.isReading = binding.wrappedValue
-        }
-    }
     
     func setReading(_ value: Bool) {
         print("DEBUG: IsReadingBook.setReading(\(value))")

@@ -135,11 +135,13 @@ struct BookCell: View {
             NavigationLink(destination:
                 BookReaderView(book: book)
                 .onAppear {
-                    isReadingBook.isReading = true
+                    isReadingBook.setReading(true)
                     lastViewedBookPath = book.filePath
+                    print("DEBUG: Book appeared, set lastViewedBookPath = \(book.filePath)")
                 }
                 .onDisappear {
-                    isReadingBook.isReading = false
+                    isReadingBook.setReading(false)
+                    print("DEBUG: Book disappeared")
                 }
             ) {
                 Image(book.coverImage)
@@ -161,19 +163,10 @@ struct BookCell: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
         }
-        .onAppear {
-            isReadingBook.setReading(true)
-            lastViewedBookPath = book.filePath
-            print("DEBUG: Book appeared, set lastViewedBookPath = \(book.filePath)")
-        }
-        .onDisappear {
-            isReadingBook.setReading(false)
-            print("DEBUG: Book disappeared")
-        }
     }
 }
 
 #Preview {
     LibraryView()
-        .environmentObject(IsReadingBook(isReading: .constant(false)))
+        .environmentObject(IsReadingBook())
 }
