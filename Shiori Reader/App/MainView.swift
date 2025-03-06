@@ -9,7 +9,7 @@ import SwiftUI
 
 struct MainView: View {
     @State private var selectedIndex = 0
-    @State private var isReadingBook = false
+    @StateObject private var isReadingBookState = IsReadingBook()
     
     var body: some View {
         
@@ -17,15 +17,15 @@ struct MainView: View {
 
             VStack {
                 switch selectedIndex {
-                    case 0: LibraryView().environmentObject(IsReadingBook(isReading: $isReadingBook))
+                    case 0: LibraryView().environmentObject(isReadingBookState)
                     case 1: SavedWordsView()
                     case 2: SearchView()
                     case 3: SettingsView()
-                    default: LibraryView()
+                    default: LibraryView().environmentObject(isReadingBookState)
                 }
             }
 
-            if !isReadingBook {
+            if !isReadingBookState.isReading {
                 CustomTabBar(selectedIndex: $selectedIndex)
             }
         }
@@ -35,10 +35,17 @@ struct MainView: View {
 
 // Create an environment object to track reading state
 class IsReadingBook: ObservableObject {
-    @Binding var isReading: Bool
+    @Published var isReading: Bool = false
     
-    init(isReading: Binding<Bool>) {
-        _isReading = isReading
+    init(isReading: Binding<Bool>? = nil) {
+        if let binding = isReading {
+            self.isReading = binding.wrappedValue
+        }
+    }
+    
+    func setReading(_ value: Bool) {
+        print("DEBUG: IsReadingBook.setReading(\(value))")
+        isReading = value
     }
 }
 

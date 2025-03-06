@@ -263,6 +263,15 @@ class BookViewModel: ObservableObject {
         }
     }
     
+    @MainActor
+    func webViewContentLoaded() {
+        print("DEBUG: WebView content fully loaded")
+        // Set flag indicating the WebView is ready
+        initialLoadCompleted = true
+        // Now safe to restore position
+        self.restoreScrollPosition()
+    }
+    
     func navigateToChapter(_ index: Int) {
         guard let content = state.epubContent,
               index >= 0 && index < content.chapters.count else {

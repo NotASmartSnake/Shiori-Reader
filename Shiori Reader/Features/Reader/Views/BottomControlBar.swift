@@ -20,21 +20,7 @@ struct BottomControlBar: View {
             Text("\(Int(progress * 100))%")
                 .font(.caption)
                 .foregroundColor(.secondary)
-                .padding(.top, 4)
-            
-            // Progress slider
-            Slider(value: $progress, in: 0...1, onEditingChanged: { editing in
-                if !editing {
-                    // User finished dragging slider, navigate to position
-                    navigateToPosition(progress)
-                    
-                    // Reset and restart auto-save timer
-                    viewModel.resetAutoSave()
-                    viewModel.autoSaveProgress()
-                }
-            })
-            .padding(.horizontal)
-            .padding(.top, 4)
+                .padding(.top, 8)
             
             // Control buttons
             HStack {

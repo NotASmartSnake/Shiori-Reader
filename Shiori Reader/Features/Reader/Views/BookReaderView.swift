@@ -19,6 +19,7 @@ struct BookReaderView: View {
     
     init(book: Book) {
         _viewModel = StateObject(wrappedValue: BookViewModel(book: book))
+        _readingProgress = State(initialValue: book.readingProgress)
     }
     
     var body: some View {
@@ -83,8 +84,6 @@ struct BookReaderView: View {
                             withAnimation {
                                 showControls.toggle()
                             }
-                            viewModel.resetAutoSave()
-                            viewModel.autoSaveProgress()
                         }
                     
                     Spacer()
@@ -97,8 +96,6 @@ struct BookReaderView: View {
                             withAnimation {
                                 showControls.toggle()
                             }
-                            viewModel.resetAutoSave()
-                            viewModel.autoSaveProgress()
                         }
                 }
                 
@@ -161,7 +158,6 @@ struct BookReaderView: View {
         .task {
             await viewModel.loadEPUB()
             await viewModel.loadProgress()
-            viewModel.restoreScrollPosition()
             if !viewModel.isCurrentPositionSaved {
                 viewModel.autoSaveProgress()
             }
@@ -174,6 +170,9 @@ struct BookReaderView: View {
                     await viewModel.updateProgressAndAutoSave(newValue)
                 }
             }
+        }
+        .onChange(of: viewModel.book.readingProgress) { _, newValue in
+            readingProgress = newValue
         }
         // Save progress when view disappears
         .onAppear {

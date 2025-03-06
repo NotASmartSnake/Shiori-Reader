@@ -10,6 +10,7 @@ import SwiftUI
 struct LibraryView: View {
     @EnvironmentObject var isReadingBook: IsReadingBook
     @State private var books: [Book] = []
+    @State private var lastViewedBookPath: String? = nil
     
     let initialBooks: [Book] = [
         Book(title: "COTE", coverImage: "COTECover", readingProgress: 0.4, filePath: "cote.epub"),
@@ -42,7 +43,7 @@ struct LibraryView: View {
                 ScrollView {
                     VStack {
                         // Extract grid to separate view
-                        BookGrid(books: initialBooks, isReadingBook: isReadingBook)
+                        BookGrid(books: books, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
                         
                         Rectangle()
                             .frame(width: 0, height: 85)
@@ -66,6 +67,12 @@ struct LibraryView: View {
         .onAppear {
             // Load saved reading progress whenever the library appears
             loadSavedReadingProgress()
+        }
+        .onChange(of: isReadingBook.isReading) { _, isReading in
+            if !isReading && lastViewedBookPath != nil {
+                // We just returned from reading a book
+                loadSavedReadingProgress()
+            }
         }
     }
     
@@ -100,6 +107,7 @@ struct LibraryView: View {
 struct BookGrid: View {
     let books: [Book]
     @ObservedObject var isReadingBook: IsReadingBook
+    @Binding var lastViewedBookPath: String?
     
     let columns = [
         GridItem(.flexible()),
@@ -109,7 +117,7 @@ struct BookGrid: View {
     var body: some View {
         LazyVGrid(columns: columns, spacing: 20) {
             ForEach(books) { book in
-                BookCell(book: book, isReadingBook: isReadingBook)
+                BookCell(book: book, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
             }
         }
         .padding(.horizontal, 10)
@@ -120,13 +128,19 @@ struct BookGrid: View {
 struct BookCell: View {
     let book: Book
     @ObservedObject var isReadingBook: IsReadingBook
+    @Binding var lastViewedBookPath: String?
     
     var body: some View {
         VStack {
             NavigationLink(destination:
                 BookReaderView(book: book)
-                    .onAppear { isReadingBook.isReading = true }
-                    .onDisappear { isReadingBook.isReading = false }
+                .onAppear {
+                    isReadingBook.isReading = true
+                    lastViewedBookPath = book.filePath
+                }
+                .onDisappear {
+                    isReadingBook.isReading = false
+                }
             ) {
                 Image(book.coverImage)
                     .resizable()
@@ -146,6 +160,15 @@ struct BookCell: View {
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
+        }
+        .onAppear {
+            isReadingBook.setReading(true)
+            lastViewedBookPath = book.filePath
+            print("DEBUG: Book appeared, set lastViewedBookPath = \(book.filePath)")
+        }
+        .onDisappear {
+            isReadingBook.setReading(false)
+            print("DEBUG: Book disappeared")
         }
     }
 }

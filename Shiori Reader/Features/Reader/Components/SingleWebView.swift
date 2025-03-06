@@ -96,6 +96,8 @@ struct SingleWebView: UIViewRepresentable {
             // Calculate total character count when content loads
             DispatchQueue.main.async {
                 self.parent.viewModel.updatePositionData()
+                // Notify the ViewModel that WebView content is fully loaded and ready for position restoration
+                self.parent.viewModel.webViewContentLoaded()
             }
         }
         
