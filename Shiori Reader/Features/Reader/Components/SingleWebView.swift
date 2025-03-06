@@ -176,55 +176,64 @@ struct SingleWebView: UIViewRepresentable {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <style>
+            <style id="shiori-base-styles">
                 :root {
                     color-scheme: light dark;
+                    --shiori-font-size: \(viewModel.fontSize)px;
+                }
+        
+                /* Global reset - apply to all elements */
+                *:not(ruby):not(rt), *:not(ruby):not(rt)::before, *:not(ruby):not(rt)::after {
+                    font-size: var(--shiori-font-size) !important;
+                    max-width: 100%;
+                    box-sizing: border-box;
                 }
                 
                 body {
                     font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS Mincho", serif;
-                    font-size: 18px;
+                    font-size: var(--shiori-font-size) !important;
                     line-height: 1.8;
                     padding: 16px;
                     background-color: transparent;
                     color: #333333;
                 }
-                        
-                /* Reset inherited properties */
-                div, p, span {
-                    font-size: inherit !important;
+        
+                /* More specific selectors with !important to ensure they override */
+                #content, #content * {
+                    font-size: var(--shiori-font-size) !important;
+                }
+                
+                .chapter, .chapter * {
+                    font-size: var(--shiori-font-size) !important;
+                }
+                
+                .chapter-content, .chapter-content * {
+                    font-size: var(--shiori-font-size) !important;
+                }
+                
+                /* Specific element overrides */
+                p, div, span, h1, h2, h3, h4, h5, h6 {
+                    font-size: var(--shiori-font-size) !important;
                     font-weight: normal !important;
                 }
-
-                /* Override publisher-specific styles */
-                .chapter-content {
-                    font-size: 18px !important;
-                    font-weight: normal !important;
+        
+                /* Relative sizing for headings */
+                h1 { font-size: calc(var(--shiori-font-size) * 1.5) !important; }
+                h2 { font-size: calc(var(--shiori-font-size) * 1.3) !important; }
+                h3 { font-size: calc(var(--shiori-font-size) * 1.2) !important; }
+                
+                /* Ruby text (furigana) should stay smaller */
+                html body ruby {
+                    font-size: var(--shiori-font-size) !important;
                 }
 
-                .chapter-content p, 
-                .chapter-content div {
-                    font-size: inherit !important;
-                    font-weight: normal !important;
-                    margin: 1em 0;
-                    line-height: inherit;
+                html body ruby rt {
+                    font-size: calc(var(--shiori-font-size) * 0.5) !important;
                 }
 
                 /* Ensure standard text weight */
                 .main {
                     font-weight: normal !important;
-                }
-                
-                .book-title {
-                    font-size: 2em;
-                    font-weight: bold;
-                    margin-bottom: 0.5em;
-                }
-                
-                .book-author {
-                    font-size: 1.5em;
-                    color: #666;
-                    margin-bottom: 2em;
                 }
                 
                 .chapter {
@@ -234,11 +243,6 @@ struct SingleWebView: UIViewRepresentable {
                 
                 .chapter:last-child {
                     border-bottom: none;
-                }
-                
-                .chapter-title {
-                    font-size: 1.5em;
-                    margin: 1em 0;
                 }
                 
                 .chapter-content {
@@ -252,11 +256,6 @@ struct SingleWebView: UIViewRepresentable {
                     margin: 1em auto;
                 }
                 
-                * {
-                    max-width: 100%;
-                    box-sizing: border-box;
-                }
-                
                 p {
                     margin: 1em 0;
                 }
@@ -265,20 +264,9 @@ struct SingleWebView: UIViewRepresentable {
                     margin: 1.5em 0 0.5em;
                 }
                 
-                ruby {
-                    font-size: 0.8em;
-                }
-                
-                rt {
-                    font-size: 0.6em;
-                }
-                
                 @media (prefers-color-scheme: dark) {
                     body {
                         color: #FFFFFF;
-                    }
-                    .book-author {
-                        color: #999;
                     }
                     .chapter {
                         border-bottom-color: #333;
@@ -286,6 +274,32 @@ struct SingleWebView: UIViewRepresentable {
                 }
             </style>
             <script>
+        
+                document.addEventListener('DOMContentLoaded', function() {
+                    enforceRubyTextSize(\(viewModel.fontSize));
+                });
+        
+                function updateFontSize(size) {
+                    document.documentElement.style.setProperty('--shiori-font-size', size + 'px');
+                    console.log('Font size updated to: ' + size + 'px');
+                    return true;
+                }
+        
+                function enforceRubyTextSize(baseFontSize) {
+                    // Get all rt elements
+                    const rtElements = document.querySelectorAll('rt');
+                    
+                    // Apply the reduced font size with highest priority
+                    for (const rt of rtElements) {
+                        // Remove any existing inline styles that might conflict
+                        rt.setAttribute('style', '');
+                        // Apply our font size with !important to override everything
+                        rt.style.cssText = 'font-size: ' + (baseFontSize * 0.5) + 'px !important';
+                    }
+                    
+                    return rtElements.length;
+                }
+        
                 // Store more detailed position information
                 let lastKnownPosition = {
                     percentage: 0,

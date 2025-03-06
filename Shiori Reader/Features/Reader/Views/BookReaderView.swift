@@ -147,7 +147,7 @@ struct BookReaderView: View {
                         
                         Spacer()
                         
-                        ThemePanel()
+                        ThemePanel(viewModel: viewModel)
                             .shadow(radius: 10)
                             .transition(.move(edge: .bottom))
                             .zIndex(2)
@@ -161,6 +161,7 @@ struct BookReaderView: View {
         .task {
             await viewModel.loadEPUB()
             await viewModel.loadProgress()
+            viewModel.loadFontPreferences()
             if !viewModel.isCurrentPositionSaved {
                 viewModel.autoSaveProgress()
             }
@@ -180,6 +181,8 @@ struct BookReaderView: View {
         // Save progress when view disappears
         .onAppear {
             print("DEBUG: BookReaderView appeared")
+            viewModel.loadFontPreferences()
+            
             Task {
                 print("DEBUG: Loading book and progress")
                 await viewModel.loadEPUB()

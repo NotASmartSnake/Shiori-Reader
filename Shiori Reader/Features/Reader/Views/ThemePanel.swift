@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ThemePanel: View {
     @Environment(\.colorScheme) var colorScheme
+    @ObservedObject var viewModel: BookViewModel
     
     var body: some View {
         VStack(spacing: 10) {
@@ -26,19 +27,29 @@ struct ThemePanel: View {
             ZStack {
                 HStack {
                     HStack {
-                        Image(systemName: "textformat.size.smaller")
-                            .foregroundStyle(.primary)
-                            .font(.title)
-                            .padding(.horizontal, 40)
+                        Button(action: {
+                            viewModel.decreaseFontSize()
+                        }) {
+                            Image(systemName: "textformat.size.smaller")
+                                .foregroundStyle(.primary)
+                                .font(.title)
+                                .padding(.horizontal, 40)
+                        }
+                        .foregroundStyle(.primary)
                         
                         Rectangle()
                             .frame(width: 1, height: 25)
                             .opacity(0.2)
                         
-                        Image(systemName: "textformat.size.larger")
-                            .foregroundStyle(.primary)
-                            .font(.title)
-                            .padding(.horizontal, 40)
+                        Button(action: {
+                            viewModel.increaseFontSize()
+                        }) {
+                            Image(systemName: "textformat.size.larger")
+                                .foregroundStyle(.primary)
+                                .font(.title)
+                                .padding(.horizontal, 40)
+                        }
+                        .foregroundStyle(.primary)
                         
                     }
                     .frame(height: 40)

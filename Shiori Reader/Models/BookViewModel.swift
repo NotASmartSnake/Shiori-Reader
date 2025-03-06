@@ -17,17 +17,20 @@ class BookViewModel: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var currentTOCHref: String?
     @Published private(set) var isCurrentPositionSaved = false
+    @Published var fontSize: Int = 18
     private var webView: WKWebView?
     private var autoSaveWorkItem: DispatchWorkItem?
     private let repository: BookRepository
     private var initialLoadCompleted = false
     private var preventPositionUpdates = false
+    private var defaultFontSize = 18
     
     // MARK: - Initialization
     init(book: Book, repository: BookRepository = BookRepository()) {
         self.book = book
         self.state = BookState()
         self.repository = repository
+        loadFontPreferences()
     }
     
     // MARK: - Public Methods
@@ -261,6 +264,7 @@ class BookViewModel: ObservableObject {
                 print("DEBUG: Loaded position for \(book.title): \(exploredCharCount)/\(state.totalCharCount) chars with progress \(progress)")
             }
         }
+        
     }
     
     @MainActor
@@ -499,6 +503,92 @@ class BookViewModel: ObservableObject {
             }
         } else {
             print("DEBUG: Cannot restore position - invalid character counts: \(savedExploredCount)/\(savedTotalCount)")
+        }
+    }
+    
+    func increaseFontSize() {
+        if fontSize < 36 { // Max font size
+            fontSize += 1
+            updateFontSize()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.debugFontSizes()
+            }
+        }
+    }
+
+    func decreaseFontSize() {
+        if fontSize > 12 { // Min font size
+            fontSize -= 1
+            updateFontSize()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.debugFontSizes()
+            }
+        }
+    }
+
+    private func updateFontSize() {
+        guard let webView = webView else { return }
+        
+        let script = """
+        updateFontSize(\(fontSize));
+        enforceRubyTextSize(\(fontSize));
+        """
+        
+        webView.evaluateJavaScript(script) { result, error in
+            if let error = error {
+                print("DEBUG: Error updating font size: \(error)")
+            } else {
+                print("DEBUG: Font size updated successfully to \(self.fontSize)px")
+                // Save to global preference instead of book-specific
+                UserDefaults.standard.set(self.fontSize, forKey: "global_font_size_preference")
+            }
+        }
+    }
+    
+    @MainActor
+    func loadFontPreferences() {
+        // Load saved font size
+        let savedFontSize = UserDefaults.standard.integer(forKey: "global_font_size_preference")
+        if savedFontSize >= 12 && savedFontSize <= 36 {
+            fontSize = savedFontSize
+            print("DEBUG: Loaded global font size preference: \(savedFontSize)px")
+        } else {
+            fontSize = defaultFontSize
+            print("DEBUG: Using default font size: \(defaultFontSize)px")
+        }
+    }
+    
+    func debugFontSizes() {
+        guard let webView = webView else { return }
+        
+        let script = """
+        (function() {
+            const elements = ['body', '.chapter-content', 'p', 'div', 'span', 'h1', 'h2', 'ruby', 'rt'];
+            const results = {};
+            
+            for (const selector of elements) {
+                const els = document.querySelectorAll(selector);
+                if (els.length > 0) {
+                    const sizes = Array.from(els).slice(0, 3).map(el => {
+                        return window.getComputedStyle(el).fontSize;
+                    });
+                    results[selector] = sizes;
+                }
+            }
+            
+            return results;
+        })();
+        """
+        
+        webView.evaluateJavaScript(script) { result, error in
+            if let error = error {
+                print("DEBUG: Error getting font sizes: \(error)")
+            } else if let fontSizes = result as? [String: [String]] {
+                print("DEBUG: Current font sizes:")
+                for (selector, sizes) in fontSizes {
+                    print("  \(selector): \(sizes.joined(separator: ", "))")
+                }
+            }
         }
     }
 
