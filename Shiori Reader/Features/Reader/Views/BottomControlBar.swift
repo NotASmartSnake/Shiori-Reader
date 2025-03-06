@@ -16,11 +16,25 @@ struct BottomControlBar: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // Progress text
+            Text("\(Int(progress * 100))%")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 4)
             
             // Progress slider
-            Slider(value: $progress, in: 0...1)
-                .padding(.horizontal)
-                .padding(.top, 8)
+            Slider(value: $progress, in: 0...1, onEditingChanged: { editing in
+                if !editing {
+                    // User finished dragging slider, navigate to position
+                    navigateToPosition(progress)
+                    
+                    // Reset and restart auto-save timer
+                    viewModel.resetAutoSave()
+                    viewModel.autoSaveProgress()
+                }
+            })
+            .padding(.horizontal)
+            .padding(.top, 4)
             
             // Control buttons
             HStack {
@@ -72,7 +86,21 @@ struct BottomControlBar: View {
         .background(.ultraThinMaterial)
         .padding(.bottom, 30)
     }
+    
+    private func navigateToPosition(_ position: Double) {
+        if let webView = viewModel.getWebView() {
+            let script = """
+            window.scrollTo({
+                top: (document.getElementById('content').scrollHeight - window.innerHeight) * \(position),
+                behavior: 'auto'
+            });
+            """
+            webView.evaluateJavaScript(script)
+        }
+    }
 }
+
+
 
 #Preview {
     BookReaderView(book: Book(title: "ようこそ実力至上主義の教室へ (Additional Title Text)", coverImage: "COTECover", readingProgress: 0.1, filePath: "konosuba.epub"))

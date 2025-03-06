@@ -10,7 +10,7 @@ import SwiftUI
 struct TopControlBar: View {
     let title: String
     let onBack: () -> Void
-    @State private var isBookmarked = false
+    @ObservedObject var viewModel: BookViewModel
     
     var body: some View {
         ZStack {
@@ -30,8 +30,12 @@ struct TopControlBar: View {
                     
                     Spacer()
                     
-                    Button(action: { isBookmarked.toggle() }) {
-                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                    Button(action: {
+                        Task {
+                            await viewModel.toggleBookmark()
+                        }
+                    }) {
+                        Image(systemName: viewModel.state.isBookmarked ? "bookmark.fill" : "bookmark")
                             .imageScale(.large)
                     }
                     .padding(.trailing)
@@ -50,7 +54,7 @@ struct TopControlBar: View {
             }
             
         }
-        .frame(height: 30) // Adjust total height to accommodate status bar + content
+        .frame(height: 30)
     }
 }
 

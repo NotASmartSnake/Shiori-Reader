@@ -9,8 +9,9 @@ import SwiftUI
 
 struct LibraryView: View {
     @EnvironmentObject var isReadingBook: IsReadingBook
+    @State private var books: [Book] = []
     
-    let booksArray: [Book] = [
+    let initialBooks: [Book] = [
         Book(title: "COTE", coverImage: "COTECover", readingProgress: 0.4, filePath: "cote.epub"),
         Book(title: "3 Days", coverImage: "3DaysCover", readingProgress: 0.56, filePath: "3Days.epub"),
         Book(title: "Honzuki", coverImage: "AOABCover", readingProgress: 0.3, filePath: "honzuki.epub"),
@@ -41,7 +42,7 @@ struct LibraryView: View {
                 ScrollView {
                     VStack {
                         // Extract grid to separate view
-                        BookGrid(books: booksArray, isReadingBook: isReadingBook)
+                        BookGrid(books: initialBooks, isReadingBook: isReadingBook)
                         
                         Rectangle()
                             .frame(width: 0, height: 85)
@@ -62,6 +63,36 @@ struct LibraryView: View {
             .toolbarBackground(.visible, for: .tabBar)
             .navigationTitle("Library")
         }
+        .onAppear {
+            // Load saved reading progress whenever the library appears
+            loadSavedReadingProgress()
+        }
+    }
+    
+    // Load saved reading progress for all books
+    private func loadSavedReadingProgress() {
+        print("DEBUG: Loading saved reading progress for all books")
+        
+        // Start with the initial books data
+        var updatedBooks = initialBooks
+        
+        // Load saved progress for each book
+        for index in 0..<updatedBooks.count {
+            if !updatedBooks[index].filePath.isEmpty {
+                let key = "book_progress_\(updatedBooks[index].filePath)"
+                let savedProgress = UserDefaults.standard.double(forKey: key)
+                print("DEBUG: Book \(updatedBooks[index].title) - key: \(key), progress: \(savedProgress)")
+                
+                if savedProgress > 0 {
+                    // Update with the saved progress if it exists
+                    updatedBooks[index].readingProgress = savedProgress
+                    print("DEBUG: Loaded saved progress for \(updatedBooks[index].title): \(savedProgress)")
+                }
+            }
+        }
+        
+        // Update the books array with the loaded progress
+        books = updatedBooks
     }
 }
 

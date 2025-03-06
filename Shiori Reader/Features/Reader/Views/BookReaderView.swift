@@ -50,8 +50,25 @@ struct BookReaderView: View {
                                         showControls = false
                                     }
                                 }
+                                // Reset auto-save timer when user interacts
+                                viewModel.resetAutoSave()
+                            }
+                            .onEnded { _ in
+                                // Start auto-save timer when user finishes interaction
+                                viewModel.autoSaveProgress()
                             }
                     )
+                    // Add a tap gesture to detect user interactions
+                    .onTapGesture {
+                        // This tap will toggle controls but also serves to detect user interaction
+                        withAnimation {
+                            showControls.toggle()
+                        }
+                        // Reset auto-save timer when user interacts
+                        viewModel.resetAutoSave()
+                        // Start auto-save timer when user finishes interaction
+                        viewModel.autoSaveProgress()
+                    }
             }
             
             ZStack(alignment: .bottom) {
@@ -66,6 +83,8 @@ struct BookReaderView: View {
                             withAnimation {
                                 showControls.toggle()
                             }
+                            viewModel.resetAutoSave()
+                            viewModel.autoSaveProgress()
                         }
                     
                     Spacer()
@@ -78,20 +97,35 @@ struct BookReaderView: View {
                             withAnimation {
                                 showControls.toggle()
                             }
+                            viewModel.resetAutoSave()
+                            viewModel.autoSaveProgress()
                         }
                 }
                 
                 if showControls {
                     VStack {
                         // Top control bar
-                        TopControlBar(title: viewModel.book.title) {
-                            dismiss()
-                        }
+                        TopControlBar(
+                            title: viewModel.book.title,
+                            onBack: {
+                                // Save progress before dismissing
+                                Task {
+                                    await viewModel.saveCurrentProgress()
+                                    dismiss()
+                                }
+                            },
+                            viewModel: viewModel
+                        )
                         
                         Spacer()
                         
                         // Bottom control bar
-                        BottomControlBar(viewModel: viewModel, progress: $readingProgress, showThemes: $showThemes, showSearch: $showSearch, showTableOfContents: $showTableofContents)
+                        BottomControlBar(
+                            viewModel: viewModel,
+                            progress: $readingProgress,
+                            showThemes: $showThemes,
+                            showSearch: $showSearch,
+                            showTableOfContents: $showTableofContents)
                     }
                     .transition(.opacity)
                 }
@@ -106,6 +140,8 @@ struct BookReaderView: View {
                                 withAnimation {
                                     showThemes.toggle()
                                 }
+                                viewModel.resetAutoSave()
+                                viewModel.autoSaveProgress()
                             }
                             .zIndex(1)
                         
@@ -124,9 +160,45 @@ struct BookReaderView: View {
         }
         .task {
             await viewModel.loadEPUB()
+            await viewModel.loadProgress()
+            viewModel.restoreScrollPosition()
+            if !viewModel.isCurrentPositionSaved {
+                viewModel.autoSaveProgress()
+            }
         }
         .toolbar(.hidden)
         .ignoresSafeArea(edges: .bottom)
+        .onChange(of: readingProgress) { oldValue, newValue in
+            if abs(oldValue - newValue) > 0.01 {
+                Task {
+                    await viewModel.updateProgressAndAutoSave(newValue)
+                }
+            }
+        }
+        // Save progress when view disappears
+        .onAppear {
+            print("DEBUG: BookReaderView appeared")
+            Task {
+                print("DEBUG: Loading book and progress")
+                await viewModel.loadEPUB()
+                await viewModel.loadProgress()
+                print("DEBUG: Starting auto-save timer")
+                viewModel.autoSaveProgress()
+            }
+        }
+        .onDisappear {
+            Task {
+                // If user is closing the book, we want to ensure we're returning to the
+                // last explicitly saved position, not the current scroll position
+                if viewModel.isCurrentPositionSaved {
+                    print("DEBUG: Book closed with saved position - no need for final save")
+                } else {
+                    print("DEBUG: Book closed with unsaved changes - saving last auto-saved position only")
+                    // Don't save current position, but ensure auto-save work is cancelled
+                    viewModel.resetAutoSave()
+                }
+            }
+        }
         
     }
 }

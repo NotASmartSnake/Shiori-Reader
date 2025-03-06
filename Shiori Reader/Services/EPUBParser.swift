@@ -13,7 +13,6 @@ class EPUBParser {
     private var imageDirs: [String] = []
     
     func parseEPUB(at filePath: String) throws -> (content: EPUBContent, baseURL: URL) {
-        print("DEBUG: Starting to parse EPUB at \(filePath)")
         
         // Create a persistent directory
         let documentsURL = try fileManager.url(
@@ -25,28 +24,21 @@ class EPUBParser {
         
         let bookHash = abs((filePath as NSString).lastPathComponent.hash)
         let extractionDir = documentsURL.appendingPathComponent("books/\(bookHash)", isDirectory: true)
-        
-        print("DEBUG: Extraction directory: \(extractionDir.path)")
-        
+                
         // Clean existing directory
         try? fileManager.removeItem(at: extractionDir)
         try fileManager.createDirectory(at: extractionDir, withIntermediateDirectories: true)
-        
-        print("DEBUG: Created extraction directory")
-        
+                
         // Extract EPUB contents
         do {
-            print("DEBUG: Attempting to open archive at \(filePath)")
             let archive = try Archive(url: URL(fileURLWithPath: filePath), accessMode: .read)
             
             var entryCount = 0
             for _ in archive {
                 entryCount += 1
             }
-            print("DEBUG: Successfully opened archive with \(entryCount) entries")
             
             // First pass: identify image directories
-            print("DEBUG: Starting first pass to identify image directories")
             for entry in archive {
                 let components = entry.path.components(separatedBy: "/")
                 let fileExtension = (entry.path as NSString).pathExtension.lowercased()
@@ -62,10 +54,8 @@ class EPUBParser {
                 }
             }
             
-            print("DEBUG: Found \(imageDirs.count) image directories")
             
             // Second pass: extract files
-            print("DEBUG: Starting second pass to extract files")
             var images: [String: Data] = [:]
             var filesExtracted = 0
             
@@ -97,21 +87,13 @@ class EPUBParser {
                 }
             }
             
-            print("DEBUG: Extracted \(filesExtracted) files from archive")
-            
             // Find and parse chapters with spine order
-            print("DEBUG: Finding OPF file and parsing chapters")
             let (chapters, spineOrder) = try findAndParseChapters(in: extractionDir, images: images)
-            print("DEBUG: Successfully parsed \(chapters.count) chapters with \(spineOrder.count) in spine order")
             
-            print("DEBUG: Extracting metadata")
             let metadata = try extractMetadata(from: extractionDir)
             
-            print("DEBUG: Parsing table of contents")
             let tableOfContents = try parseTOC(in: extractionDir)
-            
-            print("DEBUG: EPUB parsing completed successfully")
-            
+                        
             return (EPUBContent(
                 chapters: chapters,
                 metadata: metadata,
@@ -120,7 +102,6 @@ class EPUBParser {
                 tableOfContents: tableOfContents
             ), extractionDir)
         } catch {
-            print("DEBUG: Error during EPUB parsing: \(error)")
             throw error
         }
     }
@@ -212,19 +193,16 @@ class EPUBParser {
         }
         
         private func findOPFFile(in directory: URL) throws -> URL {
-            print("DEBUG: Looking for container.xml in \(directory.path)")
             // First look for container.xml in META-INF
             let containerURL = directory.appendingPathComponent("META-INF/container.xml")
             
             guard fileManager.fileExists(atPath: containerURL.path) else {
-                print("DEBUG: container.xml not found at \(containerURL.path)")
                 
                 // List contents of the META-INF directory if it exists
                 let metaInfDir = directory.appendingPathComponent("META-INF")
                 if fileManager.fileExists(atPath: metaInfDir.path, isDirectory: nil) {
                     do {
                         let contents = try fileManager.contentsOfDirectory(at: metaInfDir, includingPropertiesForKeys: nil)
-                        print("DEBUG: META-INF contents: \(contents.map { $0.lastPathComponent })")
                     } catch {
                         print("DEBUG: Error listing META-INF: \(error)")
                     }
@@ -237,29 +215,24 @@ class EPUBParser {
             
             do {
                 let containerContent = try String(contentsOf: containerURL, encoding: .utf8)
-                print("DEBUG: Successfully read container.xml")
                 
                 // Extract root file path from container.xml
                 let rootFilePattern = "rootfile[^>]+full-path=\"([^\"]+)\""
                 guard let regex = try? NSRegularExpression(pattern: rootFilePattern),
                       let match = regex.firstMatch(in: containerContent, range: NSRange(containerContent.startIndex..., in: containerContent)),
                       let range = Range(match.range(at: 1), in: containerContent) else {
-                    print("DEBUG: Failed to extract OPF path from container.xml")
                     throw EPUBError.invalidArchive
                 }
                 
                 let opfPath = String(containerContent[range])
-                print("DEBUG: Found OPF file path: \(opfPath)")
                 
                 let opfURL = directory.appendingPathComponent(opfPath)
                 if fileManager.fileExists(atPath: opfURL.path) {
                     return opfURL
                 } else {
-                    print("DEBUG: OPF file does not exist at path: \(opfURL.path)")
                     throw EPUBError.fileNotFound
                 }
             } catch {
-                print("DEBUG: Error processing container.xml: \(error)")
                 throw error
             }
         }
@@ -471,9 +444,7 @@ class EPUBParser {
             // First try to find the TOC file (either NCX or EPUB3 nav)
             let tocURL = try findTOCFile(in: directory)
             let tocContent = try String(contentsOf: tocURL, encoding: .utf8)
-            
-            print("DEBUG: Found TOC file: \(tocURL.lastPathComponent)")
-            
+                        
             // Check if this is an NCX file or an EPUB3 nav document
             let isNavDocument = tocContent.contains("epub:type=\"toc\"") ||
                                 tocContent.contains("epub:type='toc'") ||
@@ -481,10 +452,8 @@ class EPUBParser {
                                 tocURL.lastPathComponent.contains("nav")
             
             if isNavDocument {
-                print("DEBUG: Treating as EPUB3 navigation document")
                 return try parseNavContent(tocContent)
             } else {
-                print("DEBUG: Treating as NCX document")
                 return try parseNCXContent(tocContent)
             }
         } catch {
@@ -496,7 +465,6 @@ class EPUBParser {
 
     
     private func findTOCFile(in directory: URL) throws -> URL {
-        print("DEBUG: Looking for TOC file in \(directory.path)")
         
         let commonPaths = [
             "toc.ncx",
@@ -514,7 +482,6 @@ class EPUBParser {
         for path in commonPaths {
             let ncxURL = directory.appendingPathComponent(path)
             if FileManager.default.fileExists(atPath: ncxURL.path) {
-                print("DEBUG: Found TOC file at common path: \(path)")
                 return ncxURL
             }
         }
@@ -536,24 +503,14 @@ class EPUBParser {
                let range = Range(match.range(at: 1), in: opfContent) {
                 
                 let ncxPath = String(opfContent[range])
-                print("DEBUG: Found TOC reference in OPF: \(ncxPath)")
                 
                 let ncxURL = opfURL.deletingLastPathComponent().appendingPathComponent(ncxPath)
                 if FileManager.default.fileExists(atPath: ncxURL.path) {
                     return ncxURL
-                } else {
-                    print("DEBUG: Referenced TOC file does not exist at: \(ncxURL.path)")
                 }
             }
         }
-        
-        // If we can't find any TOC file, list all files to help diagnose the issue
-        print("DEBUG: Listing all files in the extraction directory:")
-        let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: nil)
-        while let url = enumerator?.nextObject() as? URL {
-            print("DEBUG: Found file: \(url.path)")
-        }
-        
+                
         throw EPUBError.fileNotFound
     }
     
@@ -611,7 +568,6 @@ class EPUBParser {
     }
     
     private func parseNavContent(_ content: String) throws -> [TOCEntry] {
-        print("DEBUG: Parsing EPUB3 navigation document")
         var entries: [TOCEntry] = []
         
         // EPUB3 nav documents use <li> elements inside a <nav> element with epub:type="toc"
@@ -621,21 +577,16 @@ class EPUBParser {
         guard let navRegex = try? NSRegularExpression(pattern: navPattern, options: [.dotMatchesLineSeparators]),
               let navMatch = navRegex.firstMatch(in: content, range: NSRange(content.startIndex..., in: content)),
               let navRange = Range(navMatch.range(at: 1), in: content) else {
-            print("DEBUG: Could not find nav element with epub:type='toc'")
-            print("DEBUG: Content snippet: \(content.prefix(500))")
             return []
         }
         
         let navContent = String(content[navRange])
-        print("DEBUG: Found navigation content section")
         
         // Extract all li elements with their a child elements directly
         let liAPattern = "<li[^>]*>\\s*<a[^>]*href=[\"']([^\"']+)[\"'][^>]*>([^<]+)</a>\\s*</li>"
         let liARegex = try NSRegularExpression(pattern: liAPattern, options: [.dotMatchesLineSeparators])
         let liAMatches = liARegex.matches(in: navContent, range: NSRange(navContent.startIndex..., in: navContent))
-        
-        print("DEBUG: Found \(liAMatches.count) navigation entries")
-        
+                
         for match in liAMatches {
             if let hrefRange = Range(match.range(at: 1), in: navContent),
                let labelRange = Range(match.range(at: 2), in: navContent) {
@@ -644,7 +595,6 @@ class EPUBParser {
                 let label = String(navContent[labelRange])
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 
-                print("DEBUG: Navigation entry - \(label): \(href)")
                 entries.append(TOCEntry(label: label, href: href, level: 1, children: []))
             }
         }

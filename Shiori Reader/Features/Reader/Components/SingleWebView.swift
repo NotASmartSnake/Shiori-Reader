@@ -11,13 +11,58 @@ struct SingleWebView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
         
+        config.userContentController.add(context.coordinator, name: "pageInfoHandler")
+        config.userContentController.add(context.coordinator, name: "scrollTrackingHandler")
+        
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.backgroundColor = .clear
         webView.isOpaque = false
         webView.scrollView.backgroundColor = .clear
         
+        // Ensure proper scrolling behavior
+        webView.scrollView.isScrollEnabled = true
+        webView.scrollView.bounces = true
+        webView.scrollView.alwaysBounceVertical = true
+        webView.scrollView.decelerationRate = .normal
+        
+        let trackingScript = WKUserScript(source: """
+            // Calculate total character count once when page loads
+            let totalChars = document.getElementById('content').textContent.length;
+            
+            // Use requestAnimationFrame for smooth performance
+            let ticking = false;
+            document.addEventListener('scroll', function() {
+                if (!ticking) {
+                    window.requestAnimationFrame(function() {
+                        // Calculate progress based on scroll position
+                        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+                        const progress = window.scrollY / scrollHeight;
+                        
+                        // Only send a message when actually scrolling (avoid excess calculations)
+                        window.webkit.messageHandlers.scrollTrackingHandler.postMessage({
+                            action: "userScrolled",
+                            progress: progress,
+                            exploredChars: Math.round(totalChars * progress),
+                            totalChars: totalChars,
+                            currentPage: Math.ceil(progress * 100),
+                            scrollY: window.scrollY
+                        });
+                        
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            }, { passive: true });
+        """, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        
+        webView.configuration.userContentController.addUserScript(trackingScript)
+        
         viewModel.setWebView(webView)
+        
+        // Load the content immediately
+        loadContent(webView: webView, coordinator: context.coordinator)
+        
         return webView
     }
     
@@ -25,8 +70,10 @@ struct SingleWebView: UIViewRepresentable {
         Coordinator(self)
     }
     
-    class Coordinator: NSObject, WKNavigationDelegate {
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var parent: SingleWebView
+        var contentLoaded: Bool = false
+        var lastScrollPosition: CGFloat = 0
         
         init(_ parent: SingleWebView) {
             self.parent = parent
@@ -44,9 +91,59 @@ struct SingleWebView: UIViewRepresentable {
             }
             decisionHandler(.allow)
         }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Calculate total character count when content loads
+            DispatchQueue.main.async {
+                self.parent.viewModel.updatePositionData()
+            }
+        }
+        
+        
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "scrollTrackingHandler",
+               let info = message.body as? [String: Any],
+               let action = info["action"] as? String,
+               action == "userScrolled" {
+                
+                // Get all data in one go
+                let progress = info["progress"] as? Double ?? 0
+                let exploredChars = info["exploredChars"] as? Int ?? 0
+                let totalChars = info["totalChars"] as? Int ?? 1
+                let currentPage = info["currentPage"] as? Int ?? 1
+                
+                DispatchQueue.main.async {
+                    // Only update UI if we have meaningful change
+                    let significantChange = abs(self.parent.viewModel.book.readingProgress - progress) > 0.01
+                    
+                    if significantChange {
+                        // Update state through the proper method
+                        self.parent.viewModel.updateReadingState(
+                            exploredChars: exploredChars,
+                            totalChars: totalChars,
+                            currentPage: currentPage
+                        )
+                        
+                        // Update progress
+                        Task {
+                            await self.parent.viewModel.updateProgressAndAutoSave(progress)
+                        }
+                    }
+                    
+                    // Manage auto-save
+                    self.parent.viewModel.resetAutoSave()
+                    self.parent.viewModel.autoSaveProgress()
+                }
+            }
+        }
     }
     
     func updateUIView(_ webView: WKWebView, context: Context) {
+
+    }
+    
+    // Separate method to load content once
+    private func loadContent(webView: WKWebView, coordinator: Coordinator) {
         guard let baseURL = baseURL else { return }
         
         let processedChapters = content.chapters.enumerated().map { index, chapter -> String in
@@ -186,6 +283,109 @@ struct SingleWebView: UIViewRepresentable {
                     }
                 }
             </style>
+            <script>
+                // Store more detailed position information
+                let lastKnownPosition = {
+                    percentage: 0,
+                    pixelOffset: 0,
+                    elementId: null,
+                    elementOffset: 0
+                };
+
+                // Enhance the tracking function to store more context
+                function trackPosition() {
+                    const content = document.getElementById('content');
+                    if (!content) return;
+                    
+                    const maxScroll = content.scrollHeight - window.innerHeight;
+                    const currentScroll = window.scrollY;
+                    
+                    // Save detailed position info
+                    lastKnownPosition.percentage = maxScroll > 0 ? currentScroll / maxScroll : 0;
+                    lastKnownPosition.pixelOffset = currentScroll;
+                    
+                    // Try to identify a nearby element as a landmark
+                    const elements = document.querySelectorAll('p, h1, h2, h3, h4, h5, div.chapter');
+                    let closestElement = null;
+                    let closestDistance = Number.MAX_VALUE;
+                    
+                    elements.forEach(el => {
+                        const distance = Math.abs(el.offsetTop - currentScroll);
+                        if (distance < closestDistance) {
+                            closestDistance = distance;
+                            closestElement = el;
+                        }
+                    });
+                    
+                    if (closestElement && closestElement.id) {
+                        lastKnownPosition.elementId = closestElement.id;
+                        lastKnownPosition.elementOffset = currentScroll - closestElement.offsetTop;
+                    }
+                    
+                    // Send position data to Swift
+                    window.webkit.messageHandlers.pageInfoHandler.postMessage({
+                        progress: lastKnownPosition.percentage,
+                        currentPage: Math.floor(lastKnownPosition.percentage * 100) + 1,
+                        totalPages: 100,
+                        pixelOffset: lastKnownPosition.pixelOffset,
+                        elementId: lastKnownPosition.elementId,
+                        elementOffset: lastKnownPosition.elementOffset
+                    });
+                }
+
+                // Enhanced restoration function
+                function restoreScrollPosition(data) {
+                    // First try exact pixel position
+                    if (data.pixelOffset && data.pixelOffset > 0) {
+                        window.scrollTo(0, data.pixelOffset);
+                        console.log('Restored to exact pixel offset: ' + data.pixelOffset);
+                        return;
+                    }
+                    
+                    // Next try element-based position if available
+                    if (data.elementId) {
+                        const element = document.getElementById(data.elementId);
+                        if (element) {
+                            const targetPosition = element.offsetTop + (data.elementOffset || 0);
+                            window.scrollTo(0, targetPosition);
+                            console.log('Restored using element position: ' + targetPosition);
+                            return;
+                        }
+                    }
+                    
+                    // Fall back to percentage-based as last resort
+                    const content = document.getElementById('content');
+                    if (content && data.percentage) {
+                        const maxScroll = content.scrollHeight - window.innerHeight;
+                        const targetPosition = maxScroll * data.percentage;
+                        window.scrollTo(0, targetPosition);
+                        console.log('Restored using percentage: ' + data.percentage);
+                    }
+                }
+
+                // Make the function globally available
+                window.restoreScrollPosition = restoreScrollPosition;
+
+                // Modified scrollToProgress
+                function scrollToProgress(progress, savedPixelOffset, elementId, elementOffset) {
+                    // Create a data object with all available positioning info
+                    const positionData = {
+                        percentage: progress,
+                        pixelOffset: savedPixelOffset || 0,
+                        elementId: elementId || null,
+                        elementOffset: elementOffset || 0
+                    };
+                    
+                    // Use the enhanced restoration function
+                    restoreScrollPosition(positionData);
+                    
+                    // After scrolling, update progress tracking
+                    setTimeout(function() {
+                        trackPosition();
+                        console.log('Progress restoration complete');
+                    }, 100);
+                }
+            </script>
         </head>
         <body>
             <div id="content">
@@ -195,7 +395,35 @@ struct SingleWebView: UIViewRepresentable {
         </html>
         """
         
+        // Load the HTML only once
         webView.loadHTMLString(combinedHTML, baseURL: baseURL)
+        
+        // Mark that content is loaded
+        coordinator.contentLoaded = true
+    }
+    
+    
+    func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        // Save the final position before dismantling
+        webView.evaluateJavaScript("window.scrollY") { (result, error) in
+            if let scrollY = result as? CGFloat {
+                coordinator.lastScrollPosition = scrollY
+                
+                // Calculate and save progress
+                webView.evaluateJavaScript("document.getElementById('content').scrollHeight - window.innerHeight") { (maxScrollResult, maxScrollError) in
+                    if let maxScroll = maxScrollResult as? CGFloat, maxScroll > 0 {
+                        let progress = scrollY / maxScroll
+                        Task {
+                            await self.viewModel.saveCurrentProgress()
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Clean up message handlers
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "pageInfoHandler")
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "scrollTrackingHandler")
     }
     
     // MARK: - Helper Functions
@@ -349,4 +577,5 @@ struct SingleWebView: UIViewRepresentable {
         
         return originalPath
     }
+    
 }

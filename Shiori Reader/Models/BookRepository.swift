@@ -53,9 +53,47 @@ class BookRepository {
     }
     
     @MainActor
-    func saveProgress(for book: Book) async throws {
-        // Implement persistence logic
-        // For now, could just use UserDefaults
-        UserDefaults.standard.set(book.readingProgress, forKey: "book_progress_\(book.id)")
+    func saveProgress(for book: Book, exploredCharCount: Int, totalCharCount: Int) async throws {
+        let key = "book_progress_\(book.filePath)"
+        
+        // Save progress percentage
+        UserDefaults.standard.set(book.readingProgress, forKey: key)
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "book_progress_timestamp_\(book.filePath)")
+        
+        // Save character count data
+        UserDefaults.standard.set(exploredCharCount, forKey: "book_char_count_\(book.filePath)")
+        UserDefaults.standard.set(totalCharCount, forKey: "book_total_char_count_\(book.filePath)")
+        
+        // Force UserDefaults to save immediately
+        UserDefaults.standard.synchronize()
+        
+        print("DEBUG: Saved position for \(book.title): \(exploredCharCount)/\(totalCharCount) chars")
+    }
+    
+    @MainActor
+    func getExploredCharCount(for filePath: String) -> Int {
+        return UserDefaults.standard.integer(forKey: "book_char_count_\(filePath)")
+    }
+    
+    @MainActor
+    func getTotalCharCount(for filePath: String) -> Int {
+        return UserDefaults.standard.integer(forKey: "book_total_char_count_\(filePath)")
+    }
+    
+    @MainActor
+    func getProgress(for filePath: String) -> Double {
+        let key = "book_progress_\(filePath)"
+        let progress = UserDefaults.standard.double(forKey: key)
+        print("DEBUG: Getting progress with key: \(key), value: \(progress)")
+        return progress
+    }
+    
+    @MainActor
+    func getLastReadDate(for bookId: UUID) -> Date? {
+        let timestamp = UserDefaults.standard.double(forKey: "book_progress_timestamp_\(bookId)")
+        if timestamp > 0 {
+            return Date(timeIntervalSince1970: timestamp)
+        }
+        return nil
     }
 }
