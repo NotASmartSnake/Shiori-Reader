@@ -115,24 +115,15 @@ struct SingleWebView: UIViewRepresentable {
                 let currentPage = info["currentPage"] as? Int ?? 1
                 
                 DispatchQueue.main.async {
-                    // Only update UI if we have meaningful change
-                    let significantChange = abs(self.parent.viewModel.book.readingProgress - progress) > 0.01
+                    // Use the new handler that checks preventPositionUpdates
+                    self.parent.viewModel.userScrolledHandler(
+                        progress: progress,
+                        exploredChars: exploredChars,
+                        totalChars: totalChars,
+                        currentPage: currentPage
+                    )
                     
-                    if significantChange {
-                        // Update state through the proper method
-                        self.parent.viewModel.updateReadingState(
-                            exploredChars: exploredChars,
-                            totalChars: totalChars,
-                            currentPage: currentPage
-                        )
-                        
-                        // Update progress
-                        Task {
-                            await self.parent.viewModel.updateProgressAndAutoSave(progress)
-                        }
-                    }
-                    
-                    // Manage auto-save
+                    // Always reset auto-save timer on user interaction
                     self.parent.viewModel.resetAutoSave()
                     self.parent.viewModel.autoSaveProgress()
                 }
@@ -400,6 +391,120 @@ struct SingleWebView: UIViewRepresentable {
                         trackPosition();
                         console.log('Progress restoration complete');
                     }, 100);
+                }
+        
+                // Function to find the element at a specific character position
+                function findElementAtCharPosition(targetPosition) {
+                    const content = document.getElementById('content');
+                    if (!content) return null;
+                    
+                    const textContent = content.textContent;
+                    if (targetPosition <= 0 || targetPosition >= textContent.length) {
+                        return null;
+                    }
+                    
+                    // Get all text nodes in order
+                    let textNodes = [];
+                    
+                    function collectTextNodes(node) {
+                        if (node.nodeType === Node.TEXT_NODE) {
+                            if (node.textContent.trim().length > 0) {
+                                textNodes.push(node);
+                            }
+                        } else {
+                            for (let i = 0; i < node.childNodes.length; i++) {
+                                collectTextNodes(node.childNodes[i]);
+                            }
+                        }
+                    }
+                    
+                    collectTextNodes(content);
+                    
+                    // Find the text node that contains our target position
+                    let currentPosition = 0;
+                    let targetNode = null;
+                    let positionWithinNode = 0;
+                    
+                    for (let i = 0; i < textNodes.length; i++) {
+                        const nodeLength = textNodes[i].textContent.length;
+                        
+                        if (currentPosition + nodeLength >= targetPosition) {
+                            targetNode = textNodes[i];
+                            positionWithinNode = targetPosition - currentPosition;
+                            break;
+                        }
+                        
+                        currentPosition += nodeLength;
+                    }
+                    
+                    if (!targetNode) return null;
+                    
+                    // Return the parent element of the text node
+                    return {
+                        element: targetNode.parentElement,
+                        characterOffset: positionWithinNode,
+                        totalNodeChars: targetNode.textContent.length
+                    };
+                }
+
+                // Function to scroll to a specific character position
+                function scrollToCharacterPosition(charPosition) {
+                    const result = findElementAtCharPosition(charPosition);
+                    if (!result) {
+                        console.error('Could not find element at character position: ' + charPosition);
+                        return false;
+                    }
+                    
+                    console.log('Found element at char position ' + charPosition + ':', 
+                               result.element.tagName, 
+                               'with text starting with "' + result.element.textContent.substring(0, 20) + '..."');
+                    
+                    // Scroll the element into view with center alignment
+                    result.element.scrollIntoView({
+                        behavior: 'auto',
+                        block: 'center'
+                    });
+                    
+                    return true;
+                }
+
+                // Improved function to get character position at current scroll position
+                function getCurrentCharacterPosition() {
+                    const content = document.getElementById('content');
+                    if (!content) return { explored: 0, total: 0 };
+                    
+                    const totalChars = content.textContent.length;
+                    const scrollY = window.scrollY;
+                    const viewportHeight = window.innerHeight;
+                    const scrollHeight = document.documentElement.scrollHeight;
+                    const maxScroll = scrollHeight - viewportHeight;
+                    const ratio = maxScroll > 0 ? scrollY / maxScroll : 0;
+                    
+                    // Calculate character count
+                    const exploredChars = Math.round(totalChars * ratio);
+                    
+                    return {
+                        explored: exploredChars,
+                        total: totalChars,
+                        ratio: ratio,
+                        scrollY: scrollY
+                    };
+                }
+
+                // Utility to handle font size changes with exact character position preservation
+                function changeFontSizePreservingCharPosition(fontSize, charPosition) {
+                    // Save exact character position
+                    const position = charPosition || getCurrentCharacterPosition().explored;
+                    
+                    // Update font size
+                    document.documentElement.style.setProperty('--shiori-font-size', fontSize + 'px');
+                    
+                    // Give browser time to update layout
+                    setTimeout(() => {
+                        // Scroll to the saved character position
+                        scrollToCharacterPosition(position);
+                        console.log('Restored to exact character position:', position);
+                    }, 50);
                 }
             </script>
         </head>

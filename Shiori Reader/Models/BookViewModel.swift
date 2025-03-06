@@ -102,7 +102,6 @@ class BookViewModel: ObservableObject {
     }
     
     func resetAutoSave() {
-        print("DEBUG: Auto-save timer reset (user interaction)")
         autoSaveWorkItem?.cancel()
         autoSaveWorkItem = nil
         
@@ -137,87 +136,64 @@ class BookViewModel: ObservableObject {
         guard let webView = webView else { return }
         
         let script = """
-        function getPositionData() {
+        (function() {
             const content = document.getElementById('content');
-            const totalCharCount = content.textContent.length;
+            if (!content) return null;
             
-            // Calculate character count up to current viewport position
-            const visibleTop = window.scrollY;
-            const visibleBottom = visibleTop + window.innerHeight;
+            const textContent = content.textContent;
+            const totalCharCount = textContent.length;
+            
+            // Get current scroll position
+            const scrollY = window.scrollY;
+            const viewportHeight = window.innerHeight;
             const scrollHeight = document.documentElement.scrollHeight;
+            const maxScroll = scrollHeight - viewportHeight;
+            const scrollRatio = maxScroll > 0 ? scrollY / maxScroll : 0;
             
-            // Create a range from the beginning to the middle of the viewport
-            const viewportMiddle = visibleTop + (window.innerHeight / 2);
-            const progress = viewportMiddle / scrollHeight;
+            // Calculate character position
+            const exploredCharCount = Math.round(totalCharCount * scrollRatio);
             
-            // Estimate character count based on scroll position
-            const exploredCharCount = Math.round(totalCharCount * progress);
-            
-            // Calculate page numbers for display
-            const totalPages = Math.ceil(scrollHeight / window.innerHeight);
-            const currentPage = Math.ceil(visibleTop / (scrollHeight / totalPages)) + 1;
-            
+            // Return all data
             return {
-                exploredCharCount: exploredCharCount,
-                totalCharCount: totalCharCount,
-                progress: progress,
-                currentPage: currentPage,
-                totalPages: totalPages
+                exploredChars: exploredCharCount,
+                totalChars: totalCharCount,
+                scrollRatio: scrollRatio,
+                scrollY: scrollY,
+                scrollHeight: scrollHeight
             };
-        }
-        getPositionData();
+        })();
         """
         
         webView.evaluateJavaScript(script) { [weak self] result, error in
-            guard let self = self, let data = result as? [String: Any] else {
-                if let error = error {
-                    print("DEBUG: Error getting position data: \(error)")
-                }
+            guard let self = self,
+                  let data = result as? [String: Any],
+                  let exploredChars = data["exploredChars"] as? Int,
+                  let totalChars = data["totalChars"] as? Int,
+                  !self.preventPositionUpdates else {
                 return
             }
             
-            if let exploredCharCount = data["exploredCharCount"] as? Int {
-                self.state.exploredCharCount = exploredCharCount
-            }
-            
-            if let totalCharCount = data["totalCharCount"] as? Int {
-                self.state.totalCharCount = totalCharCount
-            }
-            
-            if let progress = data["progress"] as? Double {
-                // Only update if the change is significant enough
+            // Only update if we're not in the middle of a font change operation
+            if !self.preventPositionUpdates {
+                // Update state with accurate character counts
+                self.state.exploredCharCount = exploredChars
+                self.state.totalCharCount = totalChars
+                
+                // Calculate progress based on character position
+                let progress = Double(exploredChars) / Double(totalChars)
                 if abs(self.book.readingProgress - progress) > 0.01 {
-                    Task {
-                        await self.updateProgressAndAutoSave(progress)
-                    }
+                    self.book.readingProgress = progress
                 }
-            }
-            
-            if let currentPage = data["currentPage"] as? Int,
-               let totalPages = data["totalPages"] as? Int {
-                self.updatePositionData()
+                
+                print("DEBUG: Position updated - chars: \(exploredChars)/\(totalChars)")
             }
         }
-    }
-    
-    func updateReadingState(exploredChars: Int, totalChars: Int, currentPage: Int) {
-        // Don't update state if we're in the middle of restoring position
-        guard !preventPositionUpdates else {
-            print("DEBUG: Ignoring position update during restoration")
-            return
-        }
-        
-        state.exploredCharCount = exploredChars
-        state.totalCharCount = totalChars
-        state.currentPage = currentPage
-        state.totalPages = 100
     }
 
     // Call this when progress changes significantly
     func updateProgressAndAutoSave(_ progress: Double) async {
         // Don't update progress if we're in the middle of restoring position
         guard !preventPositionUpdates else {
-            print("DEBUG: Ignoring progress update during restoration")
             return
         }
         
@@ -505,11 +481,17 @@ class BookViewModel: ObservableObject {
             print("DEBUG: Cannot restore position - invalid character counts: \(savedExploredCount)/\(savedTotalCount)")
         }
     }
-    
+
+    private var lastFontSizeCharPosition: Int = 0
+
     func increaseFontSize() {
         if fontSize < 36 { // Max font size
+            // Store exact character position before font size change
+            lastFontSizeCharPosition = state.exploredCharCount
+            
             fontSize += 1
-            updateFontSize()
+            updateFontSizeExact(preservingExactPosition: true)
+            
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.debugFontSizes()
             }
@@ -518,30 +500,279 @@ class BookViewModel: ObservableObject {
 
     func decreaseFontSize() {
         if fontSize > 12 { // Min font size
+            // Store exact character position before font size change
+            lastFontSizeCharPosition = state.exploredCharCount
+            
             fontSize -= 1
-            updateFontSize()
+            updateFontSizeExact(preservingExactPosition: true)
+            
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.debugFontSizes()
             }
         }
     }
 
-    private func updateFontSize() {
+    private func updateFontSizeExact(preservingExactPosition: Bool = false) {
         guard let webView = webView else { return }
         
-        let script = """
-        updateFontSize(\(fontSize));
-        enforceRubyTextSize(\(fontSize));
+        // Disable position updates
+        preventPositionUpdates = true
+        
+        // First, find and mark the current visible element before changing font size
+        let markPositionScript = """
+        (function() {
+            // Find the element currently at the center of the viewport
+            function findVisibleElement() {
+                const viewportTop = window.scrollY;
+                const viewportMiddle = viewportTop + (window.innerHeight / 2);
+                
+                // Query all potential elements that might be visible
+                const elements = document.querySelectorAll('p, div.chapter-content > *, h1, h2, h3, h4, h5, h6');
+                
+                let bestElement = null;
+                let bestDistance = Infinity;
+                
+                for (const el of elements) {
+                    // Skip elements with no content
+                    if (el.textContent.trim().length === 0) continue;
+                    
+                    const rect = el.getBoundingClientRect();
+                    const topRelativeToDocument = rect.top + window.scrollY;
+                    const distance = Math.abs(topRelativeToDocument - viewportMiddle);
+                    
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        bestElement = el;
+                    }
+                }
+                
+                return bestElement;
+            }
+            
+            // Find and mark the current visible element
+            const visibleElement = findVisibleElement();
+            
+            if (!visibleElement) {
+                return {
+                    found: false,
+                    charPosition: \(lastFontSizeCharPosition),
+                    message: "No visible element found"
+                };
+            }
+            
+            // Calculate character position up to this element
+            let charCount = 0;
+            function countCharsUpTo(node, target) {
+                if (node === target) return true;
+                
+                if (node.nodeType === 3) { // Text node
+                    charCount += node.textContent.length;
+                }
+                
+                // Process child nodes
+                if (node.childNodes) {
+                    for (let i = 0; i < node.childNodes.length; i++) {
+                        if (countCharsUpTo(node.childNodes[i], target)) {
+                            return true;
+                        }
+                    }
+                }
+                
+                return false;
+            }
+            
+            // Add a marker to identify this element after font change
+            const markerId = "__position_marker_" + Date.now();
+            visibleElement.id = markerId;
+            
+            // Record where we are in the content
+            const contentElement = document.getElementById('content');
+            countCharsUpTo(contentElement, visibleElement);
+            
+            // Get some context about the element
+            const elementText = visibleElement.textContent.substring(0, 30) + "...";
+            
+            return {
+                found: true,
+                markerId: markerId,
+                elementText: elementText,
+                charPosition: charCount,
+                tagName: visibleElement.tagName,
+                originalPosition: \(lastFontSizeCharPosition)
+            };
+        })();
         """
         
-        webView.evaluateJavaScript(script) { result, error in
-            if let error = error {
-                print("DEBUG: Error updating font size: \(error)")
+        // Step 1: Mark the current position
+        webView.evaluateJavaScript(markPositionScript) { [weak self] markResult, markError in
+            guard let self = self else { return }
+            
+            var markerId = ""
+            var charPosition = self.lastFontSizeCharPosition
+            
+            if let markData = markResult as? [String: Any],
+               let found = markData["found"] as? Bool, found,
+               let id = markData["markerId"] as? String {
+                
+                markerId = id
+                
+                if let elementText = markData["elementText"] as? String,
+                   let tagName = markData["tagName"] as? String {
+                    print("DEBUG: Marked position at \(tagName) with text: \(elementText)")
+                }
+                
+                // Use the character position if reasonable, otherwise stick with our stored value
+                if let position = markData["charPosition"] as? Int, position > 100 {
+                    // If the position is reasonably large, use it
+                    charPosition = position
+                    print("DEBUG: Using element-based character position: \(position)")
+                } else {
+                    print("DEBUG: Using stored character position: \(charPosition)")
+                }
             } else {
-                print("DEBUG: Font size updated successfully to \(self.fontSize)px")
-                // Save to global preference instead of book-specific
-                UserDefaults.standard.set(self.fontSize, forKey: "global_font_size_preference")
+                print("DEBUG: Failed to mark position, using stored value: \(charPosition)")
             }
+            
+            // Step 2: Update font size and restore position
+            let updateScript = """
+            (function() {
+                // Update the font size
+                document.documentElement.style.setProperty('--shiori-font-size', \(self.fontSize) + 'px');
+                enforceRubyTextSize(\(self.fontSize));
+                
+                // Give layout time to update
+                setTimeout(function() {
+                    // First try to find the marked element
+                    const markedElement = document.getElementById('\(markerId)');
+                    let success = false;
+                    
+                    if (markedElement) {
+                        // Scroll to the marked element
+                        markedElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+                        console.log('Restored position using marked element');
+                        success = true;
+                    } else {
+                        // If element not found, try character-based position
+                        const charPosition = \(charPosition);
+                        const content = document.getElementById('content');
+                        
+                        if (content) {
+                            // Count characters and find the element at our position
+                            let currentCount = 0;
+                            let targetElement = null;
+                            
+                            function findElementAtPosition(node, targetPos) {
+                                if (node.nodeType === 3) { // Text node
+                                    currentCount += node.textContent.length;
+                                    if (currentCount >= targetPos && !targetElement) {
+                                        targetElement = node.parentElement;
+                                        return true;
+                                    }
+                                } else if (node.childNodes) {
+                                    for (let i = 0; i < node.childNodes.length; i++) {
+                                        if (findElementAtPosition(node.childNodes[i], targetPos)) {
+                                            return true;
+                                        }
+                                    }
+                                }
+                                return false;
+                            }
+                            
+                            findElementAtPosition(content, charPosition);
+                            
+                            if (targetElement) {
+                                targetElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+                                console.log('Restored position using character count');
+                                success = true;
+                            } else {
+                                // Last resort: use a ratio-based approach
+                                const totalChars = content.textContent.length;
+                                const ratio = charPosition / totalChars;
+                                const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+                                const targetPosition = scrollHeight * ratio;
+                                
+                                window.scrollTo(0, targetPosition);
+                                console.log('Restored position using ratio: ' + ratio);
+                                success = true;
+                            }
+                        }
+                    }
+                    
+                    return {
+                        fontSizeApplied: true,
+                        positionRestored: success,
+                        method: markedElement ? 'marker' : 'character',
+                        charPosition: \(charPosition)
+                    };
+                }, 200);
+                
+                return { fontSizeUpdating: true };
+            })();
+            """
+            
+            webView.evaluateJavaScript(updateScript) { result, error in
+                if let error = error {
+                    print("DEBUG: Error updating font size: \(error)")
+                } else if let resultDict = result as? [String: Any] {
+                    print("DEBUG: Font size update: \(resultDict)")
+                }
+                
+                // Force character count to stay the same
+                self.state.exploredCharCount = charPosition
+                
+                // Re-enable position updates after a delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    print("DEBUG: Font size updated successfully to \(self.fontSize)px")
+                    
+                    // Save font size preference
+                    UserDefaults.standard.set(self.fontSize, forKey: "global_font_size_preference")
+                    
+                    // Make sure we maintain position
+                    self.state.exploredCharCount = charPosition
+                    
+                    // Debug font sizes
+                    self.debugFontSizes()
+                    
+                    // Re-enable position updates
+                    self.preventPositionUpdates = false
+                }
+            }
+        }
+    }
+
+    // Update the updateReadingState method to be more strict about prevention
+    func updateReadingState(exploredChars: Int, totalChars: Int, currentPage: Int) {
+        // Don't update state if we're in the middle of restoring position
+        if preventPositionUpdates {
+            print("DEBUG: Blocking position update during font change - keeping at \(lastFontSizeCharPosition)")
+            return
+        }
+        
+        // Normal behavior when not prevented
+        state.exploredCharCount = exploredChars
+        state.totalCharCount = totalChars
+        state.currentPage = currentPage
+        state.totalPages = 100
+    }
+
+    func userScrolledHandler(progress: Double, exploredChars: Int, totalChars: Int, currentPage: Int) {
+        // Only process user scrolling if we're not in the middle of a font size change
+        if preventPositionUpdates {
+            print("DEBUG: Ignoring scroll event during font change")
+            return
+        }
+        
+        // Sanity check - prevent jumps to beginning or end
+        if lastFontSizeCharPosition > 1000 && exploredChars < 1000 {
+            print("DEBUG: Preventing unexpected jump to beginning of book")
+            return
+        }
+        
+        // Normal handling
+        updateReadingState(exploredChars: exploredChars, totalChars: totalChars, currentPage: currentPage)
+        
+        Task {
+            await updateProgressAndAutoSave(progress)
         }
     }
     
