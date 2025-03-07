@@ -8,6 +8,8 @@
 import Foundation
 import WebKit
 
+// NEED TO CLEAN THIS SHIT UP!!!!!
+
 @MainActor
 class BookViewModel: ObservableObject {
     // MARK: - Published Properties
@@ -16,9 +18,10 @@ class BookViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var currentTOCHref: String?
-    @Published var appearanceMode: AppearanceMode = .system
     @Published private(set) var isCurrentPositionSaved = false
     @Published var fontSize: Int = 18
+    
+    // MARK: - Private Properties
     private var webView: WKWebView?
     private var autoSaveWorkItem: DispatchWorkItem?
     private let repository: BookRepository
@@ -32,9 +35,6 @@ class BookViewModel: ObservableObject {
         self.state = BookState()
         self.repository = repository
         loadFontPreferences()
-        
-        // Observe the AppearanceManager
-        appearanceMode = AppearanceManager.shared.appearanceMode
     }
     
     func loadEPUB() async {
@@ -64,16 +64,13 @@ class BookViewModel: ObservableObject {
     
     @MainActor
     func webViewContentLoaded() {
-        print("DEBUG: WebView content fully loaded")
-        // Set flag indicating the WebView is ready
         initialLoadCompleted = true
-        // Now safe to restore position
         self.restoreScrollPosition()
     }
     
     // MARK: - Reading Position Management
     
-    // Load initial bookmark state - simplify to just loading progress
+    // Load initial bookmark state
     @MainActor
     func loadProgress() async {
         let exploredCharCount = repository.getExploredCharCount(for: book.filePath)
@@ -103,16 +100,11 @@ class BookViewModel: ObservableObject {
     }
     
     func restoreScrollPosition() {
-        guard let webView = webView, initialLoadCompleted else {
-            print("DEBUG: Cannot restore - initial load not completed or webView missing")
-            return
-        }
+        guard let webView = webView, initialLoadCompleted else { return }
         
-        // Save the loaded values to local variables to prevent them being changed
         let savedExploredCount = state.exploredCharCount
         let savedTotalCount = state.totalCharCount
         
-        // Make sure we have valid character counts
         if savedExploredCount > 0 && savedTotalCount > 0 {
             // Add a delay to ensure WebView is fully loaded
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
@@ -173,17 +165,13 @@ class BookViewModel: ObservableObject {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                             self.preventPositionUpdates = false
                         }
-                    } else {
-                        print("DEBUG: Position restoration failed")
                     }
                 }
             }
-        } else {
-            print("DEBUG: Cannot restore position - invalid character counts: \(savedExploredCount)/\(savedTotalCount)")
         }
     }
     
-    // MARK: - User Interaction and Navigation
+    // MARK: - Navigation Functions
     
     func navigateToTOCEntry(_ href: String) {
         guard let webView = webView else {
@@ -601,12 +589,7 @@ class BookViewModel: ObservableObject {
             fontSize = defaultFontSize
             print("DEBUG: Using default font size: \(defaultFontSize)px")
         }
-        
-        // Sync with AppearanceManager
-        appearanceMode = AppearanceManager.shared.appearanceMode
-        
-        // We'll apply styles in applyStyleChanges instead of here
-        applyStyleChanges()
+
     }
     
     func debugFontSizes() {
@@ -645,6 +628,14 @@ class BookViewModel: ObservableObject {
     
     // MARK: - Bookmarking/Autosave Functions
     
+    func toggleBookmark() async {
+        // Toggle bookmark state
+        state.isBookmarked.toggle()
+        
+        // Save current progress regardless of bookmark state
+        await saveCurrentProgress()
+    }
+    
     @MainActor
     func updateProgress(_ progress: Double) async {
         book.readingProgress = progress
@@ -659,14 +650,6 @@ class BookViewModel: ObservableObject {
                 await updateProgress(progress)
             }
         }
-    }
-    
-    func toggleBookmark() async {
-        // Toggle bookmark state
-        state.isBookmarked.toggle()
-        
-        // Save current progress regardless of bookmark state
-        await saveCurrentProgress()
     }
 
     func autoSaveProgress() {
@@ -843,69 +826,6 @@ class BookViewModel: ObservableObject {
         state.totalCharCount = totalChars
         state.currentPage = currentPage
         state.totalPages = 100
-    }
-    
-    // MARK: - Appearance Mode Functions
-    
-    func setAppearanceMode(_ mode: AppearanceMode) {
-        // Update AppearanceManager to change the entire app
-        AppearanceManager.shared.appearanceMode = mode
-        
-        // Update local property to keep in sync
-        appearanceMode = mode
-        
-        // Apply to the WebView
-        applyStyleChanges()
-    }
-    
-    private func applyStyleChanges() {
-        guard let webView = webView else { return }
-        
-        // Apply font size changes to the WebView
-        let fontSizeScript = "updateFontSize(\(fontSize))"
-        webView.evaluateJavaScript(fontSizeScript)
-        
-        // Apply appearance mode using JavaScript
-        let appearanceScript = """
-        (() => {
-            document.documentElement.style.setProperty('color-scheme', '\(appearanceMode == .system ? "light dark" : appearanceMode.rawValue)');
-            return true;
-        })();
-        """
-        webView.evaluateJavaScript(appearanceScript)
-    }
-    
-    private func applyAppearanceMode() {
-        guard let webView = webView else { return }
-        
-        let script: String
-        
-        switch appearanceMode {
-        case .light:
-            script = """
-            document.documentElement.style.setProperty('color-scheme', 'light');
-            document.body.style.backgroundColor = '#FFFFFF';
-            document.body.style.color = '#333333';
-            """
-        case .dark:
-            script = """
-            document.documentElement.style.setProperty('color-scheme', 'dark');
-            document.body.style.backgroundColor = '#000000';
-            document.body.style.color = '#FFFFFF';
-            """
-        case .system:
-            script = """
-            document.documentElement.style.setProperty('color-scheme', 'light dark');
-            document.body.style.backgroundColor = '';
-            document.body.style.color = '';
-            """
-        }
-        
-        webView.evaluateJavaScript(script) { _, error in
-            if let error = error {
-                print("DEBUG: Error applying appearance mode: \(error)")
-            }
-        }
     }
         
 }

@@ -12,7 +12,6 @@ struct ThemePanel: View {
     @Environment(\.colorScheme) var colorScheme
     @AppStorage("isDarkMode") var isDarkMode: Bool?
     @ObservedObject var viewModel: BookViewModel
-    @ObservedObject var appearanceManager = AppearanceManager.shared
     
     var body: some View {
         VStack(spacing: 10) {

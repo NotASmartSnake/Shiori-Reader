@@ -151,10 +151,6 @@ struct BookReaderView: View {
                             .shadow(radius: 10)
                             .transition(.move(edge: .bottom))
                             .zIndex(2)
-                            .onChange(of: viewModel.appearanceMode) { _, newValue in
-                                // Apply appearance mode changes immediately
-                                viewModel.loadFontPreferences()
-                            }
                     }
                 }
             
