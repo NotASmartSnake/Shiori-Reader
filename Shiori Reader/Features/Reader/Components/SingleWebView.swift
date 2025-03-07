@@ -169,7 +169,7 @@ struct SingleWebView: UIViewRepresentable {
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
             <style id="shiori-base-styles">
                 :root {
-                    color-scheme: light dark;
+                    color-scheme: \(viewModel.appearanceMode == .system ? "light dark" : viewModel.appearanceMode.rawValue);;
                     --shiori-font-size: \(viewModel.fontSize)px;
                 }
         

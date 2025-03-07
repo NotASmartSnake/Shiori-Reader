@@ -6,10 +6,13 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ThemePanel: View {
     @Environment(\.colorScheme) var colorScheme
+    @AppStorage("isDarkMode") var isDarkMode: Bool?
     @ObservedObject var viewModel: BookViewModel
+    @ObservedObject var appearanceManager = AppearanceManager.shared
     
     var body: some View {
         VStack(spacing: 10) {
@@ -56,18 +59,54 @@ struct ThemePanel: View {
                     .background(colorScheme == .dark ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.gray.opacity(0.15)))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     
-                    HStack {
-                        Image(systemName: "circle.lefthalf.filled")
-                            .font(.title2)
-                            .padding(.horizontal, 20)
-                    }
-                    .frame(height: 40)
-                    .background(colorScheme == .dark ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.gray.opacity(0.15)))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    
-                    HStack {
+                    Menu {
+                        Button(action: {
+                            isDarkMode = false
+                        }) {
+                            HStack {
+                                Text("Light Mode")
+                                Spacer()
+                                if isDarkMode == false {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
                         
+                        Button(action: {
+                            isDarkMode = true
+                        }) {
+                            HStack {
+                                Text("Dark Mode")
+                                Spacer()
+                                if isDarkMode == true {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                        
+                        Button(action: {
+                            isDarkMode = nil
+                        }) {
+                            HStack {
+                                Text("Use System Setting")
+                                Spacer()
+                                if isDarkMode == nil {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            AppearanceModeIcon()
+                                .font(.title2)
+                                .padding(.horizontal, 20)
+                            
+                        }
+                        .frame(height: 40)
+                        .background(colorScheme == .dark ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.gray.opacity(0.15)))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+                    .foregroundStyle(.primary)
                     
                 }
                 .padding(.horizontal)
@@ -137,6 +176,18 @@ struct ThemeOption: View {
                             .foregroundColor(textColor)
                     }
                 )
+        }
+    }
+}
+
+struct AppearanceModeIcon: View {
+    @AppStorage("isDarkMode") var isDarkMode: Bool?
+    
+    var body: some View {
+        if let isDarkMode = isDarkMode {
+            Image(systemName: isDarkMode ? "moon.fill" : "sun.max.fill")
+        } else {
+            Image(systemName: "circle.lefthalf.filled")
         }
     }
 }

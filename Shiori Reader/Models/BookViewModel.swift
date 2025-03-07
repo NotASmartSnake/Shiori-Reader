@@ -16,6 +16,7 @@ class BookViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var currentTOCHref: String?
+    @Published var appearanceMode: AppearanceMode = .system
     @Published private(set) var isCurrentPositionSaved = false
     @Published var fontSize: Int = 18
     private var webView: WKWebView?
@@ -31,9 +32,11 @@ class BookViewModel: ObservableObject {
         self.state = BookState()
         self.repository = repository
         loadFontPreferences()
+        
+        // Observe the AppearanceManager
+        appearanceMode = AppearanceManager.shared.appearanceMode
     }
     
-    // MARK: - Public Methods
     func loadEPUB() async {
         guard state.epubContent == nil else {
             return
@@ -51,169 +54,25 @@ class BookViewModel: ObservableObject {
         }
     }
     
+    func setWebView(_ webView: WKWebView) {
+        self.webView = webView
+    }
+    
+    func getWebView() -> WKWebView? {
+        return webView
+    }
+    
     @MainActor
-    func updateProgress(_ progress: Double) async {
-        book.readingProgress = progress
-        print("DEBUG: Book progress updated to \(progress)")
+    func webViewContentLoaded() {
+        print("DEBUG: WebView content fully loaded")
+        // Set flag indicating the WebView is ready
+        initialLoadCompleted = true
+        // Now safe to restore position
+        self.restoreScrollPosition()
     }
     
-    func setProgress(_ progress: Double) {
-        // Only update if the change is significant enough (to avoid minute changes)
-        if abs(book.readingProgress - progress) > 0.01 {
-            book.readingProgress = progress
-            Task {
-                await updateProgress(progress)
-            }
-        }
-    }
+    // MARK: - Reading Position Management
     
-    func toggleBookmark() async {
-        // Toggle bookmark state
-        state.isBookmarked.toggle()
-        
-        // Save current progress regardless of bookmark state
-        await saveCurrentProgress()
-    }
-
-    func autoSaveProgress() {
-        print("DEBUG: Auto-save timer started")
-        autoSaveWorkItem?.cancel()
-        
-        // Update UI to show bookmark is NOT active
-        if state.isBookmarked {
-            state.isBookmarked = false
-        }
-        
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
-            
-            Task {
-                await self.saveCurrentProgress()
-                
-                await MainActor.run {
-                    self.state.isBookmarked = true
-                    self.isCurrentPositionSaved = true
-                }
-            }
-        }
-        
-        autoSaveWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: workItem)
-    }
-    
-    func resetAutoSave() {
-        autoSaveWorkItem?.cancel()
-        autoSaveWorkItem = nil
-        
-        // Immediately set bookmark to not active when user interacts
-        if state.isBookmarked {
-            state.isBookmarked = false
-            print("DEBUG: Setting bookmark indicator to false due to user interaction")
-        }
-        
-        // Mark that current position is not saved
-        isCurrentPositionSaved = false
-    }
-
-
-    func saveCurrentProgress() async {
-        if state.exploredCharCount > 0 && state.totalCharCount > 0 {
-            do {
-                try await repository.saveProgress(
-                    for: book,
-                    exploredCharCount: state.exploredCharCount,
-                    totalCharCount: state.totalCharCount
-                )
-                
-                print("DEBUG: Saved progress: \(book.readingProgress) (\(state.exploredCharCount)/\(state.totalCharCount) chars)")
-            } catch {
-                print("DEBUG: Error saving progress: \(error.localizedDescription)")
-            }
-        }
-    }
-    
-    func updatePositionData() {
-        guard let webView = webView else { return }
-        
-        let script = """
-        (function() {
-            const content = document.getElementById('content');
-            if (!content) return null;
-            
-            const textContent = content.textContent;
-            const totalCharCount = textContent.length;
-            
-            // Get current scroll position
-            const scrollY = window.scrollY;
-            const viewportHeight = window.innerHeight;
-            const scrollHeight = document.documentElement.scrollHeight;
-            const maxScroll = scrollHeight - viewportHeight;
-            const scrollRatio = maxScroll > 0 ? scrollY / maxScroll : 0;
-            
-            // Calculate character position
-            const exploredCharCount = Math.round(totalCharCount * scrollRatio);
-            
-            // Return all data
-            return {
-                exploredChars: exploredCharCount,
-                totalChars: totalCharCount,
-                scrollRatio: scrollRatio,
-                scrollY: scrollY,
-                scrollHeight: scrollHeight
-            };
-        })();
-        """
-        
-        webView.evaluateJavaScript(script) { [weak self] result, error in
-            guard let self = self,
-                  let data = result as? [String: Any],
-                  let exploredChars = data["exploredChars"] as? Int,
-                  let totalChars = data["totalChars"] as? Int,
-                  !self.preventPositionUpdates else {
-                return
-            }
-            
-            // Only update if we're not in the middle of a font change operation
-            if !self.preventPositionUpdates {
-                // Update state with accurate character counts
-                self.state.exploredCharCount = exploredChars
-                self.state.totalCharCount = totalChars
-                
-                // Calculate progress based on character position
-                let progress = Double(exploredChars) / Double(totalChars)
-                if abs(self.book.readingProgress - progress) > 0.01 {
-                    self.book.readingProgress = progress
-                }
-                
-                print("DEBUG: Position updated - chars: \(exploredChars)/\(totalChars)")
-            }
-        }
-    }
-
-    // Call this when progress changes significantly
-    func updateProgressAndAutoSave(_ progress: Double) async {
-        // Don't update progress if we're in the middle of restoring position
-        guard !preventPositionUpdates else {
-            return
-        }
-        
-        // Update the progress value
-        let significantChange = abs(book.readingProgress - progress) > 0.01
-        
-        // Only log if it's meaningful
-        if progress > 0.001 {
-            print("DEBUG: Progress update - Current: \(book.readingProgress), New: \(progress), Significant: \(significantChange)")
-        }
-        
-        book.readingProgress = progress
-        
-        if significantChange {
-            // Trigger auto-save timer
-            autoSaveProgress()
-        }
-    }
-
-
     // Load initial bookmark state - simplify to just loading progress
     @MainActor
     func loadProgress() async {
@@ -243,26 +102,88 @@ class BookViewModel: ObservableObject {
         
     }
     
-    @MainActor
-    func webViewContentLoaded() {
-        print("DEBUG: WebView content fully loaded")
-        // Set flag indicating the WebView is ready
-        initialLoadCompleted = true
-        // Now safe to restore position
-        self.restoreScrollPosition()
-    }
-    
-    func navigateToChapter(_ index: Int) {
-        guard let content = state.epubContent,
-              index >= 0 && index < content.chapters.count else {
+    func restoreScrollPosition() {
+        guard let webView = webView, initialLoadCompleted else {
+            print("DEBUG: Cannot restore - initial load not completed or webView missing")
             return
         }
-        state.currentChapterIndex = index
+        
+        // Save the loaded values to local variables to prevent them being changed
+        let savedExploredCount = state.exploredCharCount
+        let savedTotalCount = state.totalCharCount
+        
+        // Make sure we have valid character counts
+        if savedExploredCount > 0 && savedTotalCount > 0 {
+            // Add a delay to ensure WebView is fully loaded
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                guard let self = self else { return }
+                
+                print("DEBUG: Attempting to restore to position \(savedExploredCount) of \(savedTotalCount) chars")
+                
+                // Improved restoration script that's less prone to issues
+                let script = """
+                (function() {
+                    // Get the content element
+                    const content = document.getElementById('content');
+                    if (!content) {
+                        console.error('Content element not found');
+                        return false;
+                    }
+                    
+                    // Calculate the target position based on saved character count
+                    const targetRatio = \(Double(savedExploredCount)) / \(Double(savedTotalCount));
+                    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+                    const targetPosition = Math.max(0, Math.round(scrollHeight * targetRatio));
+                    
+                    // Block any scroll event handlers temporarily to prevent overriding our position
+                    const oldScrollHandler = window.onscroll;
+                    window.onscroll = null;
+                    
+                    // Actually perform the scroll
+                    window.scrollTo({
+                        top: targetPosition,
+                        left: 0,
+                        behavior: 'auto'
+                    });
+                    
+                    // After a short delay, restore the scroll handler
+                    setTimeout(function() {
+                        window.onscroll = oldScrollHandler;
+                    }, 100);
+                    
+                    return {
+                        success: true,
+                        targetRatio: targetRatio,
+                        targetPosition: targetPosition,
+                        scrollHeight: scrollHeight
+                    };
+                })();
+                """
+                
+                webView.evaluateJavaScript(script) { result, error in
+                    if let error = error {
+                        print("DEBUG: Error restoring position: \(error)")
+                    } else if let resultDict = result as? [String: Any],
+                              let success = resultDict["success"] as? Bool,
+                              success {
+                        print("DEBUG: Successfully restored to character position \(savedExploredCount) (ratio: \(resultDict["targetRatio"] ?? "unknown"), position: \(resultDict["targetPosition"] ?? "unknown"))")
+                        
+                        // Disable position updates briefly to avoid overwriting restored position
+                        self.preventPositionUpdates = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            self.preventPositionUpdates = false
+                        }
+                    } else {
+                        print("DEBUG: Position restoration failed")
+                    }
+                }
+            }
+        } else {
+            print("DEBUG: Cannot restore position - invalid character counts: \(savedExploredCount)/\(savedTotalCount)")
+        }
     }
     
-    func setWebView(_ webView: WKWebView) {
-        self.webView = webView
-    }
+    // MARK: - User Interaction and Navigation
     
     func navigateToTOCEntry(_ href: String) {
         guard let webView = webView else {
@@ -401,87 +322,16 @@ class BookViewModel: ObservableObject {
         currentTOCHref = href
     }
     
-    func restoreScrollPosition() {
-        guard let webView = webView, initialLoadCompleted else {
-            print("DEBUG: Cannot restore - initial load not completed or webView missing")
+    func navigateToChapter(_ index: Int) {
+        guard let content = state.epubContent,
+              index >= 0 && index < content.chapters.count else {
             return
         }
-        
-        // Save the loaded values to local variables to prevent them being changed
-        let savedExploredCount = state.exploredCharCount
-        let savedTotalCount = state.totalCharCount
-        
-        // Make sure we have valid character counts
-        if savedExploredCount > 0 && savedTotalCount > 0 {
-            // Add a delay to ensure WebView is fully loaded
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                guard let self = self else { return }
-                
-                print("DEBUG: Attempting to restore to position \(savedExploredCount) of \(savedTotalCount) chars")
-                
-                // Improved restoration script that's less prone to issues
-                let script = """
-                (function() {
-                    // Get the content element
-                    const content = document.getElementById('content');
-                    if (!content) {
-                        console.error('Content element not found');
-                        return false;
-                    }
-                    
-                    // Calculate the target position based on saved character count
-                    const targetRatio = \(Double(savedExploredCount)) / \(Double(savedTotalCount));
-                    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-                    const targetPosition = Math.max(0, Math.round(scrollHeight * targetRatio));
-                    
-                    // Block any scroll event handlers temporarily to prevent overriding our position
-                    const oldScrollHandler = window.onscroll;
-                    window.onscroll = null;
-                    
-                    // Actually perform the scroll
-                    window.scrollTo({
-                        top: targetPosition,
-                        left: 0,
-                        behavior: 'auto'
-                    });
-                    
-                    // After a short delay, restore the scroll handler
-                    setTimeout(function() {
-                        window.onscroll = oldScrollHandler;
-                    }, 100);
-                    
-                    return {
-                        success: true,
-                        targetRatio: targetRatio,
-                        targetPosition: targetPosition,
-                        scrollHeight: scrollHeight
-                    };
-                })();
-                """
-                
-                webView.evaluateJavaScript(script) { result, error in
-                    if let error = error {
-                        print("DEBUG: Error restoring position: \(error)")
-                    } else if let resultDict = result as? [String: Any],
-                              let success = resultDict["success"] as? Bool,
-                              success {
-                        print("DEBUG: Successfully restored to character position \(savedExploredCount) (ratio: \(resultDict["targetRatio"] ?? "unknown"), position: \(resultDict["targetPosition"] ?? "unknown"))")
-                        
-                        // Disable position updates briefly to avoid overwriting restored position
-                        self.preventPositionUpdates = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            self.preventPositionUpdates = false
-                        }
-                    } else {
-                        print("DEBUG: Position restoration failed")
-                    }
-                }
-            }
-        } else {
-            print("DEBUG: Cannot restore position - invalid character counts: \(savedExploredCount)/\(savedTotalCount)")
-        }
+        state.currentChapterIndex = index
     }
-
+    
+    // MARK: - Font Size Functions
+    
     private var lastFontSizeCharPosition: Int = 0
 
     func increaseFontSize() {
@@ -739,42 +589,6 @@ class BookViewModel: ObservableObject {
             }
         }
     }
-
-    // Update the updateReadingState method to be more strict about prevention
-    func updateReadingState(exploredChars: Int, totalChars: Int, currentPage: Int) {
-        // Don't update state if we're in the middle of restoring position
-        if preventPositionUpdates {
-            print("DEBUG: Blocking position update during font change - keeping at \(lastFontSizeCharPosition)")
-            return
-        }
-        
-        // Normal behavior when not prevented
-        state.exploredCharCount = exploredChars
-        state.totalCharCount = totalChars
-        state.currentPage = currentPage
-        state.totalPages = 100
-    }
-
-    func userScrolledHandler(progress: Double, exploredChars: Int, totalChars: Int, currentPage: Int) {
-        // Only process user scrolling if we're not in the middle of a font size change
-        if preventPositionUpdates {
-            print("DEBUG: Ignoring scroll event during font change")
-            return
-        }
-        
-        // Sanity check - prevent jumps to beginning or end
-        if lastFontSizeCharPosition > 1000 && exploredChars < 1000 {
-            print("DEBUG: Preventing unexpected jump to beginning of book")
-            return
-        }
-        
-        // Normal handling
-        updateReadingState(exploredChars: exploredChars, totalChars: totalChars, currentPage: currentPage)
-        
-        Task {
-            await updateProgressAndAutoSave(progress)
-        }
-    }
     
     @MainActor
     func loadFontPreferences() {
@@ -787,6 +601,12 @@ class BookViewModel: ObservableObject {
             fontSize = defaultFontSize
             print("DEBUG: Using default font size: \(defaultFontSize)px")
         }
+        
+        // Sync with AppearanceManager
+        appearanceMode = AppearanceManager.shared.appearanceMode
+        
+        // We'll apply styles in applyStyleChanges instead of here
+        applyStyleChanges()
     }
     
     func debugFontSizes() {
@@ -822,9 +642,270 @@ class BookViewModel: ObservableObject {
             }
         }
     }
+    
+    // MARK: - Bookmarking/Autosave Functions
+    
+    @MainActor
+    func updateProgress(_ progress: Double) async {
+        book.readingProgress = progress
+        print("DEBUG: Book progress updated to \(progress)")
+    }
+    
+    func setProgress(_ progress: Double) {
+        // Only update if the change is significant enough (to avoid minute changes)
+        if abs(book.readingProgress - progress) > 0.01 {
+            book.readingProgress = progress
+            Task {
+                await updateProgress(progress)
+            }
+        }
+    }
+    
+    func toggleBookmark() async {
+        // Toggle bookmark state
+        state.isBookmarked.toggle()
+        
+        // Save current progress regardless of bookmark state
+        await saveCurrentProgress()
+    }
 
-    func getWebView() -> WKWebView? {
-        return webView
+    func autoSaveProgress() {
+        print("DEBUG: Auto-save timer started")
+        autoSaveWorkItem?.cancel()
+        
+        // Update UI to show bookmark is NOT active
+        if state.isBookmarked {
+            state.isBookmarked = false
+        }
+        
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            
+            Task {
+                await self.saveCurrentProgress()
+                
+                await MainActor.run {
+                    self.state.isBookmarked = true
+                    self.isCurrentPositionSaved = true
+                }
+            }
+        }
+        
+        autoSaveWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: workItem)
+    }
+    
+    func resetAutoSave() {
+        autoSaveWorkItem?.cancel()
+        autoSaveWorkItem = nil
+        
+        // Immediately set bookmark to not active when user interacts
+        if state.isBookmarked {
+            state.isBookmarked = false
+            print("DEBUG: Setting bookmark indicator to false due to user interaction")
+        }
+        
+        // Mark that current position is not saved
+        isCurrentPositionSaved = false
+    }
+
+
+    func saveCurrentProgress() async {
+        if state.exploredCharCount > 0 && state.totalCharCount > 0 {
+            do {
+                try await repository.saveProgress(
+                    for: book,
+                    exploredCharCount: state.exploredCharCount,
+                    totalCharCount: state.totalCharCount
+                )
+                
+                print("DEBUG: Saved progress: \(book.readingProgress) (\(state.exploredCharCount)/\(state.totalCharCount) chars)")
+            } catch {
+                print("DEBUG: Error saving progress: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+
+    // Call this when progress changes significantly
+    func updateProgressAndAutoSave(_ progress: Double) async {
+        // Don't update progress if we're in the middle of restoring position
+        guard !preventPositionUpdates else {
+            return
+        }
+        
+        // Update the progress value
+        let significantChange = abs(book.readingProgress - progress) > 0.01
+        
+        // Only log if it's meaningful
+        if progress > 0.001 {
+            print("DEBUG: Progress update - Current: \(book.readingProgress), New: \(progress), Significant: \(significantChange)")
+        }
+        
+        book.readingProgress = progress
+        
+        if significantChange {
+            // Trigger auto-save timer
+            autoSaveProgress()
+        }
+    }
+    
+    func userScrolledHandler(progress: Double, exploredChars: Int, totalChars: Int, currentPage: Int) {
+        // Only process user scrolling if we're not in the middle of a font size change
+        if preventPositionUpdates {
+            print("DEBUG: Ignoring scroll event during font change")
+            return
+        }
+        
+        // Sanity check - prevent jumps to beginning or end
+        if lastFontSizeCharPosition > 1000 && exploredChars < 1000 {
+            print("DEBUG: Preventing unexpected jump to beginning of book")
+            return
+        }
+        
+        // Normal handling
+        updateReadingState(exploredChars: exploredChars, totalChars: totalChars, currentPage: currentPage)
+        
+        Task {
+            await updateProgressAndAutoSave(progress)
+        }
+    }
+    
+    func updatePositionData() {
+        guard let webView = webView else { return }
+        
+        let script = """
+        (function() {
+            const content = document.getElementById('content');
+            if (!content) return null;
+            
+            const textContent = content.textContent;
+            const totalCharCount = textContent.length;
+            
+            // Get current scroll position
+            const scrollY = window.scrollY;
+            const viewportHeight = window.innerHeight;
+            const scrollHeight = document.documentElement.scrollHeight;
+            const maxScroll = scrollHeight - viewportHeight;
+            const scrollRatio = maxScroll > 0 ? scrollY / maxScroll : 0;
+            
+            // Calculate character position
+            const exploredCharCount = Math.round(totalCharCount * scrollRatio);
+            
+            // Return all data
+            return {
+                exploredChars: exploredCharCount,
+                totalChars: totalCharCount,
+                scrollRatio: scrollRatio,
+                scrollY: scrollY,
+                scrollHeight: scrollHeight
+            };
+        })();
+        """
+        
+        webView.evaluateJavaScript(script) { [weak self] result, error in
+            guard let self = self,
+                  let data = result as? [String: Any],
+                  let exploredChars = data["exploredChars"] as? Int,
+                  let totalChars = data["totalChars"] as? Int,
+                  !self.preventPositionUpdates else {
+                return
+            }
+            
+            // Only update if we're not in the middle of a font change operation
+            if !self.preventPositionUpdates {
+                // Update state with accurate character counts
+                self.state.exploredCharCount = exploredChars
+                self.state.totalCharCount = totalChars
+                
+                // Calculate progress based on character position
+                let progress = Double(exploredChars) / Double(totalChars)
+                if abs(self.book.readingProgress - progress) > 0.01 {
+                    self.book.readingProgress = progress
+                }
+                
+                print("DEBUG: Position updated - chars: \(exploredChars)/\(totalChars)")
+            }
+        }
+    }
+
+
+    // Update the updateReadingState method to be more strict about prevention
+    func updateReadingState(exploredChars: Int, totalChars: Int, currentPage: Int) {
+        // Don't update state if we're in the middle of restoring position
+        if preventPositionUpdates {
+            print("DEBUG: Blocking position update during font change - keeping at \(lastFontSizeCharPosition)")
+            return
+        }
+        
+        // Normal behavior when not prevented
+        state.exploredCharCount = exploredChars
+        state.totalCharCount = totalChars
+        state.currentPage = currentPage
+        state.totalPages = 100
+    }
+    
+    // MARK: - Appearance Mode Functions
+    
+    func setAppearanceMode(_ mode: AppearanceMode) {
+        // Update AppearanceManager to change the entire app
+        AppearanceManager.shared.appearanceMode = mode
+        
+        // Update local property to keep in sync
+        appearanceMode = mode
+        
+        // Apply to the WebView
+        applyStyleChanges()
+    }
+    
+    private func applyStyleChanges() {
+        guard let webView = webView else { return }
+        
+        // Apply font size changes to the WebView
+        let fontSizeScript = "updateFontSize(\(fontSize))"
+        webView.evaluateJavaScript(fontSizeScript)
+        
+        // Apply appearance mode using JavaScript
+        let appearanceScript = """
+        (() => {
+            document.documentElement.style.setProperty('color-scheme', '\(appearanceMode == .system ? "light dark" : appearanceMode.rawValue)');
+            return true;
+        })();
+        """
+        webView.evaluateJavaScript(appearanceScript)
+    }
+    
+    private func applyAppearanceMode() {
+        guard let webView = webView else { return }
+        
+        let script: String
+        
+        switch appearanceMode {
+        case .light:
+            script = """
+            document.documentElement.style.setProperty('color-scheme', 'light');
+            document.body.style.backgroundColor = '#FFFFFF';
+            document.body.style.color = '#333333';
+            """
+        case .dark:
+            script = """
+            document.documentElement.style.setProperty('color-scheme', 'dark');
+            document.body.style.backgroundColor = '#000000';
+            document.body.style.color = '#FFFFFF';
+            """
+        case .system:
+            script = """
+            document.documentElement.style.setProperty('color-scheme', 'light dark');
+            document.body.style.backgroundColor = '';
+            document.body.style.color = '';
+            """
+        }
+        
+        webView.evaluateJavaScript(script) { _, error in
+            if let error = error {
+                print("DEBUG: Error applying appearance mode: \(error)")
+            }
+        }
     }
         
 }
