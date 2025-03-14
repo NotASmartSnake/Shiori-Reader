@@ -100,6 +100,23 @@ struct BookReaderView: View {
                         }
                 }
                 
+                ZStack {
+                    if viewModel.showDictionary {
+                        Spacer()
+                        
+                        DictionaryPopupView(
+                            matches: viewModel.dictionaryMatches,
+                            onDismiss: {
+                                viewModel.showDictionary = false
+                            }
+                        )
+                        .transition(.move(edge: .bottom))
+                    }
+                }
+                .ignoresSafeArea(edges: .bottom)
+                .animation(.spring(duration: 0.3, bounce: 0.2), value: viewModel.showDictionary)
+                .zIndex(2)
+                
                 if showControls {
                     VStack {
                         // Top control bar
@@ -130,7 +147,6 @@ struct BookReaderView: View {
                     .transition(.opacity)
                 }
                 
-                // Theme panel overlay
                 if showThemes {
                     Group {
                         Color.black.opacity(0.3)
@@ -152,35 +168,6 @@ struct BookReaderView: View {
                             .transition(.move(edge: .bottom))
                             .zIndex(2)
                     }
-                }
-                
-                if viewModel.showDictionary {
-                    Group {
-                        Color.black.opacity(0.3)
-                            .ignoresSafeArea()
-                            .transition(.opacity)
-                            .onTapGesture {
-                                withAnimation {
-                                    showThemes.toggle()
-                                }
-                                viewModel.resetAutoSave()
-                                viewModel.autoSaveProgress()
-                            }
-                            .zIndex(1)
-                        
-                        Spacer()
-                        
-                        DictionaryPopupView(
-                            matches: viewModel.dictionaryMatches,
-                            onDismiss: {
-                                viewModel.showDictionary = false
-                            }
-                        )
-                            .transition(.move(edge: .bottom))
-                            .zIndex(2)
-                        
-                    }
-                    .ignoresSafeArea(edges: .bottom)
                 }
                 
 
