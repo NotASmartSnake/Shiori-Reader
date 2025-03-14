@@ -153,7 +153,36 @@ struct BookReaderView: View {
                             .zIndex(2)
                     }
                 }
-            
+                
+                if viewModel.showDictionary {
+                    Group {
+                        Color.black.opacity(0.3)
+                            .ignoresSafeArea()
+                            .transition(.opacity)
+                            .onTapGesture {
+                                withAnimation {
+                                    showThemes.toggle()
+                                }
+                                viewModel.resetAutoSave()
+                                viewModel.autoSaveProgress()
+                            }
+                            .zIndex(1)
+                        
+                        Spacer()
+                        
+                        DictionaryPopupView(
+                            matches: viewModel.dictionaryMatches,
+                            onDismiss: {
+                                viewModel.showDictionary = false
+                            }
+                        )
+                            .transition(.move(edge: .bottom))
+                            .zIndex(2)
+                        
+                    }
+                    .ignoresSafeArea(edges: .bottom)
+                }
+                
 
             }
             
@@ -162,6 +191,7 @@ struct BookReaderView: View {
             await viewModel.loadEPUB()
             await viewModel.loadProgress()
             viewModel.loadFontPreferences()
+            viewModel.loadThemePreferences()
             if !viewModel.isCurrentPositionSaved {
                 viewModel.autoSaveProgress()
             }
@@ -182,6 +212,7 @@ struct BookReaderView: View {
         .onAppear {
             print("DEBUG: BookReaderView appeared")
             viewModel.loadFontPreferences()
+            viewModel.loadThemePreferences()
             
             Task {
                 print("DEBUG: Loading book and progress")
@@ -214,7 +245,7 @@ struct BookReaderView: View {
         title: "実力至上主義者の教室",
         coverImage: "COTECover",
         readingProgress: 0.1,
-        filePath: "honzuki.epub"
+        filePath: "hakomari.epub"
     ))
     .environmentObject(isReadingBook)
 }

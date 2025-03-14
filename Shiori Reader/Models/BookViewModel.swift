@@ -7,6 +7,7 @@
 
 import Foundation
 import WebKit
+import SwiftUI
 
 // NEED TO CLEAN THIS SHIT UP!!!!!
 
@@ -19,6 +20,11 @@ class BookViewModel: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var currentTOCHref: String?
     @Published private(set) var isCurrentPositionSaved = false
+    @Published var showDictionary = false
+    @Published var selectedWord = ""
+    @Published var isLoadingDictionary = false
+    @Published var dictionaryMatches: [DictionaryMatch] = []
+    @Published var currentTheme: Theme = Theme.original
     @Published var fontSize: Int = 18
     
     // MARK: - Private Properties
@@ -35,6 +41,7 @@ class BookViewModel: ObservableObject {
         self.state = BookState()
         self.repository = repository
         loadFontPreferences()
+        loadThemePreferences()
     }
     
     func loadEPUB() async {
@@ -66,6 +73,59 @@ class BookViewModel: ObservableObject {
     func webViewContentLoaded() {
         initialLoadCompleted = true
         self.restoreScrollPosition()
+    }
+    
+    // MARK: - Dictionary Management
+    
+    func handleTextTap(text: String) {
+        // Find all valid Japanese words in the text, starting from the longest
+        identifyJapaneseWords(text: text) { matches in
+            if !matches.isEmpty {
+                self.dictionaryMatches = matches
+                self.showDictionary = true
+            }
+        }
+    }
+    
+    private func identifyJapaneseWords(text: String, completion: @escaping ([DictionaryMatch]) -> Void) {
+        let lookupQueue = DispatchQueue(label: "com.shiori.dictionaryLookup", qos: .userInitiated)
+        
+        lookupQueue.async {
+            // Maximum word length to consider (adjust as needed)
+            let maxLength = min(27, text.count)
+            
+            // Store all valid matches
+            var matches: [DictionaryMatch] = []
+            
+            // Try words of decreasing length, starting from the longest
+            for length in stride(from: maxLength, through: 1, by: -1) {
+                // Make sure we don't exceed the text length
+                guard length <= text.count else { continue }
+                
+                // Extract the substring of current length
+                let endIndex = text.index(text.startIndex, offsetBy: length)
+                let candidateWord = String(text[..<endIndex])
+                
+                // Look up this word in the dictionary
+                let entries = DictionaryManager.shared.lookup(word: candidateWord)
+                
+                // If we found matches, add this as a valid match
+                if !entries.isEmpty {
+                    let match = DictionaryMatch(word: candidateWord, entries: entries)
+                    matches.append(match)
+                    
+                    // Optional: Limit to a reasonable number of matches (e.g., 5)
+                    if matches.count >= 5 {
+                        break
+                    }
+                }
+            }
+            
+            // Return all matches found, ordered by length (longest first)
+            DispatchQueue.main.async {
+                completion(matches)
+            }
+        }
     }
     
     // MARK: - Reading Position Management
@@ -623,6 +683,103 @@ class BookViewModel: ObservableObject {
                     print("  \(selector): \(sizes.joined(separator: ", "))")
                 }
             }
+        }
+    }
+    
+    // MARK: - Font Color/Background Color Functions
+    
+    // Load saved theme or use default
+    func loadThemePreferences() {
+        // Get the current dark mode setting
+        let isDarkMode = UserDefaults.standard.object(forKey: "isDarkMode") as? Bool
+        
+        // Get the appropriate theme name
+        if let savedThemeName = UserDefaults.standard.selectedThemeName(forDarkMode: isDarkMode ?? false) {
+            // Try to find the saved theme
+            let savedTheme = Theme.allThemes.first(where: { $0.name == savedThemeName })
+            
+            if let theme = savedTheme {
+                currentTheme = theme
+                print("DEBUG: Loaded saved theme for \(isDarkMode == true ? "dark" : "light") mode: \(savedThemeName)")
+                return
+            }
+        }
+        
+        // If no saved theme or theme not found, use default for the current mode
+        if isDarkMode == true {
+            currentTheme = Theme.darkOriginal
+        } else {
+            currentTheme = Theme.original
+        }
+        
+        print("DEBUG: Using default theme for \(isDarkMode == true ? "dark" : "light") mode: \(currentTheme.name)")
+    }
+    
+    // Apply the selected theme to the WebView
+    func applyTheme(_ theme: Theme) {
+        guard let webView = webView else { return }
+        
+        // Save character position before theme change
+        let charPosition = state.exploredCharCount
+        
+        // Prevent position updates during theme change
+        preventPositionUpdates = true
+        
+        // Update the theme
+        currentTheme = theme
+        
+        // Get current dark mode state
+        let isDarkMode = UserDefaults.standard.object(forKey: "isDarkMode") as? Bool
+        
+        // Save to UserDefaults for the appropriate mode
+        UserDefaults.standard.setSelectedThemeName(theme.name, forDarkMode: isDarkMode ?? false)
+        
+        // Apply theme to WebView
+        let script = """
+        (function() {
+            // Update CSS variables for theme
+            document.documentElement.style.setProperty('--shiori-background-color', '\(theme.backgroundColorCSS)');
+            document.documentElement.style.setProperty('--shiori-text-color', '\(theme.textColorCSS)');
+            
+            // Set the data-theme attribute
+            document.documentElement.setAttribute('data-theme', '\(theme.name.lowercased())');
+            
+            // Wait for rendering and then restore position
+            setTimeout(function() {
+                // Try to restore to saved character position
+                scrollToCharacterPosition(\(charPosition));
+            }, 100);
+            
+            return true;
+        })();
+        """
+        
+        webView.evaluateJavaScript(script) { [weak self] result, error in
+            if let error = error {
+                print("DEBUG: Error applying theme: \(error)")
+            } else {
+                print("DEBUG: Applied theme: \(theme.name)")
+            }
+            
+            // Re-enable position updates after a delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self?.preventPositionUpdates = false
+            }
+        }
+    }
+    
+    func handleAppearanceChange(isDarkMode: Bool?) {
+        // Get appropriate saved theme for the new mode or use default
+        let savedThemeName = UserDefaults.standard.selectedThemeName(forDarkMode: isDarkMode ?? false)
+        
+        // Find the theme by name, or use default
+        if let themeName = savedThemeName,
+           let theme = Theme.allThemes.first(where: { $0.name == themeName }) {
+            applyTheme(theme)
+        } else {
+            // Use default theme for the current mode
+            let defaultTheme = isDarkMode == true ? Theme.darkOriginal : Theme.original
+            applyTheme(defaultTheme)
         }
     }
     

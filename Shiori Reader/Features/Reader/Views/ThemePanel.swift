@@ -118,12 +118,21 @@ struct ThemePanel: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 15) {
-                ThemeOption(name: "Original", backgroundColor: .white, textColor: .black)
-                ThemeOption(name: "Warm", backgroundColor: Color(red: 245/255, green: 230/255, blue: 211/255), textColor: .black)
-                ThemeOption(name: "Sepia", backgroundColor: Color(red: 0.98, green: 0.95, blue: 0.9), textColor: .black)
-                ThemeOption(name: "Soft", backgroundColor: Color(red: 250/255, green: 249/255, blue: 246/255), textColor: .black)
-                ThemeOption(name: "Paper", backgroundColor: Color(red: 237/255, green: 237/255, blue: 237/255), textColor: .black)
-                ThemeOption(name: "Calm", backgroundColor: Color(red: 227/255, green: 242/255, blue: 253/255), textColor: .black)
+                // Only show themes appropriate for the current mode
+                let themesToShow = isDarkMode == true ?
+                    Theme.darkThemes : Theme.lightThemes
+                
+                ForEach(themesToShow) { theme in
+                    ThemeOption(
+                        name: theme.name.replacingOccurrences(of: "Dark ", with: ""),
+                        backgroundColor: theme.backgroundColor,
+                        textColor: theme.textColor,
+                        isSelected: viewModel.currentTheme.name == theme.name
+                    )
+                    .onTapGesture {
+                        viewModel.applyTheme(theme)
+                    }
+                }
             }
             .padding(.horizontal)
             
@@ -157,12 +166,24 @@ struct ThemeOption: View {
     let name: String
     let backgroundColor: Color
     let textColor: Color
+    let isSelected: Bool
+    
+    init(name: String, backgroundColor: Color, textColor: Color, isSelected: Bool = false) {
+        self.name = name
+        self.backgroundColor = backgroundColor
+        self.textColor = textColor
+        self.isSelected = isSelected
+    }
     
     var body: some View {
         VStack {
             RoundedRectangle(cornerRadius: 12)
                 .fill(backgroundColor)
                 .frame(height: 100)
+                .overlay(
+                    isSelected ? RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.blue, lineWidth: 3) : nil
+                )
                 .shadow(color: .gray.opacity(0.4), radius: 3)
                 .overlay(
                     VStack {

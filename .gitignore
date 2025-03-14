@@ -1,1 +1,4 @@
 Books/*.epub
+Documentation/
+"Reference Files"/
+.claudesync/

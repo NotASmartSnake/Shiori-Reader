@@ -14,6 +14,67 @@ struct SingleWebView: UIViewRepresentable {
         config.userContentController.add(context.coordinator, name: "pageInfoHandler")
         config.userContentController.add(context.coordinator, name: "scrollTrackingHandler")
         
+        let wordSelectionScript = WKUserScript(
+            source: """
+                document.addEventListener('click', function(event) {
+                    // Don't intercept clicks on elements that should be interactive
+                    if (event.target.tagName === 'A' || 
+                        event.target.tagName === 'BUTTON' || 
+                        event.target.tagName === 'INPUT') {
+                        return;
+                    }
+                    
+                    // Get the exact position that was clicked
+                    let range = document.caretRangeFromPoint(event.clientX, event.clientY);
+                    if (!range) {
+                        // No valid selection range found, dismiss dictionary
+                        window.webkit.messageHandlers.dismissDictionary.postMessage({});
+                        return;
+                    }
+                    
+                    // Get the text node that was clicked
+                    let node = range.startContainer;
+                    if (node.nodeType !== Node.TEXT_NODE) {
+                        // Not a text node, dismiss dictionary
+                        window.webkit.messageHandlers.dismissDictionary.postMessage({});
+                        return;
+                    }
+                    
+                    // Get the text content and click offset
+                    let text = node.textContent;
+                    let offset = range.startOffset;
+                    
+                    // Check if there's text after the click position
+                    if (offset < text.length) {
+                        // Extract up to 27 characters starting from the click position
+                        let contextText = text.substring(offset, Math.min(text.length, offset + 27));
+                        
+                        // Check if the extracted text contains Japanese characters
+                        if (/[\\u3000-\\u303F]|[\\u3040-\\u309F]|[\\u30A0-\\u30FF]|[\\uFF00-\\uFFEF]|[\\u4E00-\\u9FAF]|[\\u2605-\\u2606]|[\\u2190-\\u2195]|\\u203B/g.test(contextText)) {
+                            // Send the context text to Swift
+                            window.webkit.messageHandlers.wordTapped.postMessage({
+                                text: contextText,
+                                absoluteOffset: offset
+                            });
+                        } else {
+                            // Non-Japanese text, dismiss dictionary
+                            window.webkit.messageHandlers.dismissDictionary.postMessage({});
+                        }
+                    } else {
+                        // End of text node, dismiss dictionary
+                        window.webkit.messageHandlers.dismissDictionary.postMessage({});
+                    }
+                }, false);
+            """,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: false
+        )
+        
+        config.userContentController.addUserScript(wordSelectionScript)
+        
+        config.userContentController.add(context.coordinator, name: "wordTapped")
+        config.userContentController.add(context.coordinator, name: "dismissDictionary")
+        
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.backgroundColor = .clear
@@ -74,6 +135,8 @@ struct SingleWebView: UIViewRepresentable {
         var parent: SingleWebView
         var contentLoaded: Bool = false
         var lastScrollPosition: CGFloat = 0
+        @State private var showDictionary = false
+        @State private var selectedWord: String = ""
         
         init(_ parent: SingleWebView) {
             self.parent = parent
@@ -127,6 +190,18 @@ struct SingleWebView: UIViewRepresentable {
                     self.parent.viewModel.resetAutoSave()
                     self.parent.viewModel.autoSaveProgress()
                 }
+            } else if message.name == "wordTapped" {
+                if let body = message.body as? [String: Any],
+                   let text = body["text"] as? String {
+                    
+                    DispatchQueue.main.async {
+                        self.parent.viewModel.handleTextTap(text: text)
+                    }
+                }
+            } else if message.name == "dismissDictionary" {
+                DispatchQueue.main.async {
+                    self.parent.viewModel.showDictionary = false
+                }
             }
         }
     }
@@ -169,8 +244,10 @@ struct SingleWebView: UIViewRepresentable {
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
             <style id="shiori-base-styles">
                 :root {
-                    color-scheme: light dark;;
+                    color-scheme: light dark;
                     --shiori-font-size: \(viewModel.fontSize)px;
+                    --shiori-background-color: \(viewModel.currentTheme.backgroundColorCSS);
+                    --shiori-text-color: \(viewModel.currentTheme.textColorCSS);
                 }
         
                 /* Global reset - apply to all elements */
@@ -185,8 +262,8 @@ struct SingleWebView: UIViewRepresentable {
                     font-size: var(--shiori-font-size) !important;
                     line-height: 1.8;
                     padding: 16px;
-                    background-color: transparent;
-                    color: #333333;
+                    background-color: var(--shiori-background-color);
+                    color: var(--shiori-text-color);
                 }
         
                 /* More specific selectors with !important to ensure they override */
@@ -255,13 +332,9 @@ struct SingleWebView: UIViewRepresentable {
                     margin: 1.5em 0 0.5em;
                 }
                 
-                @media (prefers-color-scheme: dark) {
-                    body {
-                        color: #FFFFFF;
-                    }
-                    .chapter {
-                        border-bottom-color: #333;
-                    }
+                html[data-theme="dark"] body {
+                    color: var(--shiori-text-color);
+                    background-color: var(--shiori-background-color);
                 }
             </style>
             <script>

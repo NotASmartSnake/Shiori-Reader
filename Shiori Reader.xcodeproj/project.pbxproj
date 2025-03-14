@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		516EAA672D83777C00F57059 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 516EAA662D83777C00F57059 /* GRDB */; };
 		51811C942D5EDE5F00E2D973 /* Heuristica-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */; };
 		51811CA42D5F1CBA00E2D973 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 51811CA32D5F1CBA00E2D973 /* ZIPFoundation */; };
 /* End PBXBuildFile section */
@@ -64,6 +65,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				51811CA42D5F1CBA00E2D973 /* ZIPFoundation in Frameworks */,
+				516EAA672D83777C00F57059 /* GRDB in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,6 +138,7 @@
 			name = "Shiori Reader";
 			packageProductDependencies = (
 				51811CA32D5F1CBA00E2D973 /* ZIPFoundation */,
+				516EAA662D83777C00F57059 /* GRDB */,
 			);
 			productName = "Shiori Reader";
 			productReference = 51811C3F2D5E4D2C00E2D973 /* Shiori Reader.app */;
@@ -221,6 +224,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				51811CA02D5F1BD300E2D973 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+				516EAA5A2D836F9400F57059 /* XCRemoteSwiftPackageReference "SQLite.swift" */,
+				516EAA652D83777C00F57059 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 51811C402D5E4D2C00E2D973 /* Products */;
@@ -586,6 +591,22 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		516EAA5A2D836F9400F57059 /* XCRemoteSwiftPackageReference "SQLite.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stephencelis/SQLite.swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.15.3;
+			};
+		};
+		516EAA652D83777C00F57059 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 		51811CA02D5F1BD300E2D973 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
@@ -597,6 +618,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		516EAA662D83777C00F57059 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 516EAA652D83777C00F57059 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
 		51811CA32D5F1CBA00E2D973 /* ZIPFoundation */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 51811CA02D5F1BD300E2D973 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
