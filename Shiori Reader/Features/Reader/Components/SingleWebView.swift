@@ -8,72 +8,31 @@ struct SingleWebView: UIViewRepresentable {
     
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
+        
+        // Set up configuration
         config.allowsInlineMediaPlayback = true
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
-        
         config.userContentController.add(context.coordinator, name: "pageInfoHandler")
         config.userContentController.add(context.coordinator, name: "scrollTrackingHandler")
-        
-        let wordSelectionScript = WKUserScript(
-            source: """
-                document.addEventListener('click', function(event) {
-                    // Don't intercept clicks on elements that should be interactive
-                    if (event.target.tagName === 'A' || 
-                        event.target.tagName === 'BUTTON' || 
-                        event.target.tagName === 'INPUT') {
-                        return;
-                    }
-                    
-                    // Get the exact position that was clicked
-                    let range = document.caretRangeFromPoint(event.clientX, event.clientY);
-                    if (!range) {
-                        // No valid selection range found, dismiss dictionary
-                        window.webkit.messageHandlers.dismissDictionary.postMessage({});
-                        return;
-                    }
-                    
-                    // Get the text node that was clicked
-                    let node = range.startContainer;
-                    if (node.nodeType !== Node.TEXT_NODE) {
-                        // Not a text node, dismiss dictionary
-                        window.webkit.messageHandlers.dismissDictionary.postMessage({});
-                        return;
-                    }
-                    
-                    // Get the text content and click offset
-                    let text = node.textContent;
-                    let offset = range.startOffset;
-                    
-                    // Check if there's text after the click position
-                    if (offset < text.length) {
-                        // Extract up to 27 characters starting from the click position
-                        let contextText = text.substring(offset, Math.min(text.length, offset + 27));
-                        
-                        // Check if the extracted text contains Japanese characters
-                        if (/[\\u3000-\\u303F]|[\\u3040-\\u309F]|[\\u30A0-\\u30FF]|[\\uFF00-\\uFFEF]|[\\u4E00-\\u9FAF]|[\\u2605-\\u2606]|[\\u2190-\\u2195]|\\u203B/g.test(contextText)) {
-                            // Send the context text to Swift
-                            window.webkit.messageHandlers.wordTapped.postMessage({
-                                text: contextText,
-                                absoluteOffset: offset
-                            });
-                        } else {
-                            // Non-Japanese text, dismiss dictionary
-                            window.webkit.messageHandlers.dismissDictionary.postMessage({});
-                        }
-                    } else {
-                        // End of text node, dismiss dictionary
-                        window.webkit.messageHandlers.dismissDictionary.postMessage({});
-                    }
-                }, false);
-            """,
-            injectionTime: .atDocumentEnd,
-            forMainFrameOnly: false
-        )
-        
-        config.userContentController.addUserScript(wordSelectionScript)
-        
         config.userContentController.add(context.coordinator, name: "wordTapped")
         config.userContentController.add(context.coordinator, name: "dismissDictionary")
+        
+        // Load JavaScript files
+        if let wordSelectionScript = loadJavaScriptFile("wordSelection") {
+            config.userContentController.addUserScript(wordSelectionScript)
+        }
+        
+        if let scrollTrackingScript = loadJavaScriptFile("scrollTracking") {
+            config.userContentController.addUserScript(scrollTrackingScript)
+        }
+        
+        if let positionManagementScript = loadJavaScriptFile("positionManagement") {
+            config.userContentController.addUserScript(positionManagementScript)
+        }
+        
+        if let fontUtilitiesScript = loadJavaScriptFile("fontUtilities") {
+            config.userContentController.addUserScript(fontUtilitiesScript)
+        }
         
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
@@ -86,38 +45,6 @@ struct SingleWebView: UIViewRepresentable {
         webView.scrollView.bounces = true
         webView.scrollView.alwaysBounceVertical = true
         webView.scrollView.decelerationRate = .normal
-        
-        let trackingScript = WKUserScript(source: """
-            // Calculate total character count once when page loads
-            let totalChars = document.getElementById('content').textContent.length;
-            
-            // Use requestAnimationFrame for smooth performance
-            let ticking = false;
-            document.addEventListener('scroll', function() {
-                if (!ticking) {
-                    window.requestAnimationFrame(function() {
-                        // Calculate progress based on scroll position
-                        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-                        const progress = window.scrollY / scrollHeight;
-                        
-                        // Only send a message when actually scrolling (avoid excess calculations)
-                        window.webkit.messageHandlers.scrollTrackingHandler.postMessage({
-                            action: "userScrolled",
-                            progress: progress,
-                            exploredChars: Math.round(totalChars * progress),
-                            totalChars: totalChars,
-                            currentPage: Math.ceil(progress * 100),
-                            scrollY: window.scrollY
-                        });
-                        
-                        ticking = false;
-                    });
-                    ticking = true;
-                }
-            }, { passive: true });
-        """, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-        
-        webView.configuration.userContentController.addUserScript(trackingScript)
         
         viewModel.setWebView(webView)
         
@@ -195,7 +122,7 @@ struct SingleWebView: UIViewRepresentable {
                    let text = body["text"] as? String {
                     
                     DispatchQueue.main.async {
-                        self.parent.viewModel.handleTextTap(text: text)
+                        self.parent.viewModel.handleTextTap(text: text, options: body)
                     }
                 }
             } else if message.name == "dismissDictionary" {
@@ -337,249 +264,6 @@ struct SingleWebView: UIViewRepresentable {
                     background-color: var(--shiori-background-color);
                 }
             </style>
-            <script>
-        
-                document.addEventListener('DOMContentLoaded', function() {
-                    enforceRubyTextSize(\(viewModel.fontSize));
-                });
-        
-                function updateFontSize(size) {
-                    document.documentElement.style.setProperty('--shiori-font-size', size + 'px');
-                    console.log('Font size updated to: ' + size + 'px');
-                    return true;
-                }
-        
-                function enforceRubyTextSize(baseFontSize) {
-                    // Get all rt elements
-                    const rtElements = document.querySelectorAll('rt');
-                    
-                    // Apply the reduced font size with highest priority
-                    for (const rt of rtElements) {
-                        // Remove any existing inline styles that might conflict
-                        rt.setAttribute('style', '');
-                        // Apply our font size with !important to override everything
-                        rt.style.cssText = 'font-size: ' + (baseFontSize * 0.5) + 'px !important';
-                    }
-                    
-                    return rtElements.length;
-                }
-        
-                // Store more detailed position information
-                let lastKnownPosition = {
-                    percentage: 0,
-                    pixelOffset: 0,
-                    elementId: null,
-                    elementOffset: 0
-                };
-
-                // Enhance the tracking function to store more context
-                function trackPosition() {
-                    const content = document.getElementById('content');
-                    if (!content) return;
-                    
-                    const maxScroll = content.scrollHeight - window.innerHeight;
-                    const currentScroll = window.scrollY;
-                    
-                    // Save detailed position info
-                    lastKnownPosition.percentage = maxScroll > 0 ? currentScroll / maxScroll : 0;
-                    lastKnownPosition.pixelOffset = currentScroll;
-                    
-                    // Try to identify a nearby element as a landmark
-                    const elements = document.querySelectorAll('p, h1, h2, h3, h4, h5, div.chapter');
-                    let closestElement = null;
-                    let closestDistance = Number.MAX_VALUE;
-                    
-                    elements.forEach(el => {
-                        const distance = Math.abs(el.offsetTop - currentScroll);
-                        if (distance < closestDistance) {
-                            closestDistance = distance;
-                            closestElement = el;
-                        }
-                    });
-                    
-                    if (closestElement && closestElement.id) {
-                        lastKnownPosition.elementId = closestElement.id;
-                        lastKnownPosition.elementOffset = currentScroll - closestElement.offsetTop;
-                    }
-                    
-                    // Send position data to Swift
-                    window.webkit.messageHandlers.pageInfoHandler.postMessage({
-                        progress: lastKnownPosition.percentage,
-                        currentPage: Math.floor(lastKnownPosition.percentage * 100) + 1,
-                        totalPages: 100,
-                        pixelOffset: lastKnownPosition.pixelOffset,
-                        elementId: lastKnownPosition.elementId,
-                        elementOffset: lastKnownPosition.elementOffset
-                    });
-                }
-
-                // Enhanced restoration function
-                function restoreScrollPosition(data) {
-                    // First try exact pixel position
-                    if (data.pixelOffset && data.pixelOffset > 0) {
-                        window.scrollTo(0, data.pixelOffset);
-                        console.log('Restored to exact pixel offset: ' + data.pixelOffset);
-                        return;
-                    }
-                    
-                    // Next try element-based position if available
-                    if (data.elementId) {
-                        const element = document.getElementById(data.elementId);
-                        if (element) {
-                            const targetPosition = element.offsetTop + (data.elementOffset || 0);
-                            window.scrollTo(0, targetPosition);
-                            console.log('Restored using element position: ' + targetPosition);
-                            return;
-                        }
-                    }
-                    
-                    // Fall back to percentage-based as last resort
-                    const content = document.getElementById('content');
-                    if (content && data.percentage) {
-                        const maxScroll = content.scrollHeight - window.innerHeight;
-                        const targetPosition = maxScroll * data.percentage;
-                        window.scrollTo(0, targetPosition);
-                        console.log('Restored using percentage: ' + data.percentage);
-                    }
-                }
-
-                // Make the function globally available
-                window.restoreScrollPosition = restoreScrollPosition;
-
-                // Modified scrollToProgress
-                function scrollToProgress(progress, savedPixelOffset, elementId, elementOffset) {
-                    // Create a data object with all available positioning info
-                    const positionData = {
-                        percentage: progress,
-                        pixelOffset: savedPixelOffset || 0,
-                        elementId: elementId || null,
-                        elementOffset: elementOffset || 0
-                    };
-                    
-                    // Use the enhanced restoration function
-                    restoreScrollPosition(positionData);
-                    
-                    // After scrolling, update progress tracking
-                    setTimeout(function() {
-                        trackPosition();
-                        console.log('Progress restoration complete');
-                    }, 100);
-                }
-        
-                // Function to find the element at a specific character position
-                function findElementAtCharPosition(targetPosition) {
-                    const content = document.getElementById('content');
-                    if (!content) return null;
-                    
-                    const textContent = content.textContent;
-                    if (targetPosition <= 0 || targetPosition >= textContent.length) {
-                        return null;
-                    }
-                    
-                    // Get all text nodes in order
-                    let textNodes = [];
-                    
-                    function collectTextNodes(node) {
-                        if (node.nodeType === Node.TEXT_NODE) {
-                            if (node.textContent.trim().length > 0) {
-                                textNodes.push(node);
-                            }
-                        } else {
-                            for (let i = 0; i < node.childNodes.length; i++) {
-                                collectTextNodes(node.childNodes[i]);
-                            }
-                        }
-                    }
-                    
-                    collectTextNodes(content);
-                    
-                    // Find the text node that contains our target position
-                    let currentPosition = 0;
-                    let targetNode = null;
-                    let positionWithinNode = 0;
-                    
-                    for (let i = 0; i < textNodes.length; i++) {
-                        const nodeLength = textNodes[i].textContent.length;
-                        
-                        if (currentPosition + nodeLength >= targetPosition) {
-                            targetNode = textNodes[i];
-                            positionWithinNode = targetPosition - currentPosition;
-                            break;
-                        }
-                        
-                        currentPosition += nodeLength;
-                    }
-                    
-                    if (!targetNode) return null;
-                    
-                    // Return the parent element of the text node
-                    return {
-                        element: targetNode.parentElement,
-                        characterOffset: positionWithinNode,
-                        totalNodeChars: targetNode.textContent.length
-                    };
-                }
-
-                // Function to scroll to a specific character position
-                function scrollToCharacterPosition(charPosition) {
-                    const result = findElementAtCharPosition(charPosition);
-                    if (!result) {
-                        console.error('Could not find element at character position: ' + charPosition);
-                        return false;
-                    }
-                    
-                    console.log('Found element at char position ' + charPosition + ':', 
-                               result.element.tagName, 
-                               'with text starting with "' + result.element.textContent.substring(0, 20) + '..."');
-                    
-                    // Scroll the element into view with center alignment
-                    result.element.scrollIntoView({
-                        behavior: 'auto',
-                        block: 'center'
-                    });
-                    
-                    return true;
-                }
-
-                // Improved function to get character position at current scroll position
-                function getCurrentCharacterPosition() {
-                    const content = document.getElementById('content');
-                    if (!content) return { explored: 0, total: 0 };
-                    
-                    const totalChars = content.textContent.length;
-                    const scrollY = window.scrollY;
-                    const viewportHeight = window.innerHeight;
-                    const scrollHeight = document.documentElement.scrollHeight;
-                    const maxScroll = scrollHeight - viewportHeight;
-                    const ratio = maxScroll > 0 ? scrollY / maxScroll : 0;
-                    
-                    // Calculate character count
-                    const exploredChars = Math.round(totalChars * ratio);
-                    
-                    return {
-                        explored: exploredChars,
-                        total: totalChars,
-                        ratio: ratio,
-                        scrollY: scrollY
-                    };
-                }
-
-                // Utility to handle font size changes with exact character position preservation
-                function changeFontSizePreservingCharPosition(fontSize, charPosition) {
-                    // Save exact character position
-                    const position = charPosition || getCurrentCharacterPosition().explored;
-                    
-                    // Update font size
-                    document.documentElement.style.setProperty('--shiori-font-size', fontSize + 'px');
-                    
-                    // Give browser time to update layout
-                    setTimeout(() => {
-                        // Scroll to the saved character position
-                        scrollToCharacterPosition(position);
-                        console.log('Restored to exact character position:', position);
-                    }, 50);
-                }
-            </script>
         </head>
         <body>
             <div id="content">
@@ -770,6 +454,22 @@ struct SingleWebView: UIViewRepresentable {
         }
         
         return originalPath
+    }
+    
+    private func loadJavaScriptFile(_ filename: String) -> WKUserScript? {
+        guard let scriptPath = Bundle.main.path(forResource: filename, ofType: "js"),
+              let scriptContent = try? String(contentsOfFile: scriptPath, encoding: .utf8) else {
+            print("ERROR: Failed to load \(filename).js")
+            
+            // Debug: List all available resource paths
+            let resources = Bundle.main.paths(forResourcesOfType: "js", inDirectory: nil)
+            print("Available JS files: \(resources)")
+            
+            return nil
+        }
+        
+        print("Successfully loaded \(filename).js with \(scriptContent.count) characters")
+        return WKUserScript(source: scriptContent, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
     }
     
 }

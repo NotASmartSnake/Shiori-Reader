@@ -76,13 +76,75 @@ class BookViewModel: ObservableObject {
     }
     
     // MARK: - Dictionary Management
-    
-    func handleTextTap(text: String) {
-        // Find all valid Japanese words in the text, starting from the longest
-        identifyJapaneseWords(text: text) { matches in
-            if !matches.isEmpty {
-                self.dictionaryMatches = matches
-                self.showDictionary = true
+
+    // Add this method to your BookViewModel class
+
+    func handleTextTap(text: String, options: [String: Any] = [:]) {
+        print("DEBUG: Word tapped - \(text) with options: \(options)")
+        
+        // Check if this is a partial ruby compound selection
+        if let isPartialCompound = options["isPartialCompound"] as? Bool, isPartialCompound,
+           let isRuby = options["isRuby"] as? Bool, isRuby {
+            
+            // Get all the possible text segments we might want to look up
+            let selectedChar = text
+            let surroundingText = options["surroundingText"] as? String
+            let textFromClickedKanji = options["textFromClickedKanji"] as? String
+            let remainingTextInRuby = options["remainingTextInRuby"] as? String
+            let fullCompound = options["fullCompound"] as? String
+            
+            // Strategy: Try multiple lookups in priority order and use the first one with matches
+            
+            // 1. First priority: Check for compounds that start with the clicked kanji
+            // This will include both the individual kanji and any compound words starting with it
+            let textToLookup = textFromClickedKanji ?? remainingTextInRuby ?? selectedChar
+            
+            // If we have surrounding text, try to include more characters to allow for longer compounds
+            var extendedText = textToLookup
+            if let surroundingText = surroundingText {
+                // Find the position of the selected character in the surrounding text
+                if let range = surroundingText.range(of: selectedChar) {
+                    // Get text from the clicked character to the end, up to 30 characters
+                    let startIndex = range.lowerBound
+                    let endIndex = surroundingText.index(startIndex, offsetBy: min(30, surroundingText.distance(from: startIndex, to: surroundingText.endIndex)))
+                    extendedText = String(surroundingText[startIndex..<endIndex])
+                }
+            }
+            
+            print("DEBUG: Looking up text: \(extendedText)")
+            
+            // Perform the lookup
+            identifyJapaneseWords(text: extendedText) { matches in
+                if !matches.isEmpty {
+                    self.dictionaryMatches = matches
+                    self.showDictionary = true
+                } else if let fullCompound = fullCompound, fullCompound != selectedChar {
+                    // 2. Second priority: If no matches for partial compound, try the full compound
+                    print("DEBUG: No matches for partial, trying full compound: \(fullCompound)")
+                    self.identifyJapaneseWords(text: fullCompound) { fullMatches in
+                        if !fullMatches.isEmpty {
+                            self.dictionaryMatches = fullMatches
+                            self.showDictionary = true
+                        } else if let surroundingText = surroundingText {
+                            // 3. Third priority: Try wider surrounding text
+                            print("DEBUG: No matches for compound, trying surrounding text")
+                            self.identifyJapaneseWords(text: surroundingText) { contextMatches in
+                                if !contextMatches.isEmpty {
+                                    self.dictionaryMatches = contextMatches
+                                    self.showDictionary = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Original behavior for regular text or full ruby compounds
+            identifyJapaneseWords(text: text) { matches in
+                if !matches.isEmpty {
+                    self.dictionaryMatches = matches
+                    self.showDictionary = true
+                }
             }
         }
     }
