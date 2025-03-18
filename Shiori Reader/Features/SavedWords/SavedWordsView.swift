@@ -86,7 +86,7 @@ struct SavedWordsView: View {
                     }
                     
                     Rectangle()
-                        .frame(width: 0, height: 60)
+                        .frame(width: 0, height: 40)
                         .foregroundStyle(Color.clear)
                 }
                 

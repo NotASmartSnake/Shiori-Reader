@@ -46,7 +46,7 @@ struct LibraryView: View {
                         BookGrid(books: books, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
                         
                         Rectangle()
-                            .frame(width: 0, height: 85)
+                            .frame(width: 0, height: 60)
                             .foregroundStyle(.clear)
                     }
                 }

@@ -22,31 +22,35 @@ struct CustomTabBar: View {
     var body: some View {
         
         VStack(spacing:0) {
-            if (colorScheme == .light) {
-                Rectangle()
-                    .frame(height: 1)
-                    .foregroundColor(Color.gray.opacity(0.3))
-            }
-
+            Divider()
+                .background(Color.gray.opacity(0.5))
             HStack {
                 ForEach(0..<tabBarItems.count, id: \.self) { index in
-                    VStack(spacing: 5) { // Adjust spacing here
+                    Spacer()
+                    
+                    VStack(spacing: 4) { // Adjust spacing here
                         Image(systemName: tabBarItems[index].0)
-                            .imageScale(.large)
+                            .imageScale(.medium)
+                            .font(.system(size: 21))
                         Text(tabBarItems[index].1)
-                            .font(.caption)
+                            .font(.system(size: 10))
                     }
-                    .foregroundColor(selectedIndex == index ? .blue : .gray)
+                    .foregroundColor(selectedIndex == index ? .accentColor : .gray)
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 3) // Add top padding
+                    .frame(height: 49)
                     .onTapGesture {
                         selectedIndex = index
                     }
                 }
             }
-            .padding(.vertical, 10)
             .background(.ultraThinMaterial)
+            
         }
     }
 
 }
+
+#Preview {
+    MainView()
+}
+
