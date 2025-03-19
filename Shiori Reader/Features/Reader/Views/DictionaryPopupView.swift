@@ -68,7 +68,7 @@ struct DictionaryPopupView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity)
-        .frame(height: UIScreen.main.bounds.height * 0.5)
+        .frame(height: UIScreen.main.bounds.height * 0.4)
         .background(Color(.secondarySystemBackground))
         .cornerRadius(20)
         .shadow(radius: 5)

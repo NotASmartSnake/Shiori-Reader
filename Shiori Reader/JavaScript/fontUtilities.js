@@ -38,7 +38,6 @@ function enforceRubyTextSize(baseFontSize) {
         // This prevents double-application
         if (Math.abs(currentSize - rubyFontSize) > 2) {
             rt.style.cssText = 'font-size: ' + rubyFontSize + 'px !important';
-            console.log('Applied ruby text size:', rubyFontSize + 'px', 'Previous size was:', currentSize + 'px');
         }
     }
     

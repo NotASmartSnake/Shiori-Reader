@@ -40,6 +40,19 @@ struct SingleWebView: UIViewRepresentable {
         webView.isOpaque = false
         webView.scrollView.backgroundColor = .clear
         
+        // Allow console.log output to show in terminal
+        config.preferences.setValue(true, forKey: "developerExtrasEnabled")
+        
+        let loggingScript = WKUserScript(source: """
+            console.originalLog = console.log;
+            console.log = function(message) {
+                console.originalLog(message);
+                window.webkit.messageHandlers.consoleLog.postMessage(message);
+            };
+            """, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        config.userContentController.addUserScript(loggingScript)
+        config.userContentController.add(context.coordinator, name: "consoleLog")
+        
         // Ensure proper scrolling behavior
         webView.scrollView.isScrollEnabled = true
         webView.scrollView.bounces = true
@@ -129,7 +142,25 @@ struct SingleWebView: UIViewRepresentable {
                 DispatchQueue.main.async {
                     self.parent.viewModel.showDictionary = false
                 }
+            } else if message.name == "consoleLog" {
+                print("JS Console: \(message.body)")
             }
+        }
+        
+        // Functions for console.log JS output
+        func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+            print("JS Alert: \(message)")
+            completionHandler()
+        }
+
+        func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+            print("JS Confirm: \(message)")
+            completionHandler(true)
+        }
+
+        func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+            print("JS Prompt: \(prompt)")
+            completionHandler(defaultText)
         }
     }
     
@@ -290,7 +321,6 @@ struct SingleWebView: UIViewRepresentable {
                 // Calculate and save progress
                 webView.evaluateJavaScript("document.getElementById('content').scrollHeight - window.innerHeight") { (maxScrollResult, maxScrollError) in
                     if let maxScroll = maxScrollResult as? CGFloat, maxScroll > 0 {
-                        let progress = scrollY / maxScroll
                         Task {
                             await self.viewModel.saveCurrentProgress()
                         }

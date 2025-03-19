@@ -36,18 +36,6 @@
 		51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Heuristica-Bold.otf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		515BB3EE2D891BCE00411F9B /* Exceptions for "Shiori Reader" folder in "Compile Sources" phase from "Shiori Reader" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = 51811C3B2D5E4D2C00E2D973 /* Sources */;
-			membershipExceptions = (
-				JavaScript/positionManagement.js,
-				JavaScript/scrollTracking.js,
-				JavaScript/wordSelection.js,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		511842932D6835F100D1C8EA /* Books */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -56,9 +44,6 @@
 		};
 		51811C412D5E4D2C00E2D973 /* Shiori Reader */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				515BB3EE2D891BCE00411F9B /* Exceptions for "Shiori Reader" folder in "Compile Sources" phase from "Shiori Reader" target */,
-			);
 			path = "Shiori Reader";
 			sourceTree = "<group>";
 		};

@@ -102,15 +102,27 @@ struct BookReaderView: View {
                 
                 ZStack {
                     if viewModel.showDictionary {
-                        Spacer()
-                        
-                        DictionaryPopupView(
-                            matches: viewModel.dictionaryMatches,
-                            onDismiss: {
+                        Color.black.opacity(0.3)
+                            .edgesIgnoringSafeArea(.all)
+                            .onTapGesture {
+                                // Dismiss the dictionary popup when tapped
                                 viewModel.showDictionary = false
                             }
-                        )
+                            .transition(.opacity)
+                        
+                        VStack {
+                            Spacer()
+                            
+                            DictionaryPopupView(
+                                matches: viewModel.dictionaryMatches,
+                                onDismiss: {
+                                    viewModel.showDictionary = false
+                                }
+                            )
+                            
+                        }
                         .transition(.move(edge: .bottom))
+                        
                     }
                 }
                 .ignoresSafeArea(edges: .bottom)

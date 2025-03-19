@@ -133,8 +133,8 @@ function handleRubyClick(event, rubyElement) {
     if (rbElements.length === 0) {
         // Get all direct text nodes and non-rt elements as implicit rb content
         const childNodes = [...rubyElement.childNodes];
-        const baseTextNodes = childNodes.filter(node => 
-            node.nodeType === Node.TEXT_NODE || 
+        const baseTextNodes = childNodes.filter(node =>
+            node.nodeType === Node.TEXT_NODE ||
             (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'RT' && node.tagName !== 'RP')
         );
         
