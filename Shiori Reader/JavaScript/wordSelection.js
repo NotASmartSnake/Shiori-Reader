@@ -188,7 +188,7 @@ function handleRubyClick(event, rubyElement) {
             const surroundingText = getExtendedSurroundingText(rubyElement, kanji, 30);
             
             window.webkit.messageHandlers.wordTapped.postMessage({
-                text: kanji,                             // The specific kanji clicked
+                text: textFromClickedKanji,                             // The specific kanji clicked
                 reading: reading,                        // Reading for this specific kanji
                 fullCompound: fullText,                  // The full ruby compound
                 fullReading: fullReading,                // Reading for the full compound
@@ -228,104 +228,79 @@ function handleImplicitRubyClick(event, rubyElement, baseTextNodes) {
     // Get the specific text node that was clicked
     const clickedNode = range.startContainer;
     
-    // If it's a text node within our base nodes or a descendant of one
-    const isDescendantOfBaseNode = baseTextNodes.some(node => 
+    // Check if this is a text node within our base nodes or a descendant
+    const isDescendantOfBaseNode = baseTextNodes.some(node =>
         node === clickedNode || (node.contains && node.contains(clickedNode))
     );
     
-    if ((clickedNode.nodeType === Node.TEXT_NODE && baseTextNodes.includes(clickedNode)) || 
+    if ((clickedNode.nodeType === Node.TEXT_NODE && baseTextNodes.includes(clickedNode)) ||
         isDescendantOfBaseNode) {
         
         // Get the position within this node
         const offset = range.startOffset;
         
-        // Make sure we have a valid text node and offset
-        if (clickedNode.nodeType !== Node.TEXT_NODE || offset >= clickedNode.textContent.length) {
-            // Fallback to full ruby content if we can't determine the exact position
-            handleFullRubySelection(rubyElement);
-            return;
-        }
-        
         // Get the character at the clicked position
         const clickedChar = clickedNode.textContent.charAt(offset);
         
-        // Create context by including a few characters before and after
-        let startPos = Math.max(0, offset - 2);
-        let endPos = Math.min(clickedNode.textContent.length, offset + 3);
-        let contextText = clickedNode.textContent.substring(startPos, endPos);
-        
-        // Get the full ruby readings
+        // Get the furigana reading (simplistic matching approach)
         const readings = [];
         const rtElements = rubyElement.querySelectorAll('rt');
         for (const rt of rtElements) {
             readings.push(rt.textContent);
         }
         
-        // Determine which character and reading was clicked (approximate mapping)
-        const baseTextIndex = baseTextNodes.indexOf(clickedNode);
-        let cumulativeLength = 0;
-        for (let i = 0; i < baseTextIndex; i++) {
-            cumulativeLength += baseTextNodes[i].textContent.length;
-        }
-        cumulativeLength += offset;
-        
-        // Approximate which reading corresponds to the clicked character
-        const readingIndex = Math.floor(cumulativeLength * readings.length / fullText.length);
-        const reading = readings[readingIndex] || '';
-        
-        // IMPORTANT: Get text AFTER the clicked character, both from this ruby element
-        // and from following elements in the DOM
-        
-        // 1. First get remaining text in this ruby element after the clicked position
-        let remainingTextInRuby = '';
-        
-        // Handle the current node first
-        remainingTextInRuby += clickedNode.textContent.substring(offset);
-        
-        // Then handle any subsequent nodes in the ruby element
-        let foundClickedNode = false;
-        for (const node of baseTextNodes) {
-            if (node === clickedNode) {
-                foundClickedNode = true;
-                // Skip the current node as we've already handled it above
-                continue;
-            } else if (foundClickedNode) {
-                remainingTextInRuby += node.textContent;
+        // Get text AFTER the clicked position (crucial for compounds)
+        let textAfterRuby = '';
+        if (rubyElement.nextSibling) {
+            // Collect text from next sibling nodes
+            let currentNode = rubyElement.nextSibling;
+            let textLength = 0;
+            const maxLength = 30; // Reasonable context size
+            
+            while (currentNode && textLength < maxLength) {
+                if (currentNode.nodeType === Node.TEXT_NODE) {
+                    textAfterRuby += currentNode.textContent;
+                    textLength += currentNode.textContent.length;
+                } else if (currentNode.nodeType === Node.ELEMENT_NODE &&
+                           currentNode.tagName !== 'RT' &&
+                           currentNode.tagName !== 'RP') {
+                    // Handle nested text nodes in elements
+                    for (const child of currentNode.childNodes) {
+                        if (child.nodeType === Node.TEXT_NODE) {
+                            textAfterRuby += child.textContent;
+                            textLength += child.textContent.length;
+                        }
+                    }
+                }
+                
+                if (textLength >= maxLength) break;
+                currentNode = currentNode.nextSibling;
             }
         }
         
-        // 2. Now get text from nodes AFTER this ruby element
-        let textAfterRuby = '';
-        if (rubyElement.nextSibling) {
-            textAfterRuby = getTextFromNodeAndFollowing(rubyElement.nextSibling, 30);
+        // Also collect any remaining text within the ruby element after the clicked position
+        let remainingTextInRuby = '';
+        if (offset < clickedNode.textContent.length - 1) {
+            remainingTextInRuby = clickedNode.textContent.substring(offset + 1);
         }
         
-        // 3. Combine to get a complete text starting from the clicked character
-        const completeTextFromClick = clickedChar + remainingTextInRuby.substring(1) + textAfterRuby;
+        // Combine for a coherent context
+        const completeContext = clickedChar + remainingTextInRuby + textAfterRuby;
         
-        // 4. Also get extended surrounding text including parent context
-        const extendedSurroundingText = getExtendedSurroundingText(rubyElement, clickedChar, 30);
-        
-        // Send all the information to Swift
+        // Send to dictionary lookup
         window.webkit.messageHandlers.wordTapped.postMessage({
-            text: clickedChar,                     // The individual character clicked
-            contextText: contextText,              // A few characters around the click
-            fullCompound: fullText,                // The entire ruby text
-            reading: reading,                      // The approximate reading for this character
-            fullReading: readings.join(''),        // All readings combined
-            textFromClickedKanji: completeTextFromClick, // Text from clicked char + following text (important!)
-            remainingTextInRuby: remainingTextInRuby,    // Text remaining in this ruby element
-            textAfterRuby: textAfterRuby,          // Text from nodes after this ruby
-            surroundingText: extendedSurroundingText, // Extended context
+            text: completeContext,                      // The specific character clicked
+            fullCompound: fullText,                 // The entire ruby text
+            reading: readings.join(''),             // Approximate reading
+            textFromClickedKanji: completeContext,  // Important: text from clicked char + following text
+            textAfterRuby: textAfterRuby,           // Text from nodes after this ruby
             isRuby: true,
-            isPartialCompound: true,
-            rubyPosition: cumulativeLength
+            isPartialCompound: true
         });
-        return;
+    } else {
+        // Fallback to using the full ruby
+        handleFullRubySelection(rubyElement);
     }
-    
-    // Fallback to full ruby selection
-    handleFullRubySelection(rubyElement);
 }
 
 function handleFullRubySelection(rubyElement) {
@@ -346,7 +321,7 @@ function handleFullRubySelection(rubyElement) {
     const surroundingText = getExtendedSurroundingText(rubyElement, fullBaseText, 30);
     
     window.webkit.messageHandlers.wordTapped.postMessage({
-        text: fullBaseText,
+        text: extendedText,
         reading: fullReading,
         textFromClickedKanji: extendedText,  // Include text after ruby
         surroundingText: surroundingText,
@@ -421,7 +396,7 @@ function getNodeTextContent(node) {
     if (!node) return '';
     
     // Skip rt and rp elements
-    if (node.nodeType === Node.ELEMENT_NODE && 
+    if (node.nodeType === Node.ELEMENT_NODE &&
         (node.tagName === 'RT' || node.tagName === 'RP')) {
         return '';
     }

@@ -79,72 +79,14 @@ class BookViewModel: ObservableObject {
     
     func handleTextTap(text: String, options: [String: Any] = [:]) {
         print("DEBUG: Word tapped - \(text) with options: \(options)")
-            
-        // Helper function to extract what looks like a compound part (kanji + hiragana)
-        func extractPotentialCompoundPart(from text: String) -> String {
-            // Get the first continuous segment of hiragana/small characters
-            var result = ""
-            
-            // Japanese hiragana range
-            let hiraganaRange = "ぁ"..."ん"
-            let smallCharsAndPunctuation = "っゃゅょ、。？！"
-            
-            for char in text {
-                if hiraganaRange.contains(String(char)) || smallCharsAndPunctuation.contains(char) {
-                    result.append(char)
-                    // Stop at punctuation
-                    if "、。？！".contains(char) {
-                        break
-                    }
-                } else {
-                    // Stop when we hit something that's not hiragana or small characters
-                    break
-                }
+        
+        identifyJapaneseWords(text: text) { matches in
+            if !matches.isEmpty {
+                self.dictionaryMatches = matches
+                self.showDictionary = true
             }
-            
-            return result
         }
         
-        // Check if this is a partial ruby compound selection
-        if let isPartialCompound = options["isPartialCompound"] as? Bool, isPartialCompound,
-           let isRuby = options["isRuby"] as? Bool, isRuby {
-            
-            // Get all the possible text segments we might want to look up
-            let selectedChar = text
-            let textFromClickedKanji = options["textFromClickedKanji"] as? String
-            let textAfterRuby = options["textAfterRuby"] as? String
-            
-            // Simply use the selected character plus following text (up to 30 chars)
-            // If textFromClickedKanji is available, use that as it already includes the context
-            // Otherwise, manually combine the selected character with textAfterRuby
-            let lookupText = textFromClickedKanji ?? (selectedChar + (textAfterRuby ?? ""))
-            
-            print("DEBUG: Looking up text: \(lookupText)")
-            
-            // Perform the lookup
-            identifyJapaneseWords(text: lookupText) { matches in
-                if !matches.isEmpty {
-                    self.dictionaryMatches = matches
-                    self.showDictionary = true
-                } else {
-                    // If no matches, try just the single character
-                    self.identifyJapaneseWords(text: selectedChar) { charMatches in
-                        if !charMatches.isEmpty {
-                            self.dictionaryMatches = charMatches
-                            self.showDictionary = true
-                        }
-                    }
-                }
-            }
-            } else {
-            // Original behavior for regular text or full ruby compounds
-            identifyJapaneseWords(text: text) { matches in
-                if !matches.isEmpty {
-                    self.dictionaryMatches = matches
-                    self.showDictionary = true
-                }
-            }
-        }
     }
     
     private func identifyJapaneseWords(text: String, completion: @escaping ([DictionaryMatch]) -> Void) {
