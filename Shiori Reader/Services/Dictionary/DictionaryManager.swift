@@ -5,9 +5,11 @@ class DictionaryManager {
     static let shared = DictionaryManager()
     
     private var dbQueue: DatabaseQueue?
+    private var deinflector: Deinflector?
     
     private init() {
         setupDatabase()
+        deinflector = loadDeinflector()
     }
     
     private func setupDatabase() {
@@ -25,6 +27,21 @@ class DictionaryManager {
             }
         } catch {
             print("Error setting up database: \(error)")
+        }
+    }
+    
+    private func loadDeinflector() -> Deinflector? {
+        guard let url = Bundle.main.url(forResource: "deinflect", withExtension: "json") else {
+            print("Could not find deinflect.json file")
+            return nil
+        }
+        
+        do {
+            let data = try Data(contentsOf: url)
+            return Deinflector.loadFromJSON(data)
+        } catch {
+            print("Error loading deinflection data: \(error)")
+            return nil
         }
     }
     
@@ -90,6 +107,40 @@ class DictionaryManager {
         }
         
         return sortEntriesByPopularity(entries)
+    }
+    
+    func lookupWithDeinflection(word: String) -> [DictionaryEntry] {
+        var allEntries: [DictionaryEntry] = []
+        
+        // First try direct lookup
+        let directEntries = lookup(word: word)
+        allEntries.append(contentsOf: directEntries)
+        
+        // Then try deinflections if we have them and didn't find enough matches
+        if allEntries.isEmpty, let deinflector = self.deinflector {
+            let deinflections = deinflector.deinflect(word)
+            
+            for result in deinflections {
+                // Skip the original form since we already looked it up
+                if result.term == word && result.reasons.isEmpty {
+                    continue
+                }
+                
+                let entries = lookup(word: result.term)
+                
+                // For each entry found, add information about how it was deinflected
+                for var entry in entries {
+                    entry.transformed = word
+                    
+                    // Optionally, add the deinflection reasons to help explain the conjugation
+                    // entry.transformationNotes = result.reasons.joined(separator: ", ")
+                    
+                    allEntries.append(entry)
+                }
+            }
+        }
+        
+        return sortEntriesByPopularity(allEntries)
     }
     
     // Advanced lookup with prefix matching
@@ -258,4 +309,5 @@ class DictionaryManager {
                scoreTag.contains("arch") ||
                scoreTag.contains("obso")
     }
+    
 }

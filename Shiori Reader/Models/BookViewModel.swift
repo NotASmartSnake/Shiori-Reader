@@ -9,8 +9,6 @@ import Foundation
 import WebKit
 import SwiftUI
 
-// NEED TO CLEAN THIS SHIT UP!!!!!
-
 @MainActor
 class BookViewModel: ObservableObject {
     // MARK: - Published Properties
@@ -109,14 +107,14 @@ class BookViewModel: ObservableObject {
                 let candidateWord = String(text[..<endIndex])
                 
                 // Look up this word in the dictionary
-                let entries = DictionaryManager.shared.lookup(word: candidateWord)
+                let entries = DictionaryManager.shared.lookupWithDeinflection(word: candidateWord)
                 
                 // If we found matches, add this as a valid match
                 if !entries.isEmpty {
                     let match = DictionaryMatch(word: candidateWord, entries: entries)
                     matches.append(match)
                     
-                    // Optional: Limit to a reasonable number of matches (e.g., 5)
+                    // Limit to a reasonable number of matches
                     if matches.count >= 5 {
                         break
                     }
