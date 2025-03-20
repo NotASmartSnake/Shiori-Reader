@@ -35,28 +35,31 @@ struct DictionaryPopupView: View {
                     .foregroundColor(.secondary)
             } else {
                 ScrollView {
-                    ForEach(matches, id: \.word) { match in
+                    // Flatten all entries from all matches into a single list
+                    ForEach(matches.flatMap { $0.entries }, id: \.id) { entry in
                         VStack(alignment: .leading, spacing: 6) {
-                            Text(match.word)
-                                .font(.headline)
-                                .padding(.vertical, 4)
-                                .foregroundColor(.blue)
-                            
-                            ForEach(match.entries) { entry in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    if !entry.reading.isEmpty && entry.reading != entry.term {
-                                        Text(entry.reading)
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    
-                                    ForEach(entry.meanings.indices, id: \.self) { index in
-                                        Text("\(entry.meanings[index])")
-                                            .font(.body)
-                                            .padding(.leading, 8)
-                                    }
+                            // Term with furigana reading above it
+                            VStack(alignment: .leading, spacing: 0) {
+                                if !entry.reading.isEmpty && entry.reading != entry.term {
+                                    // Furigana reading
+                                    Text(entry.reading)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .padding(.bottom, 1)
                                 }
-                                .padding(.leading, 8)
+                                
+                                // Main term
+                                Text(entry.term)
+                                    .font(.headline)
+                                    .foregroundColor(.blue)
+                            }
+                            .padding(.vertical, 4)
+                            
+                            // Display meaning entries
+                            ForEach(entry.meanings.indices, id: \.self) { index in
+                                Text(entry.meanings[index])
+                                    .font(.body)
+                                    .padding(.leading, 8)
                             }
                             
                             Divider()
