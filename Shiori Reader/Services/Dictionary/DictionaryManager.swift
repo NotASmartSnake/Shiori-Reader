@@ -195,22 +195,35 @@ class DictionaryManager {
         return entries
     }
     
-    // Simple reverse lookup (search by English meaning)
+    // Search by English meaning
     func searchByMeaning(text: String, limit: Int = 20) -> [DictionaryEntry] {
         guard let db = dbQueue else { return [] }
         
         var entries: [DictionaryEntry] = []
+        let searchTerm = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         
         do {
             try db.read { db in
-                let rows = try Row.fetchAll(db, sql: """
-                    SELECT DISTINCT t.id, t.expression, t.reading, t.term_tags
+                // Split search query into individual words for better matching
+                let searchWords = searchTerm.components(separatedBy: .whitespacesAndNewlines)
+                    .filter { !$0.isEmpty }
+                
+                // Build query that prioritizes exact word matches
+                let sql = """
+                    SELECT DISTINCT t.id, t.expression, t.reading, t.term_tags, t.score, t.popularity,
+                        (CASE
+                            WHEN d.definition LIKE '% \(searchTerm) %' OR d.definition LIKE '\(searchTerm) %' OR d.definition LIKE '% \(searchTerm)' OR d.definition = '\(searchTerm)' THEN 1
+                            WHEN d.definition LIKE '%\(searchTerm)%' THEN 2
+                            ELSE 3
+                        END) AS match_quality
                     FROM terms t
                     JOIN definitions d ON t.id = d.term_id
-                    WHERE d.definition LIKE '%' || ? || '%'
-                    ORDER BY t.sequence, t.id
+                    WHERE d.definition LIKE '%\(searchTerm)%'
+                    ORDER BY match_quality, t.popularity DESC, t.sequence
                     LIMIT ?
-                    """, arguments: [text.lowercased(), limit])
+                    """
+                
+                let rows = try Row.fetchAll(db, sql: sql, arguments: [limit])
                 
                 for row in rows {
                     let termId = row["id"] as? Int64 ?? 0
@@ -220,32 +233,53 @@ class DictionaryManager {
                     let score = row["score"] as? String
                     let popularity = row["popularity"] as? Double ?? 0.0
                     
-                    // Fetch definitions for this term
+                    // Fetch all definitions for this term
                     let definitions = try String.fetchAll(db, sql: """
                         SELECT definition FROM definitions
                         WHERE term_id = ?
                         ORDER BY id
                         """, arguments: [termId])
                     
-                    let entry = DictionaryEntry(
-                        id: "\(termId)",
-                        term: expression,
-                        reading: reading,
-                        meanings: definitions,
-                        meaningTags: [],
-                        termTags: tags.split(separator: ",").map(String.init),
-                        score: score,
-                        popularity: popularity
-                    )
+                    // Filter out false positive matches
+                    let containsExactMatch = definitions.contains { definition in
+                        let lowerDef = definition.lowercased()
+                        
+                        // Check for exact phrase match
+                        if lowerDef.contains(" \(searchTerm) ") ||
+                           lowerDef.hasPrefix("\(searchTerm) ") ||
+                           lowerDef.hasSuffix(" \(searchTerm)") ||
+                           lowerDef == searchTerm {
+                            return true
+                        }
+                        
+                        // Check for word boundary matches with punctuation
+                        let defWords = lowerDef.components(separatedBy: CharacterSet.alphanumerics.inverted)
+                        return defWords.contains(searchTerm)
+                    }
                     
-                    entries.append(entry)
+                    // Only add entries where the search term appears as a complete word
+                    // or include partial matches if we have very few results
+                    if containsExactMatch || entries.count < 5 {
+                        let entry = DictionaryEntry(
+                            id: "\(termId)",
+                            term: expression,
+                            reading: reading,
+                            meanings: definitions,
+                            meaningTags: [],
+                            termTags: tags.split(separator: ",").map(String.init),
+                            score: score,
+                            popularity: popularity
+                        )
+                        
+                        entries.append(entry)
+                    }
                 }
             }
         } catch {
             print("Error searching by meaning: \(error)")
         }
         
-        return entries
+        return sortEntriesByPopularity(entries)
     }
     
     func sortEntriesByPopularity(_ entries: [DictionaryEntry]) -> [DictionaryEntry] {
