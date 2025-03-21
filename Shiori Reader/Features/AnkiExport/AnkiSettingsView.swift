@@ -22,22 +22,36 @@ struct AnkiSettingsView: View {
     @State private var alertMessage = ""
     @State private var isLoading = false
     
+    // State for the deck and note type pickers
+    @State private var availableDecks: [String] = []
+    @State private var availableNoteTypes: [String: [String]] = [:]
+    @State private var selectedNoteTypeFields: [String] = []
+    @State private var showingDeckPicker = false
+    @State private var showingNoteTypePicker = false
+    
     var body: some View {
         Form {
             Section(header: Text("AnkiMobile Integration")) {
-                TextField("Note Type", text: $noteType)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
+                HStack {
+                    Text("Note Type")
+                    Spacer()
+                    Button(noteType) {
+                        showingNoteTypePicker = true
+                    }
+                    .foregroundColor(.blue)
+                }
                 
-                TextField("Deck Name", text: $deckName)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                
-                TextField("Tags (space separated)", text: $tags)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
+                HStack {
+                    Text("Deck Name")
+                    Spacer()
+                    Button(deckName) {
+                        showingDeckPicker = true
+                    }
+                    .foregroundColor(.blue)
+                }
                 
                 Button(action: {
+                    isLoading = true
                     fetchAnkiInfo()
                 }) {
                     HStack {
@@ -51,7 +65,20 @@ struct AnkiSettingsView: View {
                 .disabled(isLoading)
             }
             
-            Section(header: Text("Field Mapping"), footer:  Text("Make sure these field names match your Anki note type exactly")) {
+            Section(header: Text("Field Mapping"), footer: Text("Make sure these field names match your Anki note type exactly")) {
+                if !selectedNoteTypeFields.isEmpty {
+                    Text("Available fields for '\(noteType)':")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    ForEach(selectedNoteTypeFields, id: \.self) { field in
+                        Text(field)
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+                    
+                    Divider()
+                }
                 
                 TextField("Word Field Name", text: $wordField)
                     .onChange(of: wordField) { newValue in
@@ -90,6 +117,60 @@ struct AnkiSettingsView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .sheet(isPresented: $showingDeckPicker) {
+            DeckPickerView(
+                selectedDeck: $deckName,
+                isPresented: $showingDeckPicker,
+                availableDecks: availableDecks
+            )
+        }
+        .sheet(isPresented: $showingNoteTypePicker) {
+            NoteTypePickerView(
+                selectedNoteType: $noteType,
+                isPresented: $showingNoteTypePicker,
+                availableNoteTypes: availableNoteTypes,
+                onNoteTypeSelected: { type, fields in
+                    selectedNoteTypeFields = fields
+                }
+            )
+        }
+    }
+    
+    private func fetchAnkiInfo() {
+        AnkiExportService.shared.fetchAnkiInfo { success, info in
+            DispatchQueue.main.async {
+                isLoading = false
+                
+                if success, let info = info {
+                    print("DEBUG: Received Anki info successfully")
+                    
+                    // Process deck information
+                    if let decks = info["decks"] as? [String] {
+                        self.availableDecks = decks
+                        print("DEBUG: Loaded \(decks.count) decks")
+                    }
+                    
+                    // Process note type information
+                    if let noteTypes = info["noteTypes"] as? [String: [String]] {
+                        self.availableNoteTypes = noteTypes
+                        print("DEBUG: Loaded \(noteTypes.count) note types")
+                        
+                        // Update the selected note type fields
+                        if let fields = noteTypes[self.noteType] {
+                            self.selectedNoteTypeFields = fields
+                        }
+                    }
+                    
+                    self.alertTitle = "Success"
+                    self.alertMessage = "Successfully retrieved Anki information. You can now select deck and note type."
+                    self.showAlert = true
+                } else {
+                    self.alertTitle = "Error"
+                    self.alertMessage = "Failed to fetch information from AnkiMobile."
+                    self.showAlert = true
+                }
+            }
+        }
     }
     
     private func testAnkiConnection() {
@@ -103,35 +184,6 @@ struct AnkiSettingsView: View {
                     alertMessage = "AnkiMobile is not installed or cannot be opened."
                 }
                 showAlert = true
-            }
-        }
-    }
-    
-    private func fetchAnkiInfo() {
-        isLoading = true
-        
-        AnkiExportService.shared.fetchAnkiInfo { success, info in
-            DispatchQueue.main.async {
-                isLoading = false
-                
-                if success, let info = info {
-                    // Process deck and note type info
-                    if let decks = info["decks"] as? [String] {
-                        // Show deck selection dialog
-                        print("Available decks: \(decks)")
-                        // You could show a picker here
-                    }
-                    
-                    if let noteTypes = info["noteTypes"] as? [String: [String]] {
-                        // Show note type selection dialog
-                        print("Available note types: \(noteTypes)")
-                        // You could show a picker here
-                    }
-                } else {
-                    alertTitle = "Error"
-                    alertMessage = "Failed to fetch information from AnkiMobile."
-                    showAlert = true
-                }
             }
         }
     }

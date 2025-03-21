@@ -129,45 +129,148 @@ class AnkiExportService {
     
     // Test connection to AnkiMobile
     func testAnkiConnection(completion: @escaping (Bool) -> Void) {
+        print("DEBUG: Testing Anki connection")
         let testURL = URL(string: "anki://")!
+        
+        // Check if we're running in the simulator
+        let isSimulator = ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil
+        print("DEBUG: Running in simulator: \(isSimulator)")
+        
+        if isSimulator {
+            print("DEBUG: In simulator - AnkiMobile likely not installed")
+            // For simulator testing, provide a mock result
+            // You can toggle this to test both success and failure paths
+            let mockSuccess = true
+            
+            print("DEBUG: Using mock success: \(mockSuccess)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                completion(mockSuccess)
+            }
+            return
+        }
+        
+        // For real device testing
+        print("DEBUG: Checking if URL '\(testURL)' can be opened")
         if UIApplication.shared.canOpenURL(testURL) {
-            UIApplication.shared.open(testURL, options: [:]) { _ in
-                completion(true)
+            print("DEBUG: URL can be opened, attempting to open AnkiMobile")
+            UIApplication.shared.open(testURL, options: [:]) { success in
+                print("DEBUG: Open URL result: \(success)")
+                completion(success)
             }
         } else {
+            print("DEBUG: URL scheme 'anki://' is not supported on this device")
             completion(false)
         }
     }
     
     // Get deck and note type information from AnkiMobile
     func fetchAnkiInfo(completion: @escaping (Bool, [String: Any]?) -> Void) {
+        print("DEBUG: Attempting to fetch Anki info")
         let infoURL = URL(string: "anki://x-callback-url/infoForAdding?x-success=shiori://anki-info")!
         
+        // Check if URL can be opened
         if UIApplication.shared.canOpenURL(infoURL) {
-            // Register for clipboard notification
-            NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+            print("DEBUG: Can open Anki info URL")
+            
+            // Create a timeout mechanism
+            let timeoutWorkItem = DispatchWorkItem { [weak self] in
+                guard let self = self else { return }
+                print("DEBUG: Timeout reached while waiting for Anki data")
+                
+                // Check clipboard one last time
+                let pasteboard = UIPasteboard.general
+                if let data = pasteboard.data(forPasteboardType: "net.ankimobile.json") {
+                    self.processAnkiData(data, completion: completion)
+                } else {
+                    print("DEBUG: No Anki data found after timeout")
+                    completion(false, nil)
+                }
+                
+                // Remove observer
+                NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
+            }
+            
+            // Register for becoming active notification
+            NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+                guard let self = self else { return }
+                
+                print("DEBUG: App became active, checking clipboard")
+                timeoutWorkItem.cancel()  // Cancel the timeout since we're back
+                
                 // Check for clipboard data when app becomes active
                 let pasteboard = UIPasteboard.general
                 if let data = pasteboard.data(forPasteboardType: "net.ankimobile.json") {
-                    // Clear clipboard
-                    pasteboard.setData(Data(), forPasteboardType: "net.ankimobile.json")
-                    
-                    // Decode json data
-                    if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                        completion(true, json)
-                    } else {
-                        completion(false, nil)
-                    }
-                    
-                    // Remove observer
-                    NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
+                    // Process the data
+                    self.processAnkiData(data, completion: completion)
                 } else {
+                    print("DEBUG: No Anki data found in clipboard after return")
+                    completion(false, nil)
+                }
+                
+                // Remove observer
+                NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
+            }
+            
+            // Schedule timeout
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: timeoutWorkItem)
+            
+            // Open AnkiMobile
+            UIApplication.shared.open(infoURL, options: [:]) { success in
+                print("DEBUG: Open URL result: \(success)")
+                if !success {
+                    timeoutWorkItem.cancel()
                     completion(false, nil)
                 }
             }
-            
-            UIApplication.shared.open(infoURL, options: [:], completionHandler: nil)
         } else {
+            print("DEBUG: Cannot open Anki info URL")
+            completion(false, nil)
+        }
+    }
+    
+    // Helper method to process Anki data
+    private func processAnkiData(_ data: Data, completion: @escaping (Bool, [String: Any]?) -> Void) {
+        // Clear clipboard after reading
+        UIPasteboard.general.setData(Data(), forPasteboardType: "net.ankimobile.json")
+        
+        do {
+            // Parse the JSON data
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                print("DEBUG: Successfully parsed Anki JSON data")
+                
+                // Process the decks data (convert from array of dictionaries to array of strings)
+                var processedData: [String: Any] = [:]
+                
+                if let decksArray = json["decks"] as? [[String: String]] {
+                    let deckNames = decksArray.compactMap { $0["name"] }
+                    processedData["decks"] = deckNames
+                    print("DEBUG: Processed \(deckNames.count) decks")
+                }
+                
+                // Process the notetypes data (convert from array of dictionaries to dictionary of arrays)
+                if let notesArray = json["notetypes"] as? [[String: Any]] {
+                    var noteTypesDict: [String: [String]] = [:]
+                    
+                    for noteType in notesArray {
+                        if let name = noteType["name"] as? String,
+                           let fields = noteType["fields"] as? [[String: String]] {
+                            let fieldNames = fields.compactMap { $0["name"] }
+                            noteTypesDict[name] = fieldNames
+                        }
+                    }
+                    
+                    processedData["noteTypes"] = noteTypesDict
+                    print("DEBUG: Processed \(noteTypesDict.count) note types")
+                }
+                
+                // Return the processed data
+                completion(true, processedData)
+            } else {
+                print("DEBUG: JSON is not a dictionary")
+                completion(false, nil)
+            }
+        } catch {
+            print("DEBUG: JSON parsing error: \(error)")
             completion(false, nil)
         }
     }
