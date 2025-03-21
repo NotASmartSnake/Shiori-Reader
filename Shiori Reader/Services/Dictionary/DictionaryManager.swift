@@ -204,10 +204,6 @@ class DictionaryManager {
         
         do {
             try db.read { db in
-                // Split search query into individual words for better matching
-                let searchWords = searchTerm.components(separatedBy: .whitespacesAndNewlines)
-                    .filter { !$0.isEmpty }
-                
                 // Build query that prioritizes exact word matches
                 let sql = """
                     SELECT DISTINCT t.id, t.expression, t.reading, t.term_tags, t.score, t.popularity,

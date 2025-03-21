@@ -30,6 +30,15 @@ struct SettingsView: View {
                             Text("Dictionaries")
                         }
                         .listRowBackground(Color(.systemGray6))
+
+                        NavigationLink(destination: AnkiSettingsView()) {
+                            HStack {
+                                Image(systemName: "rectangle.stack.fill")
+                                Text("Anki Integration")
+                            }
+                        }
+                        .listRowBackground(Color(.systemGray6))
+                        
                         
                     }
                     .listStyle(PlainListStyle())

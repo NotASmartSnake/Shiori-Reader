@@ -17,6 +17,14 @@ struct Shiori_ReaderApp: App {
                 .preferredColorScheme(
                     isDarkMode == nil ? nil : (isDarkMode! ? .dark : .light)
                 )
+                .onOpenURL { url in
+                    // Handle URL callback from AnkiMobile
+                    if url.scheme == "shiori" {
+                        // The app was opened via the URL scheme
+                        // Post a notification that a card was successfully added
+                        NotificationCenter.default.post(name: Notification.Name("AnkiCardAdded"), object: nil)
+                    }
+                }
         }
     }
 }

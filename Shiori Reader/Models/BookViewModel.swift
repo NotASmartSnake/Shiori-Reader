@@ -24,6 +24,7 @@ class BookViewModel: ObservableObject {
     @Published var dictionaryMatches: [DictionaryMatch] = []
     @Published var currentTheme: Theme = Theme.original
     @Published var fontSize: Int = 18
+    @Published var currentSentenceContext: String = ""
     
     // MARK: - Private Properties
     private var webView: WKWebView?
@@ -78,9 +79,16 @@ class BookViewModel: ObservableObject {
     func handleTextTap(text: String, options: [String: Any] = [:]) {
         print("DEBUG: Word tapped - \(text) with options: \(options)")
         
+        // Extract sentence context if available
+        var sentenceContext = ""
+        if let surroundingText = options["surroundingText"] as? String {
+            sentenceContext = surroundingText
+        }
+        
         identifyJapaneseWords(text: text) { matches in
             if !matches.isEmpty {
                 self.dictionaryMatches = matches
+                self.currentSentenceContext = sentenceContext
                 self.showDictionary = true
             }
         }

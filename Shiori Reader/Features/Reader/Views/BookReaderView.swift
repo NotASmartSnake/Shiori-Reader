@@ -117,7 +117,9 @@ struct BookReaderView: View {
                                 matches: viewModel.dictionaryMatches,
                                 onDismiss: {
                                     viewModel.showDictionary = false
-                                }
+                                },
+                                sentenceContext: viewModel.currentSentenceContext
+                                
                             )
                             
                         }
