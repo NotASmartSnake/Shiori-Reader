@@ -9,20 +9,112 @@
 import SwiftUI
 
 struct SearchView: View {
+    @StateObject private var viewModel = SearchViewModel()
+    @State private var showingEntryDetail = false
+    
     var body: some View {
-        VStack {
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.gray)
+        NavigationStack {
+            ZStack {
+                Color("BackgroundColor").ignoresSafeArea(edges: .all)
                 
-                TextField("Search", text: .constant(""))
+                VStack(spacing: 0) {
+                    // Search bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
+                        
+                        TextField("Search Japanese or English", text: $viewModel.searchText)
+                            .disableAutocorrection(true)
+                            .autocapitalization(.none)
+                        
+                        if !viewModel.searchText.isEmpty {
+                            Button(action: {
+                                viewModel.clearSearch()
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                    .padding(10)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    .padding(.top, 5)
+                    
+                    if viewModel.isSearching {
+                        // Loading indicator
+                        ProgressView()
+                            .padding()
+                        
+                        Spacer()
+                    } else if viewModel.searchResults.isEmpty && !viewModel.searchText.isEmpty {
+                        // No results message
+                        VStack(spacing: 15) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 40))
+                                .foregroundColor(.gray)
+                            Text("No results found")
+                                .font(.headline)
+                            Text("Try a different search term or check your spelling")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+                        .padding(.top, 50)
+                        .frame(maxWidth: .infinity)
+                        
+                        Spacer()
+                    } else if viewModel.searchText.isEmpty {
+                        // Initial state
+                        VStack(spacing: 20) {
+                            Image(systemName: "character.book.closed")
+                                .font(.system(size: 60))
+                                .foregroundColor(.gray.opacity(0.7))
+                                .padding(.top, 50)
+                            
+                            Text("Search for Japanese words")
+                                .font(.headline)
+                            
+                            Text("Enter Japanese characters or English meanings")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
+                            
+                            Spacer()
+                        }
+                    } else {
+                        // Search results list
+                        List {
+                            ForEach(viewModel.searchResults, id: \.id) { entry in
+                                Button(action: {
+                                    viewModel.selectedEntry = entry
+                                    showingEntryDetail = true
+                                }) {
+                                    DictionaryEntryRow(entry: entry)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .listStyle(PlainListStyle())
+                    }
+                    
+                    // Space for tab bar
+                    Rectangle()
+                        .frame(width: 0, height: 60)
+                        .foregroundStyle(.clear)
+                }
             }
-            .padding(10)
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
-            .padding()
-            
-            Spacer()
+            .navigationTitle("Dictionary")
+            .sheet(isPresented: $showingEntryDetail) {
+                if let entry = viewModel.selectedEntry {
+                    EntryDetailView(entry: entry, onSave: {
+                        viewModel.saveWordToList(entry)
+                    })
+                }
+            }
         }
     }
 }
