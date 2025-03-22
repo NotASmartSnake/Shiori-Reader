@@ -101,6 +101,16 @@ class AnkiExportService {
         
         let settings = getUserSettings()
         
+        // Debug log the settings and input values
+        print("DEBUG: Creating URL for Anki export")
+        print("DEBUG: Word: \(word)")
+        print("DEBUG: Reading: \(reading)")
+        print("DEBUG: Definition: \(definition)")
+        print("DEBUG: Sentence: \(sentence)")
+        print("DEBUG: Note Type: \(settings.noteType)")
+        print("DEBUG: Deck: \(settings.deckName)")
+        print("DEBUG: Field mappings: \(settings.fields)")
+        
         // Create query items
         var queryItems = [
             URLQueryItem(name: "type", value: settings.noteType),

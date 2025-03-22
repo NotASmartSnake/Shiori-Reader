@@ -83,6 +83,23 @@ class BookViewModel: ObservableObject {
         var sentenceContext = ""
         if let surroundingText = options["surroundingText"] as? String {
             sentenceContext = surroundingText
+            print("DEBUG: Raw sentence context: \(sentenceContext)")
+            
+            // Clean up the sentence context
+            sentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Limit length if necessary (Anki URL has size limits)
+            if sentenceContext.count > 250 {
+                sentenceContext = String(sentenceContext.prefix(250)) + "..."
+            }
+            
+            print("DEBUG: Processed sentence context: \(sentenceContext)")
+        } else if let textFromClickedKanji = options["textFromClickedKanji"] as? String {
+            // Try alternative fields if surroundingText is not available
+            sentenceContext = textFromClickedKanji
+            print("DEBUG: Using textFromClickedKanji as context: \(sentenceContext)")
+        } else {
+            print("DEBUG: No context text found in options")
         }
         
         identifyJapaneseWords(text: text) { matches in

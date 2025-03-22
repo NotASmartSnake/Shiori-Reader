@@ -44,9 +44,12 @@ document.addEventListener('click', function(event) {
         let contextText = text.substring(offset, Math.min(text.length, offset + 30));
         
         if (/[\u3000-\u303F]|[\u3040-\u309F]|[\u30A0-\u30FF]|[\uFF00-\uFFEF]|[\u4E00-\u9FAF]|[\u2605-\u2606]|[\u2190-\u2195]|\u203B/g.test(contextText)) {
+            const surroundingText = getExtendedSurroundingText(node.parentNode, contextText, 250);
+            
             window.webkit.messageHandlers.wordTapped.postMessage({
                 text: contextText,
-                absoluteOffset: offset
+                absoluteOffset: offset,
+                surroundingText: surroundingText
             });
         } else {
             window.webkit.messageHandlers.dismissDictionary.postMessage({});
@@ -123,98 +126,6 @@ function getTextFromNodeAndFollowing(startNode, maxLength, skipRubyRt = true) {
     
     // Limit to maxLength
     return result.substring(0, maxLength);
-}
-
-function handleRubyClick(event, rubyElement) {
-    // Get all rb elements within this ruby element
-    const rbElements = rubyElement.querySelectorAll('rb');
-    
-    // If traditional rb elements aren't used, we need to handle text nodes directly
-    if (rbElements.length === 0) {
-        // Get all direct text nodes and non-rt elements as implicit rb content
-        const childNodes = [...rubyElement.childNodes];
-        const baseTextNodes = childNodes.filter(node =>
-            node.nodeType === Node.TEXT_NODE ||
-            (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'RT' && node.tagName !== 'RP')
-        );
-        
-        // If we have direct text content, determine which character was clicked
-        if (baseTextNodes.length > 0) {
-            handleImplicitRubyClick(event, rubyElement, baseTextNodes);
-            return;
-        }
-    } else {
-        // We have explicit rb elements, determine which one was clicked
-        const clickedRb = determineClickedElement(event, [...rbElements]);
-        
-        if (clickedRb) {
-            // Get the clicked kanji
-            const kanji = clickedRb.textContent.trim();
-            
-            // Find the corresponding rt element (reading)
-            let reading = '';
-            const rbIndex = [...rbElements].indexOf(clickedRb);
-            const rtElements = rubyElement.querySelectorAll('rt');
-            if (rtElements.length > rbIndex) {
-                reading = rtElements[rbIndex].textContent.trim();
-            }
-            
-            // Get the full compound for context
-            const fullText = [...rbElements].map(rb => rb.textContent).join('');
-            const fullReading = [...rubyElement.querySelectorAll('rt')].map(rt => rt.textContent).join('');
-            
-            // Find the selected index within the full compound
-            const selectedIndex = [...rbElements].indexOf(clickedRb);
-            
-            // Get the text from the clicked kanji to the end of the ruby element
-            // and then continuing with following text nodes
-            let textFromClickedKanji = '';
-            if (selectedIndex >= 0) {
-                // First get text within this ruby element
-                textFromClickedKanji = [...rbElements]
-                    .slice(selectedIndex)
-                    .map(rb => rb.textContent)
-                    .join('');
-                
-                // Then extend with text from following nodes
-                // Get next sibling after this ruby element
-                if (rubyElement.nextSibling) {
-                    const followingText = getTextFromNodeAndFollowing(rubyElement.nextSibling, 30 - textFromClickedKanji.length);
-                    textFromClickedKanji += followingText;
-                }
-            }
-            
-            // Get extended surrounding text (up to 30 chars)
-            const surroundingText = getExtendedSurroundingText(rubyElement, kanji, 30);
-            
-            window.webkit.messageHandlers.wordTapped.postMessage({
-                text: textFromClickedKanji,                             // The specific kanji clicked
-                reading: reading,                        // Reading for this specific kanji
-                fullCompound: fullText,                  // The full ruby compound
-                fullReading: fullReading,                // Reading for the full compound
-                textFromClickedKanji: textFromClickedKanji, // Text from clicked kanji to end of compound + following
-                surroundingText: surroundingText,        // More context from surrounding text
-                isRuby: true,
-                isPartialCompound: true,
-                selectedIndex: selectedIndex            // Index of clicked kanji in the compound
-            });
-            return;
-        }
-    }
-    
-    // Fallback: use the full ruby content
-    const fullBaseText = getFullRubyBaseText(rubyElement);
-    const fullReading = getFullRubyReading(rubyElement);
-    
-    // Also get extended surrounding text for more context
-    const surroundingText = getExtendedSurroundingText(rubyElement, fullBaseText, 30);
-    
-    window.webkit.messageHandlers.wordTapped.postMessage({
-        text: fullBaseText,
-        reading: fullReading,
-        surroundingText: surroundingText,
-        isRuby: true
-    });
 }
 
 function handleRubyClick(event, rubyElement) {
@@ -310,17 +221,33 @@ function handleRubyClick(event, rubyElement) {
         // Combine
         const completeContext = textFromPosition + textAfterRuby;
         
-        // Now we can use the clicked character
+        // Get the full compound for context
+        const fullText = [...rbElements].map(rb => rb.textContent).join('');
+        const fullReading = [...rubyElement.querySelectorAll('rt')].map(rt => rt.textContent).join('');
+        
+        // Find the selected index within the full compound
+        const selectedIndex = [...rbElements].indexOf(clickedRb);
+        
+        // Get text starting from this element
+        let textFromClickedKanji = '';
+        if (selectedIndex >= 0) {
+            textFromClickedKanji = [...rbElements]
+                .slice(selectedIndex)
+                .map(rb => rb.textContent)
+                .join('');
+        }
+        
+        // Get the surrounding sentence for better context
+        const surroundingText = getExtendedSurroundingText(rubyElement, fullText, 250);
+        
         window.webkit.messageHandlers.wordTapped.postMessage({
-            text: completeContext,
-            fullCompound: baseText,
-            reading: reading,
-            textFromClickedKanji: completeContext,
-            textAfterRuby: textAfterRuby,
-            clickedCharacter: baseText.charAt(adjustedPosition),
-            visualPosition: adjustedPosition,
+            text: textFromClickedKanji || fullText,
+            reading: reading || fullReading,
+            fullCompound: fullText,
+            fullReading: fullReading,
+            surroundingText: surroundingText,
             isRuby: true,
-            isPartialCompound: true
+            isPartialCompound: selectedIndex >= 0
         });
         
         return;
@@ -441,33 +368,74 @@ function handleFullRubySelection(rubyElement) {
     });
 }
 
-// Get extended surrounding text, looking at parent container too
-function getExtendedSurroundingText(rubyElement, selectedText, maxLength) {
-    // Start with the parent paragraph or container
-    const container = findTextContainer(rubyElement);
+// Function to get extended surrounding context with complete sentences
+function getExtendedSurroundingText(element, selectedText, maxLength) {
+    // Japanese sentence-ending punctuation
+    const sentenceEnders = ['。', '！', '？', '…', '\n', '」', '』', '）', '）'];
+    const sentenceStarters = ['「', '『', '（', '（'];
     
-    if (container && container !== rubyElement) {
-        // Get text content of container
+    // First try to get the parent paragraph or container
+    const container = findTextContainer(element);
+
+    if (container && container !== element) {
+        // Get full text content of container
         const containerText = getNodeTextContent(container);
         
         // Try to find the selected text in the container
-        const index = containerText.indexOf(selectedText);
-        if (index >= 0) {
-            // Get text from the selected position to end of container
-            const endIndex = Math.min(containerText.length, index + maxLength);
-            return containerText.substring(index, endIndex);
+        const selectedIndex = containerText.indexOf(selectedText);
+        
+        if (selectedIndex >= 0) {
+            // Find the beginning of the sentence
+            let sentenceStart = 0;
+            for (let i = selectedIndex; i >= 0; i--) {
+                if (sentenceEnders.includes(containerText[i])) {
+                    sentenceStart = i + 1;
+                    break;
+                }
+            }
+            
+            // Find the end of the sentence
+            let sentenceEnd = containerText.length;
+            for (let i = selectedIndex + selectedText.length; i < containerText.length; i++) {
+                if (sentenceEnders.includes(containerText[i])) {
+                    sentenceEnd = i + 1; // Include the punctuation
+                    break;
+                }
+            }
+            
+            // Extract the full sentence with balanced quotes/brackets
+            let fullSentence = containerText.substring(sentenceStart, sentenceEnd);
+            
+            // Check for balanced brackets/quotes
+            const openQuotes = fullSentence.split('「').length - 1;
+            const closeQuotes = fullSentence.split('」').length - 1;
+            
+            // If quotes are unbalanced, try to extend to include the closing quote
+            if (openQuotes > closeQuotes && sentenceEnd < containerText.length) {
+                for (let i = sentenceEnd; i < containerText.length; i++) {
+                    if (containerText[i] === '」') {
+                        sentenceEnd = i + 1;
+                        break;
+                    }
+                }
+                fullSentence = containerText.substring(sentenceStart, sentenceEnd);
+            }
+            
+            console.log("Extracted sentence:", fullSentence);
+            return fullSentence;
         }
     }
     
-    // Fallback: collect text from ruby and following nodes
-    let result = getFullRubyBaseText(rubyElement);
+    // Fallback to simpler extraction if container-based approach fails
+    // Collect text from current element and following siblings
+    let result = getFullRubyBaseText(element);
     
     // Add text from following siblings
-    if (rubyElement.nextSibling) {
-        result += getTextFromNodeAndFollowing(rubyElement.nextSibling, maxLength - result.length);
+    if (element.nextSibling) {
+        result += getTextFromNodeAndFollowing(element.nextSibling, maxLength - result.length);
     }
     
-    return result.substring(0, maxLength);
+    return result;
 }
 
 // Find the nearest text container (paragraph, div, etc.)
