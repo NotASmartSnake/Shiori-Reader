@@ -101,20 +101,14 @@ class AnkiExportService {
         
         let settings = getUserSettings()
         
-        // Escape special characters for URL parameters
-        let escapedWord = word.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let escapedReading = reading.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let escapedDefinition = definition.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        let escapedSentence = sentence.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        
         // Create query items
         var queryItems = [
             URLQueryItem(name: "type", value: settings.noteType),
             URLQueryItem(name: "deck", value: settings.deckName),
-            URLQueryItem(name: "fld\(settings.fields["word"]!)", value: escapedWord),
-            URLQueryItem(name: "fld\(settings.fields["reading"]!)", value: escapedReading),
-            URLQueryItem(name: "fld\(settings.fields["definition"]!)", value: escapedDefinition),
-            URLQueryItem(name: "fld\(settings.fields["sentence"]!)", value: escapedSentence),
+            URLQueryItem(name: "fld\(settings.fields["word"]!)", value: word),
+            URLQueryItem(name: "fld\(settings.fields["reading"]!)", value: reading),
+            URLQueryItem(name: "fld\(settings.fields["definition"]!)", value: definition),
+            URLQueryItem(name: "fld\(settings.fields["sentence"]!)", value: sentence),
             URLQueryItem(name: "tags", value: settings.tags)
         ]
         
