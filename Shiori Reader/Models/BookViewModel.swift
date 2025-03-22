@@ -105,7 +105,7 @@ class BookViewModel: ObservableObject {
         identifyJapaneseWords(text: text) { matches in
             if !matches.isEmpty {
                 self.dictionaryMatches = matches
-                self.currentSentenceContext = sentenceContext
+                self.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
                 self.showDictionary = true
             }
         }
@@ -883,8 +883,6 @@ class BookViewModel: ObservableObject {
                     exploredCharCount: state.exploredCharCount,
                     totalCharCount: state.totalCharCount
                 )
-                
-                print("DEBUG: Saved progress: \(book.readingProgress) (\(state.exploredCharCount)/\(state.totalCharCount) chars)")
             } catch {
                 print("DEBUG: Error saving progress: \(error.localizedDescription)")
             }

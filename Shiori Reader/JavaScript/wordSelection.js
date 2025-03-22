@@ -368,106 +368,82 @@ function handleFullRubySelection(rubyElement) {
     });
 }
 
-// Function to get extended surrounding context with complete sentences
+// Function to get the single sentence containing the selected text
 function getExtendedSurroundingText(element, selectedText, maxLength) {
-    // Japanese sentence-ending punctuation
-    const sentenceEnders = ['。', '！', '？', '…', '\n', '」', '』', '）', '）'];
-    const sentenceStarters = ['「', '『', '（', '（'];
+    const sentenceEnders = ['。', '！', '？', '!', '?'];
+    console.log("Selected Text:", selectedText);
     
-    // First try to get the parent paragraph or container
-    const container = findTextContainer(element);
-
-    if (container && container !== element) {
-        // Get full text content of container
-        const containerText = getNodeTextContent(container);
+    // First, try to get context from the paragraph containing the element
+    const paragraph = element.closest('p, div.chapter-content, div.chapter');
+    
+    if (paragraph) {
+        console.log("Found paragraph:", paragraph.tagName);
         
-        // Try to find the selected text in the container
-        const selectedIndex = containerText.indexOf(selectedText);
+        // Get the text content of the paragraph WITHOUT furigana
+        const paragraphText = getTextWithoutFurigana(paragraph);
+        console.log("Clean paragraph text length:", paragraphText.length);
+        
+        // Find the selected text in the paragraph
+        const selectedIndex = paragraphText.indexOf(selectedText);
+        console.log("Selected index in paragraph:", selectedIndex);
         
         if (selectedIndex >= 0) {
-            // Find the beginning of the sentence
+            // Determine which sentence contains our selected text
+            // First, find all sentence boundaries
+            const sentenceBoundaries = [];
+            for (let i = 0; i < paragraphText.length; i++) {
+                if (sentenceEnders.includes(paragraphText[i])) {
+                    sentenceBoundaries.push(i);
+                }
+            }
+            
+            // Add the start and end of text as boundaries
+            sentenceBoundaries.unshift(-1); // Start of text (will use index+1)
+            sentenceBoundaries.push(paragraphText.length - 1); // End of text
+            
+            // Find which sentence contains our selected text
             let sentenceStart = 0;
-            for (let i = selectedIndex; i >= 0; i--) {
-                if (sentenceEnders.includes(containerText[i])) {
-                    sentenceStart = i + 1;
+            let sentenceEnd = paragraphText.length;
+            
+            for (let i = 0; i < sentenceBoundaries.length - 1; i++) {
+                const startPos = sentenceBoundaries[i] + 1;
+                const endPos = sentenceBoundaries[i + 1] + 1;
+                
+                // Check if selected text is within this sentence
+                if (selectedIndex >= startPos && selectedIndex < endPos) {
+                    sentenceStart = startPos;
+                    sentenceEnd = endPos;
                     break;
                 }
             }
             
-            // Find the end of the sentence
-            let sentenceEnd = containerText.length;
-            for (let i = selectedIndex + selectedText.length; i < containerText.length; i++) {
-                if (sentenceEnders.includes(containerText[i])) {
-                    sentenceEnd = i + 1; // Include the punctuation
-                    break;
-                }
-            }
+            // Extract the single sentence
+            const sentence = paragraphText.substring(sentenceStart, sentenceEnd).trim();
+            console.log("Extracted single sentence:", sentence);
             
-            // Extract the full sentence with balanced quotes/brackets
-            let fullSentence = containerText.substring(sentenceStart, sentenceEnd);
-            
-            // Check for balanced brackets/quotes
-            const openQuotes = fullSentence.split('「').length - 1;
-            const closeQuotes = fullSentence.split('」').length - 1;
-            
-            // If quotes are unbalanced, try to extend to include the closing quote
-            if (openQuotes > closeQuotes && sentenceEnd < containerText.length) {
-                for (let i = sentenceEnd; i < containerText.length; i++) {
-                    if (containerText[i] === '」') {
-                        sentenceEnd = i + 1;
-                        break;
-                    }
-                }
-                fullSentence = containerText.substring(sentenceStart, sentenceEnd);
-            }
-            
-            console.log("Extracted sentence:", fullSentence);
-            return fullSentence;
+            return sentence;
         }
     }
     
-    // Fallback to simpler extraction if container-based approach fails
-    // Collect text from current element and following siblings
-    let result = getFullRubyBaseText(element);
-    
-    // Add text from following siblings
-    if (element.nextSibling) {
-        result += getTextFromNodeAndFollowing(element.nextSibling, maxLength - result.length);
-    }
-    
-    return result;
+    // Fallback to using just the selected text
+    return selectedText;
 }
 
-// Find the nearest text container (paragraph, div, etc.)
-function findTextContainer(element) {
-    // Check if the element itself is a good container
-    if (isTextContainer(element)) {
-        return element;
-    }
+// Helper function to get text content excluding furigana
+function getTextWithoutFurigana(element) {
+    // Clone the element to avoid modifying the original
+    const clone = element.cloneNode(true);
     
-    // Look for a parent that's a good container
-    let parent = element.parentNode;
-    while (parent && parent.nodeType === Node.ELEMENT_NODE) {
-        if (isTextContainer(parent)) {
-            return parent;
-        }
-        parent = parent.parentNode;
-    }
+    // Remove all RT elements from the clone
+    const rtElements = clone.querySelectorAll('rt');
+    rtElements.forEach(rt => rt.remove());
     
-    // Fallback to the original element
-    return element;
-}
-
-// Check if an element is a good text container
-function isTextContainer(element) {
-    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
-        return false;
-    }
+    // Also remove RP elements (ruby parentheses) if present
+    const rpElements = clone.querySelectorAll('rp');
+    rpElements.forEach(rp => rp.remove());
     
-    // Common text container tags
-    const containerTags = ['P', 'DIV', 'SPAN', 'LI', 'TD', 'TH', 'BLOCKQUOTE', 'ARTICLE', 'SECTION'];
-    
-    return containerTags.includes(element.tagName);
+    // Get the text content of the cleaned clone
+    return clone.textContent;
 }
 
 // Helper to extract text content from a node, skipping rt/rp elements

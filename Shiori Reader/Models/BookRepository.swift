@@ -66,8 +66,6 @@ class BookRepository {
         
         // Force UserDefaults to save immediately
         UserDefaults.standard.synchronize()
-        
-        print("DEBUG: Saved position for \(book.title): \(exploredCharCount)/\(totalCharCount) chars")
     }
     
     @MainActor
