@@ -141,7 +141,10 @@ class AnkiExportService {
             guard let content = contentMap[contentType] else { continue }
             
             for fieldName in fieldNames {
-                queryItems.append(URLQueryItem(name: "fld\(fieldName)", value: content))
+                // Skip if the field is empty
+                if !fieldName.isEmpty {
+                    queryItems.append(URLQueryItem(name: "fld\(fieldName)", value: content))
+                }
             }
         }
         

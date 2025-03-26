@@ -111,7 +111,7 @@ struct AnkiSettingsView: View {
                     .disabled(isLoading)
                 }
                 
-                Section(header: Text("Primary Field Mapping"), footer: Text("These fields will always receive content in your Anki cards.")) {
+                Section(header: Text("Primary Field Mapping"), footer: Text("These fields will always receive content in your Anki cards. Choose a blank value if you don't want to use a specific field.")) {
                     // Word Field Menu
                     HStack {
                         Text("Word Field")
@@ -251,6 +251,19 @@ struct AnkiSettingsView: View {
     // Field picker button for menus
     private func fieldPickerButton(for binding: Binding<String>, fields: [String]) -> some View {
         Menu {
+            // Empty option - to not send any data for this field
+             Button(action: {
+                 binding.wrappedValue = ""
+             }) {
+                 HStack {
+                     Text("")
+                     if binding.wrappedValue.isEmpty {
+                         Spacer()
+                         Image(systemName: "checkmark")
+                     }
+                 }
+             }
+            
             ForEach(fields, id: \.self) { field in
                 Button(action: {
                     binding.wrappedValue = field
@@ -265,13 +278,6 @@ struct AnkiSettingsView: View {
                 }
             }
             
-            // Custom field option
-            if !fields.isEmpty {
-                Divider()
-            }
-            Button("Custom Field...") {
-                promptForCustomField(for: binding)
-            }
         } label: {
             HStack {
                 Text(binding.wrappedValue)
@@ -281,18 +287,6 @@ struct AnkiSettingsView: View {
                     .foregroundColor(.blue)
             }
         }
-    }
-    
-    // Custom field prompt
-    private func promptForCustomField(for binding: Binding<String>) {
-        alertTitle = "Enter Custom Field Name"
-        alertMessage = "Enter the exact name of the field as it appears in your Anki note type"
-        
-        // In a real app, you'd use a TextAlert or other custom solution here
-        // For simplicity, we're just showing a placeholder alert
-        showAlert = true
-        
-        // This would actually set the binding value with the user input
     }
     
     // Helper to get display name for field type
