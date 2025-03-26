@@ -8,15 +8,15 @@
 // Enhanced Ruby Character Selection script with improved implicit ruby handling
 document.addEventListener('click', function(event) {
     // Don't intercept clicks on elements that should be interactive
-    if (event.target.tagName === 'A' || 
-        event.target.tagName === 'BUTTON' || 
+    if (event.target.tagName === 'A' ||
+        event.target.tagName === 'BUTTON' ||
         event.target.tagName === 'INPUT') {
         return;
     }
     
     // Special handling for ruby elements
-    const rubyElement = event.target.tagName === 'RUBY' ? 
-                        event.target : 
+    const rubyElement = event.target.tagName === 'RUBY' ?
+                        event.target :
                         event.target.closest('ruby');
                         
     if (rubyElement) {
@@ -59,6 +59,252 @@ document.addEventListener('click', function(event) {
     }
 }, false);
 
+function handleRubyClick(event, rubyElement) {
+    // Get all rb elements within this ruby element
+    const rbElements = rubyElement.querySelectorAll('rb');
+    
+    // Get all RT elements for readings
+    const rtElements = rubyElement.querySelectorAll('rt');
+    
+    // First, try to determine what was actually clicked
+    const range = document.caretRangeFromPoint(event.clientX, event.clientY);
+    if (!range) {
+        handleFullRubySelection(rubyElement);
+        return;
+    }
+    
+    const clickedNode = range.startContainer;
+    
+    // Find what element contains the clicked node
+    let containingElement = clickedNode;
+    if (clickedNode.nodeType === Node.TEXT_NODE) {
+        containingElement = clickedNode.parentNode;
+    }
+    
+    // Determine if this is RT (reading) or base text
+    const isRtElement = containingElement.tagName === 'RT' ||
+                       (containingElement.parentNode && containingElement.parentNode.tagName === 'RT');
+    
+    // If user clicked on reading (RT), find the corresponding base character
+    if (isRtElement) {
+        // Find index of this RT among all RTs
+        const allRts = Array.from(rubyElement.querySelectorAll('rt'));
+        const clickedRtIndex = allRts.findIndex(rt => rt === containingElement || rt.contains(containingElement));
+        
+        // Get corresponding base text
+        if (rbElements.length > 0 && clickedRtIndex >= 0 && clickedRtIndex < rbElements.length) {
+            // For explicit rb elements
+            const correspondingRb = rbElements[clickedRtIndex];
+            
+            // Now use the corresponding base text for lookup
+            processTappedRubyText(
+                correspondingRb.textContent,
+                rtElements[clickedRtIndex].textContent,
+                rubyElement
+            );
+            return;
+        } else {
+            // For implicit ruby, it's harder to determine
+            handleFullRubySelection(rubyElement);
+            return;
+        }
+    }
+    
+    // Get the text content of the ruby element
+    const baseText = getFullRubyBaseText(rubyElement);
+    
+    // If we have explicit rb elements
+    if (rbElements.length > 0) {
+        // We have explicit rb elements, determine which one was clicked
+        const clickedRb = determineClickedElement(event, [...rbElements]);
+        
+        if (clickedRb) {
+            processTappedExplicitRubyText(clickedRb, rubyElement);
+            return;
+        }
+    } else {
+        // Implicit ruby without rb elements
+        
+        // Collect all text nodes and non-RT/RP elements from ruby
+        const baseTextParts = [];
+        getBaseTextParts(rubyElement, baseTextParts);
+        
+        // Map click position to character position visually
+        // Calculate bounding client rect of ruby element
+        const rubyRect = rubyElement.getBoundingClientRect();
+        const relativeX = event.clientX - rubyRect.left;
+        
+        // Calculate approximate character position based on relative click position
+        const clickRatio = relativeX / rubyRect.width;
+        const charPosition = Math.floor(clickRatio * baseText.length);
+        const adjustedPosition = Math.min(Math.max(0, charPosition), baseText.length - 1);
+        
+        // Extract text from clicked position
+        const textFromPosition = baseText.substring(adjustedPosition);
+        
+        // Get text after ruby
+        const textAfterRuby = getTextAfterElement(rubyElement, 30);
+        
+        // Get reading
+        const reading = getFullRubyReading(rubyElement);
+        
+        // Combine
+        const completeContext = textFromPosition + textAfterRuby;
+        
+        // Get the surrounding sentence for better context
+        const surroundingText = getExtendedSurroundingText(rubyElement, baseText, 250);
+        
+        window.webkit.messageHandlers.wordTapped.postMessage({
+            text: completeContext,
+            reading: reading,
+            fullCompound: baseText,
+            surroundingText: surroundingText,
+            textAfterRuby: textAfterRuby,
+            isRuby: true,
+            isPartialCompound: false
+        });
+        
+        return;
+    }
+    
+    // Fallback to using the full ruby content
+    handleFullRubySelection(rubyElement);
+}
+
+// Function to process tapped ruby text
+function processTappedRubyText(baseText, reading, rubyElement) {
+    // Get text after this ruby element
+    const textAfterRuby = getTextAfterElement(rubyElement, 30);
+    
+    // Combined text starting with the base text
+    const extendedText = baseText + textAfterRuby;
+    
+    // Get extended surrounding text for better context
+    const surroundingText = getExtendedSurroundingText(rubyElement, baseText, 250);
+    
+    window.webkit.messageHandlers.wordTapped.postMessage({
+        text: extendedText,
+        reading: reading,
+        surroundingText: surroundingText,
+        isRuby: true,
+        isPartialCompound: false
+    });
+}
+
+// Helper to get all base text parts
+function getBaseTextParts(rubyElement, parts) {
+    for (const node of rubyElement.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            if (node.textContent.trim()) {
+                parts.push(node);
+            }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.tagName !== 'RT' && node.tagName !== 'RP') {
+                if (node.childNodes.length > 0) {
+                    getBaseTextParts(node, parts);
+                } else {
+                    parts.push(node);
+                }
+            }
+        }
+    }
+    
+    return parts;
+}
+
+// Helper to get text after an element
+function getTextAfterElement(element, maxLength) {
+    let result = '';
+    let currentNode = element.nextSibling;
+    let textLength = 0;
+    
+    while (currentNode && textLength < maxLength) {
+        if (currentNode.nodeType === Node.TEXT_NODE) {
+            result += currentNode.textContent;
+            textLength += currentNode.textContent.length;
+        } else if (currentNode.nodeType === Node.ELEMENT_NODE &&
+                  currentNode.tagName !== 'RT' &&
+                  currentNode.tagName !== 'RP') {
+            for (const child of currentNode.childNodes) {
+                if (child.nodeType === Node.TEXT_NODE) {
+                    result += child.textContent;
+                    textLength += child.textContent.length;
+                }
+            }
+        }
+        
+        if (textLength >= maxLength) break;
+        currentNode = currentNode.nextSibling;
+    }
+    
+    return result;
+}
+
+// Process a tapped explicit ruby text (with rb elements)
+function processTappedExplicitRubyText(clickedRb, rubyElement) {
+    // Get the clicked kanji
+    const kanji = clickedRb.textContent.trim();
+    
+    // Find the corresponding rt element (reading)
+    let reading = '';
+    const rbElements = rubyElement.querySelectorAll('rb');
+    const rbIndex = [...rbElements].indexOf(clickedRb);
+    const rtElements = rubyElement.querySelectorAll('rt');
+    
+    if (rtElements.length > rbIndex) {
+        reading = rtElements[rbIndex].textContent.trim();
+    }
+    
+    // Get the full compound for context
+    const fullText = [...rbElements].map(rb => rb.textContent).join('');
+    const fullReading = [...rtElements].map(rt => rt.textContent).join('');
+    
+    // Find the selected index within the full compound
+    const selectedIndex = [...rbElements].indexOf(clickedRb);
+    
+    // Get text from this point onwards
+    const textFromClickedKanji = fullText.substring(selectedIndex) + getTextAfterElement(rubyElement, 30);
+    
+    window.webkit.messageHandlers.wordTapped.postMessage({
+        text: textFromClickedKanji,
+        reading: reading,
+        fullCompound: fullText,
+        fullReading: fullReading,
+        textFromClickedKanji: textFromClickedKanji,
+        surroundingText: textFromClickedKanji,
+        isRuby: true,
+        isPartialCompound: true,
+        selectedIndex: selectedIndex
+    });
+}
+
+function handleFullRubySelection(rubyElement) {
+    // Get the full ruby content
+    const fullBaseText = getFullRubyBaseText(rubyElement);
+    const fullReading = getFullRubyReading(rubyElement);
+    
+    // Get text from nodes after this ruby element
+    let textAfterRuby = '';
+    if (rubyElement.nextSibling) {
+        textAfterRuby = getTextFromNodeAndFollowing(rubyElement.nextSibling, 30);
+    }
+    
+    // Combined text starting with the full ruby
+    const extendedText = fullBaseText + textAfterRuby;
+    
+    // Get extended surrounding text
+    const surroundingText = getExtendedSurroundingText(rubyElement, fullBaseText, 250);
+    
+    window.webkit.messageHandlers.wordTapped.postMessage({
+        text: extendedText,
+        reading: fullReading,
+        textFromClickedKanji: extendedText,  // Include text after ruby
+        surroundingText: surroundingText,
+        textAfterRuby: textAfterRuby,
+        isRuby: true
+    });
+}
+
 // Get text starting from a node and collecting from siblings
 function getTextFromNodeAndFollowing(startNode, maxLength, skipRubyRt = true) {
     let result = '';
@@ -67,7 +313,7 @@ function getTextFromNodeAndFollowing(startNode, maxLength, skipRubyRt = true) {
     // Function to check if a node should be skipped
     function shouldSkipNode(node) {
         if (!node) return true;
-        if (skipRubyRt && node.nodeType === Node.ELEMENT_NODE && 
+        if (skipRubyRt && node.nodeType === Node.ELEMENT_NODE &&
             (node.tagName === 'RT' || node.tagName === 'RP')) {
             return true;
         }
@@ -128,264 +374,19 @@ function getTextFromNodeAndFollowing(startNode, maxLength, skipRubyRt = true) {
     return result.substring(0, maxLength);
 }
 
-function handleRubyClick(event, rubyElement) {
-    // Get all rb elements within this ruby element
-    const rbElements = rubyElement.querySelectorAll('rb');
-    
-    // Get all RT elements for readings
-    const rtElements = rubyElement.querySelectorAll('rt');
-    
-    // First, try to determine what was actually clicked
-    const range = document.caretRangeFromPoint(event.clientX, event.clientY);
-    if (!range) {
-        handleFullRubySelection(rubyElement);
-        return;
-    }
-    
-    const clickedNode = range.startContainer;
-    const offset = range.startOffset;
-    
-    // Find what element contains the clicked node
-    let containingElement = clickedNode;
-    if (clickedNode.nodeType === Node.TEXT_NODE) {
-        containingElement = clickedNode.parentNode;
-    }
-    
-    // Determine if this is RT (reading) or base text
-    const isRtElement = containingElement.tagName === 'RT' ||
-                       (containingElement.parentNode && containingElement.parentNode.tagName === 'RT');
-    
-    // If user clicked on reading (RT), find the corresponding base character
-    if (isRtElement) {
-        // Find index of this RT among all RTs
-        const allRts = Array.from(rubyElement.querySelectorAll('rt'));
-        const clickedRtIndex = allRts.findIndex(rt => rt === containingElement || rt.contains(containingElement));
-        
-        // Get corresponding base text
-        if (rbElements.length > 0 && clickedRtIndex >= 0 && clickedRtIndex < rbElements.length) {
-            // For explicit rb elements
-            const correspondingRb = rbElements[clickedRtIndex];
-            
-            // Now use the corresponding base text for lookup
-            processTappedRubyText(
-                correspondingRb.textContent,
-                rtElements[clickedRtIndex].textContent,
-                rubyElement
-            );
-            return;
-        } else {
-            // For implicit ruby, it's harder to determine
-            handleFullRubySelection(rubyElement);
-            return;
-        }
-    }
-    
-    // Get the text content of the ruby element
-    const baseText = getFullRubyBaseText(rubyElement);
-    
-    // If we have explicit rb elements
-    if (rbElements.length > 0) {
-        // We have explicit rb elements, determine which one was clicked
-        const clickedRb = determineClickedElement(event, [...rbElements]);
-        
-        if (clickedRb) {
-            processTappedExplicitRubyText(clickedRb, rubyElement);
-            return;
-        }
-    } else {
-        // Implicit ruby without rb elements
-        
-        // Collect all text nodes and non-RT/RP elements from ruby
-        const baseTextParts = [];
-        getBaseTextParts(rubyElement, baseTextParts);
-        
-        // NEW APPROACH: Map click position to character position visually
-        // Calculate bounding client rect of ruby element
-        const rubyRect = rubyElement.getBoundingClientRect();
-        const relativeX = event.clientX - rubyRect.left;
-        
-        // Calculate approximate character position based on relative click position
-        const clickRatio = relativeX / rubyRect.width;
-        const charPosition = Math.floor(clickRatio * baseText.length);
-        const adjustedPosition = Math.min(Math.max(0, charPosition), baseText.length - 1);
-        
-        // Extract text from clicked position
-        const textFromPosition = baseText.substring(adjustedPosition);
-        
-        // Get text after ruby
-        const textAfterRuby = getTextAfterElement(rubyElement, 30);
-        
-        // Get reading
-        const reading = getFullRubyReading(rubyElement);
-        
-        // Combine
-        const completeContext = textFromPosition + textAfterRuby;
-        
-        // Get the full compound for context
-        const fullText = [...rbElements].map(rb => rb.textContent).join('');
-        const fullReading = [...rubyElement.querySelectorAll('rt')].map(rt => rt.textContent).join('');
-        
-        // Find the selected index within the full compound
-        const selectedIndex = [...rbElements].indexOf(clickedRb);
-        
-        // Get text starting from this element
-        let textFromClickedKanji = '';
-        if (selectedIndex >= 0) {
-            textFromClickedKanji = [...rbElements]
-                .slice(selectedIndex)
-                .map(rb => rb.textContent)
-                .join('');
-        }
-        
-        // Get the surrounding sentence for better context
-        const surroundingText = getExtendedSurroundingText(rubyElement, fullText, 250);
-        
-        window.webkit.messageHandlers.wordTapped.postMessage({
-            text: textFromClickedKanji || fullText,
-            reading: reading || fullReading,
-            fullCompound: fullText,
-            fullReading: fullReading,
-            surroundingText: surroundingText,
-            isRuby: true,
-            isPartialCompound: selectedIndex >= 0
-        });
-        
-        return;
-    }
-    
-    // Fallback to using the full ruby content
-    handleFullRubySelection(rubyElement);
-}
-
-// Helper to get all base text parts
-function getBaseTextParts(rubyElement, parts) {
-    for (const node of rubyElement.childNodes) {
-        if (node.nodeType === Node.TEXT_NODE) {
-            if (node.textContent.trim()) {
-                parts.push(node);
-            }
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-            if (node.tagName !== 'RT' && node.tagName !== 'RP') {
-                if (node.childNodes.length > 0) {
-                    getBaseTextParts(node, parts);
-                } else {
-                    parts.push(node);
-                }
-            }
-        }
-    }
-}
-
-// Helper to get text after an element
-function getTextAfterElement(element, maxLength) {
-    let result = '';
-    let currentNode = element.nextSibling;
-    let textLength = 0;
-    
-    while (currentNode && textLength < maxLength) {
-        if (currentNode.nodeType === Node.TEXT_NODE) {
-            result += currentNode.textContent;
-            textLength += currentNode.textContent.length;
-        } else if (currentNode.nodeType === Node.ELEMENT_NODE &&
-                  currentNode.tagName !== 'RT' &&
-                  currentNode.tagName !== 'RP') {
-            for (const child of currentNode.childNodes) {
-                if (child.nodeType === Node.TEXT_NODE) {
-                    result += child.textContent;
-                    textLength += child.textContent.length;
-                }
-            }
-        }
-        
-        if (textLength >= maxLength) break;
-        currentNode = currentNode.nextSibling;
-    }
-    
-    return result;
-}
-
-// Process a tapped explicit ruby text (with rb elements)
-function processTappedExplicitRubyText(clickedRb, rubyElement) {
-    // Get the clicked kanji
-    const kanji = clickedRb.textContent.trim();
-    
-    // Find the corresponding rt element (reading)
-    let reading = '';
-    const rbElements = rubyElement.querySelectorAll('rb');
-    const rbIndex = [...rbElements].indexOf(clickedRb);
-    const rtElements = rubyElement.querySelectorAll('rt');
-    if (rtElements.length > rbIndex) {
-        reading = rtElements[rbIndex].textContent.trim();
-    }
-    
-    // Get the full compound for context
-    const fullText = [...rbElements].map(rb => rb.textContent).join('');
-    const fullReading = [...rtElements].map(rt => rt.textContent).join('');
-    
-    // Find the selected index within the full compound
-    const selectedIndex = [...rbElements].indexOf(clickedRb);
-    
-    // Get text from this point onwards
-    const textFromClickedKanji = fullText.substring(selectedIndex) + getTextAfterElement(rubyElement, 30);
-    
-    window.webkit.messageHandlers.wordTapped.postMessage({
-        text: textFromClickedKanji,
-        reading: reading,
-        fullCompound: fullText,
-        fullReading: fullReading,
-        textFromClickedKanji: textFromClickedKanji,
-        surroundingText: textFromClickedKanji,
-        isRuby: true,
-        isPartialCompound: true,
-        selectedIndex: selectedIndex
-    });
-}
-
-function handleFullRubySelection(rubyElement) {
-    // Get the full ruby content
-    const fullBaseText = getFullRubyBaseText(rubyElement);
-    const fullReading = getFullRubyReading(rubyElement);
-    
-    // Get text from nodes after this ruby element
-    let textAfterRuby = '';
-    if (rubyElement.nextSibling) {
-        textAfterRuby = getTextFromNodeAndFollowing(rubyElement.nextSibling, 30);
-    }
-    
-    // Combined text starting with the full ruby
-    const extendedText = fullBaseText + textAfterRuby;
-    
-    // Get extended surrounding text
-    const surroundingText = getExtendedSurroundingText(rubyElement, fullBaseText, 30);
-    
-    window.webkit.messageHandlers.wordTapped.postMessage({
-        text: extendedText,
-        reading: fullReading,
-        textFromClickedKanji: extendedText,  // Include text after ruby
-        surroundingText: surroundingText,
-        textAfterRuby: textAfterRuby,
-        isRuby: true
-    });
-}
-
 // Function to get the single sentence containing the selected text
 function getExtendedSurroundingText(element, selectedText, maxLength) {
     const sentenceEnders = ['。', '！', '？', '!', '?'];
-    console.log("Selected Text:", selectedText);
     
     // First, try to get context from the paragraph containing the element
     const paragraph = element.closest('p, div.chapter-content, div.chapter');
     
     if (paragraph) {
-        console.log("Found paragraph:", paragraph.tagName);
-        
         // Get the text content of the paragraph WITHOUT furigana
         const paragraphText = getTextWithoutFurigana(paragraph);
-        console.log("Clean paragraph text length:", paragraphText.length);
         
         // Find the selected text in the paragraph
         const selectedIndex = paragraphText.indexOf(selectedText);
-        console.log("Selected index in paragraph:", selectedIndex);
         
         if (selectedIndex >= 0) {
             // Determine which sentence contains our selected text
@@ -419,7 +420,6 @@ function getExtendedSurroundingText(element, selectedText, maxLength) {
             
             // Extract the single sentence
             const sentence = paragraphText.substring(sentenceStart, sentenceEnd).trim();
-            console.log("Extracted single sentence:", sentence);
             
             return sentence;
         }
@@ -489,9 +489,9 @@ function determineClickedElement(event, elements) {
         const rect = element.getBoundingClientRect();
         
         // Check if click is within this element
-        if (event.clientX >= rect.left && 
-            event.clientX <= rect.right && 
-            event.clientY >= rect.top && 
+        if (event.clientX >= rect.left &&
+            event.clientX <= rect.right &&
+            event.clientY >= rect.top &&
             event.clientY <= rect.bottom) {
             return element; // Direct hit
         }
@@ -502,7 +502,7 @@ function determineClickedElement(event, elements) {
         
         // Calculate distance to click
         const distance = Math.sqrt(
-            Math.pow(event.clientX - centerX, 2) + 
+            Math.pow(event.clientX - centerX, 2) +
             Math.pow(event.clientY - centerY, 2)
         );
         
@@ -527,8 +527,8 @@ function getFullRubyBaseText(rubyElement) {
     for (const node of rubyElement.childNodes) {
         if (node.nodeType === Node.TEXT_NODE) {
             textNodes.push(node.textContent);
-        } else if (node.nodeType === Node.ELEMENT_NODE && 
-                  node.tagName !== 'RT' && 
+        } else if (node.nodeType === Node.ELEMENT_NODE &&
+                  node.tagName !== 'RT' &&
                   node.tagName !== 'RP') {
             textNodes.push(node.textContent);
         }
