@@ -5,6 +5,7 @@ import SwiftUI
 class AnkiExportService {
     // Singleton instance
     static let shared = AnkiExportService()
+    private let japaneseAnalyzer = JapaneseTextAnalyzer.shared
     
     private init() {}
     
@@ -76,7 +77,8 @@ class AnkiExportService {
             "word": [UserDefaults.standard.string(forKey: "ankiWordField") ?? "Word"],
             "reading": [UserDefaults.standard.string(forKey: "ankiReadingField") ?? "Reading"],
             "definition": [UserDefaults.standard.string(forKey: "ankiDefinitionField") ?? "Definition"],
-            "sentence": [UserDefaults.standard.string(forKey: "ankiSentenceField") ?? "Sentence"]
+            "sentence": [UserDefaults.standard.string(forKey: "ankiSentenceField") ?? "Sentence"],
+            "wordWithReading": [UserDefaults.standard.string(forKey: "ankiWordWithReadingField") ?? "Word with Reading"]
         ]
         
         // Get secondary fields
@@ -123,12 +125,15 @@ class AnkiExportService {
             URLQueryItem(name: "tags", value: tags)
         ]
         
+        let wordWithReading = japaneseAnalyzer.formatWordWithReading(word: word, reading: reading)
+        
         // Map of content types to their values
         let contentMap = [
             "word": word,
             "reading": reading,
             "definition": definition,
-            "sentence": sentence
+            "sentence": sentence,
+            "wordWithReading": wordWithReading
         ]
         
         // Add all fields to query items

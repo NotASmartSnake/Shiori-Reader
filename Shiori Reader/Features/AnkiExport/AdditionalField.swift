@@ -10,7 +10,7 @@ import Foundation
 // Model for additional fields
 struct AdditionalField: Codable, Identifiable {
     var id = UUID()
-    var type: String  // "word", "reading", "definition", "sentence"
+    var type: String  // "word", "reading", "definition", "sentence", "word_with_reading"
     var fieldName: String
     
     enum CodingKeys: String, CodingKey {

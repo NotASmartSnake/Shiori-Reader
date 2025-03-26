@@ -1,5 +1,5 @@
 {
-  "originHash" : "6fbaa883a3318a693a7f7e0a14c698d2e945d9be10740e99e063663dbe60c3ba",
+  "originHash" : "51e5efd12a3bb20d9f10efcbb49cc4b511aabfdf4af67fd36b36c0fc4caf6c08",
   "pins" : [
     {
       "identity" : "grdb.swift",
@@ -8,6 +8,15 @@
       "state" : {
         "branch" : "master",
         "revision" : "6eba24d16952452a8a54f6a639491f3c8215527f"
+      }
+    },
+    {
+      "identity" : "mecab-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/shinjukunian/Mecab-Swift",
+      "state" : {
+        "branch" : "master",
+        "revision" : "2dc19043dfb01539523882f0c0f2e51b270201f7"
       }
     },
     {

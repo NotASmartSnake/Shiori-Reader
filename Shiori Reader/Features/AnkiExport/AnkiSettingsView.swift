@@ -11,6 +11,7 @@ struct AnkiSettingsView: View {
     @AppStorage("ankiReadingField") private var readingField = "Reading"
     @AppStorage("ankiDefinitionField") private var definitionField = "Definition"
     @AppStorage("ankiSentenceField") private var sentenceField = "Sentence"
+    @AppStorage("ankiWordWithReadingField") private var wordWithReadingField = "Word with Reading"
     
     // Additional field mappings as arrays
     @State private var additionalFields: [AdditionalField] = []
@@ -138,6 +139,13 @@ struct AnkiSettingsView: View {
                         Spacer()
                         fieldPickerButton(for: $sentenceField, fields: selectedNoteTypeFields)
                     }
+                    
+                    // Word With Reading Field Menu
+                    HStack {
+                        Text("Word with Reading Field")
+                        Spacer()
+                        fieldPickerButton(for: $wordWithReadingField, fields: selectedNoteTypeFields)
+                    }
                 }
                 
                 // Additional Fields Section
@@ -198,6 +206,9 @@ struct AnkiSettingsView: View {
                         }
                         Button("Sentence Field") {
                             addEmptyField(type: "sentence")
+                        }
+                        Button("Word with Reading Field") {
+                            addEmptyField(type: "word_with_reading")
                         }
                         Button("Cancel", role: .cancel) { }
                     }
@@ -291,6 +302,7 @@ struct AnkiSettingsView: View {
         case "reading": return "Reading Field"
         case "definition": return "Definition Field"
         case "sentence": return "Sentence Field"
+        case "word_with_reading": return "Word with Reading Field"
         default: return "Field"
         }
     }
