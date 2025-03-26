@@ -102,7 +102,7 @@ struct SavedWordsView: View {
                         
                         // Spacer at the bottom for tab bar
                         Rectangle()
-                            .frame(width: 0, height: 60)
+                            .frame(width: 0, height: 50)
                             .foregroundStyle(Color.clear)
                     }
                 }

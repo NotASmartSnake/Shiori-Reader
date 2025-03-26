@@ -1,12 +1,3 @@
-//
-//  AnkiExportService.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/21/25.
-//
-
-
-// AnkiExportService.swift
 import Foundation
 import UIKit
 import SwiftUI
@@ -78,49 +69,76 @@ class AnkiExportService {
         }
     }
     
-    // Get user settings
-    private func getUserSettings() -> (noteType: String, deckName: String, tags: String, fields: [String: String]) {
+    // Get all field mappings including additional fields
+    private func getAllFieldMappings() -> [String: [String]] {
+        // Primary fields
+        let fieldMappings: [String: [String]] = [
+            "word": [UserDefaults.standard.string(forKey: "ankiWordField") ?? "Word"],
+            "reading": [UserDefaults.standard.string(forKey: "ankiReadingField") ?? "Reading"],
+            "definition": [UserDefaults.standard.string(forKey: "ankiDefinitionField") ?? "Definition"],
+            "sentence": [UserDefaults.standard.string(forKey: "ankiSentenceField") ?? "Sentence"]
+        ]
+        
+        // Get secondary fields
+        var result = fieldMappings
+        
+        if let data = UserDefaults.standard.data(forKey: "ankiAdditionalFields"),
+           let additionalFields = try? JSONDecoder().decode([AdditionalField].self, from: data) {
+            
+            // Group additional fields by type
+            for field in additionalFields {
+                result[field.type, default: []].append(field.fieldName)
+            }
+        }
+        
+        return result
+    }
+    
+    // Create the URL for AnkiMobile with all field mappings
+    private func createAnkiExportURL(word: String, reading: String, definition: String, sentence: String) -> URL? {
+        var components = URLComponents(string: "anki://x-callback-url/addnote")
+        
+        // Get note type and deck
         let noteType = UserDefaults.standard.string(forKey: "ankiNoteType") ?? "Japanese"
         let deckName = UserDefaults.standard.string(forKey: "ankiDeckName") ?? "Shiori-Reader"
         let tags = UserDefaults.standard.string(forKey: "ankiTags") ?? "shiori-reader"
         
-        // Get field names
-        let fields = [
-            "word": UserDefaults.standard.string(forKey: "ankiWordField") ?? "Word",
-            "reading": UserDefaults.standard.string(forKey: "ankiReadingField") ?? "Reading",
-            "definition": UserDefaults.standard.string(forKey: "ankiDefinitionField") ?? "Definition",
-            "sentence": UserDefaults.standard.string(forKey: "ankiSentenceField") ?? "Sentence"
-        ]
+        // Get all field mappings (including secondary fields)
+        let allFields = getAllFieldMappings()
         
-        return (noteType, deckName, tags, fields)
-    }
-    
-    // Create the URL for AnkiMobile
-    private func createAnkiExportURL(word: String, reading: String, definition: String, sentence: String) -> URL? {
-        var components = URLComponents(string: "anki://x-callback-url/addnote")
-        
-        let settings = getUserSettings()
-        
-        // Debug log the settings and input values
+        // Debug log
         print("DEBUG: Creating URL for Anki export")
         print("DEBUG: Word: \(word)")
         print("DEBUG: Reading: \(reading)")
         print("DEBUG: Definition: \(definition)")
         print("DEBUG: Sentence: \(sentence)")
-        print("DEBUG: Note Type: \(settings.noteType)")
-        print("DEBUG: Deck: \(settings.deckName)")
-        print("DEBUG: Field mappings: \(settings.fields)")
+        print("DEBUG: Note Type: \(noteType)")
+        print("DEBUG: Deck: \(deckName)")
+        print("DEBUG: All field mappings: \(allFields)")
         
-        // Create query items
+        // Create base query items
         var queryItems = [
-            URLQueryItem(name: "type", value: settings.noteType),
-            URLQueryItem(name: "deck", value: settings.deckName),
-            URLQueryItem(name: "fld\(settings.fields["word"]!)", value: word),
-            URLQueryItem(name: "fld\(settings.fields["reading"]!)", value: reading),
-            URLQueryItem(name: "fld\(settings.fields["definition"]!)", value: definition),
-            URLQueryItem(name: "fld\(settings.fields["sentence"]!)", value: sentence),
-            URLQueryItem(name: "tags", value: settings.tags)
+            URLQueryItem(name: "type", value: noteType),
+            URLQueryItem(name: "deck", value: deckName),
+            URLQueryItem(name: "tags", value: tags)
         ]
+        
+        // Map of content types to their values
+        let contentMap = [
+            "word": word,
+            "reading": reading,
+            "definition": definition,
+            "sentence": sentence
+        ]
+        
+        // Add all fields to query items
+        for (contentType, fieldNames) in allFields {
+            guard let content = contentMap[contentType] else { continue }
+            
+            for fieldName in fieldNames {
+                queryItems.append(URLQueryItem(name: "fld\(fieldName)", value: content))
+            }
+        }
         
         // Add x-success callback to return to Shiori after adding
         let appURLScheme = "shiori://"
@@ -128,7 +146,10 @@ class AnkiExportService {
         
         components?.queryItems = queryItems
         
-        return components?.url
+        let url = components?.url
+        print("DEBUG: Final Anki URL: \(url?.absoluteString ?? "nil")")
+        
+        return url
     }
     
     // Test connection to AnkiMobile
