@@ -34,11 +34,37 @@ struct SingleWebView: UIViewRepresentable {
             config.userContentController.addUserScript(fontUtilitiesScript)
         }
         
+        if let safeAreaScript = loadJavaScriptFile("safeArea") {
+            config.userContentController.addUserScript(safeAreaScript)
+        }
+        
+        // Add support for safe area insets
+        let viewportScript = WKUserScript(
+            source: """
+            var meta = document.createElement('meta');
+            meta.name = 'viewport';
+            meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+            document.getElementsByTagName('head')[0].appendChild(meta);
+            """,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        )
+        config.userContentController.addUserScript(viewportScript)
+        
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.backgroundColor = .clear
         webView.isOpaque = false
         webView.scrollView.backgroundColor = .clear
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        
+        let directionClass = viewModel.readingDirection == .horizontal ? "horizontal-text" : "vertical-text"
+        webView.evaluateJavaScript("""
+            document.addEventListener('DOMContentLoaded', function() {
+                document.body.className = '\(directionClass)';
+                console.log('Set initial reading direction: \(directionClass)');
+            });
+        """)
         
         // Allow console.log output to show in terminal
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
@@ -101,6 +127,25 @@ struct SingleWebView: UIViewRepresentable {
                 self.parent.viewModel.updatePositionData()
                 // Notify the ViewModel that WebView content is fully loaded and ready for position restoration
                 self.parent.viewModel.webViewContentLoaded()
+                
+                // Force reapply direction after page load
+                print("DEBUG: Direction after navigation complete: \(self.parent.viewModel.readingDirection)")
+                
+                let directionClass = self.parent.viewModel.readingDirection == .horizontal ? "horizontal-text" : "vertical-text"
+                let script = "document.body.className = '\(directionClass)';"
+                webView.evaluateJavaScript(script, completionHandler: { result, error in
+                    print("DEBUG: Direction class reapplied: \(directionClass)")
+                    
+                    // Add additional vertical-specific styles if needed
+                    if directionClass == "vertical-text" {
+                        let verticalStyles = """
+                        document.body.style.paddingTop = '70px';
+                        document.body.style.paddingBottom = '70px';
+                        """
+                        webView.evaluateJavaScript(verticalStyles)
+                        print("DEBUG: Applied vertical-specific styles")
+                    }
+                })
             }
         }
         
@@ -206,6 +251,10 @@ struct SingleWebView: UIViewRepresentable {
                     --shiori-font-size: \(viewModel.fontSize)px;
                     --shiori-background-color: \(viewModel.currentTheme.backgroundColorCSS);
                     --shiori-text-color: \(viewModel.currentTheme.textColorCSS);
+                    --safe-area-top: env(safe-area-inset-top, 0px);
+                    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+                    --safe-area-left: env(safe-area-inset-left, 0px);
+                    --safe-area-right: env(safe-area-inset-right, 0px);
                 }
         
                 /* Global reset - apply to all elements */
@@ -222,6 +271,33 @@ struct SingleWebView: UIViewRepresentable {
                     padding: 16px;
                     background-color: var(--shiori-background-color);
                     color: var(--shiori-text-color);
+                }
+        
+                /* For vertical text */
+                body.vertical-text {
+                    writing-mode: vertical-rl;
+                    text-orientation: upright;
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                    height: 100vh;
+                    width: 100vw;
+                    padding-top: 70px !important;
+                    padding-bottom: 70px !important;
+                }
+
+                /* For horizontal text (default) */
+                body.horizontal-text {
+                    writing-mode: horizontal-tb;
+                    overflow-x: hidden;
+                    overflow-y: auto;
+                }
+        
+                /* Specific adjustments for vertical text */
+                body.vertical-text img {
+                    max-height: 90vh !important;
+                    max-width: none !important;
+                    height: auto !important;
+                    width: auto !important;
                 }
         
                 /* More specific selectors with !important to ensure they override */
@@ -306,6 +382,27 @@ struct SingleWebView: UIViewRepresentable {
         
         // Load the HTML only once
         webView.loadHTMLString(combinedHTML, baseURL: baseURL)
+        
+        // Apply reading direction class
+        let directionClass = viewModel.readingDirection == .horizontal ? "horizontal-text" : "vertical-text"
+        let directionScript = """
+        (function() {
+            // Force add the class to the body
+            document.body.className = '\(directionClass)';
+            
+            // For vertical mode, force extra top padding 
+            if (document.body.classList.contains('vertical-text')) {
+                document.body.style.paddingTop = '70px';
+                document.body.style.paddingBottom = '70px';
+            }
+            
+            console.log('Applied reading direction: \(directionClass)');
+        })();
+        """
+        webView.evaluateJavaScript(directionScript)
+        
+        let actualDirection = viewModel.readingDirection
+        print("DEBUG: Applying direction class: \(actualDirection == .horizontal ? "horizontal-text" : "vertical-text")")
         
         // Mark that content is loaded
         coordinator.contentLoaded = true
@@ -502,4 +599,15 @@ struct SingleWebView: UIViewRepresentable {
         return WKUserScript(source: scriptContent, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
     }
     
+}
+
+#Preview {
+    let isReadingBook = IsReadingBook()
+    return BookReaderView(book: Book(
+        title: "実力至上主義者の教室",
+        coverImage: "COTECover",
+        readingProgress: 0.1,
+        filePath: "hakomari.epub"
+    ))
+    .environmentObject(isReadingBook)
 }

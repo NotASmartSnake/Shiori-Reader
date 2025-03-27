@@ -107,6 +107,46 @@ struct ThemePanel: View {
                     }
                     .foregroundStyle(.primary)
                     
+                    Menu {
+                        Button(action: {
+                            viewModel.readingDirection = .horizontal
+                            viewModel.applyReadingDirection()
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.right")
+                                Text("Horizontal")
+                                Spacer()
+                                if viewModel.readingDirection == .horizontal {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                        
+                        Button(action: {
+                            viewModel.readingDirection = .vertical
+                            viewModel.applyReadingDirection()
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.down")
+                                Text("Vertical")
+                                Spacer()
+                                if viewModel.readingDirection == .vertical {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            ReadingDirectionIcon(direction: viewModel.readingDirection)
+                                .font(.title2)
+                                .padding(.horizontal, 20)
+                        }
+                        .frame(height: 40)
+                        .background(colorScheme == .dark ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.gray.opacity(0.15)))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .foregroundStyle(.primary)
+                    
                 }
                 .padding(.horizontal)
             }
@@ -209,6 +249,14 @@ struct AppearanceModeIcon: View {
         } else {
             Image(systemName: "circle.lefthalf.filled")
         }
+    }
+}
+
+struct ReadingDirectionIcon: View {
+    var direction: BookViewModel.ReadingDirection
+    
+    var body: some View {
+        Image(systemName: direction == .horizontal ? "arrow.right" : "arrow.down")
     }
 }
 

@@ -11,6 +11,12 @@ import SwiftUI
 
 @MainActor
 class BookViewModel: ObservableObject {
+    // MARK: - Enums
+    enum ReadingDirection {
+        case horizontal
+        case vertical
+    }
+    
     // MARK: - Published Properties
     @Published private(set) var book: Book
     @Published private(set) var state: BookState
@@ -25,6 +31,7 @@ class BookViewModel: ObservableObject {
     @Published var currentTheme: Theme = Theme.original
     @Published var fontSize: Int = 18
     @Published var currentSentenceContext: String = ""
+    @Published var readingDirection: ReadingDirection = .horizontal
     
     // MARK: - Private Properties
     private var webView: WKWebView?
@@ -39,6 +46,7 @@ class BookViewModel: ObservableObject {
         self.book = book
         self.state = BookState()
         self.repository = repository
+        loadDirectionPreferences()
         loadFontPreferences()
         loadThemePreferences()
     }
@@ -615,7 +623,7 @@ class BookViewModel: ObservableObject {
                                 const targetPosition = scrollHeight * ratio;
                                 
                                 window.scrollTo(0, targetPosition);
-                                console.log('Restored position using ratio: ' + ratio);
+                                consoley.log('Restored position using ratio: ' + ratio);
                                 success = true;
                             }
                         }
@@ -806,6 +814,87 @@ class BookViewModel: ObservableObject {
             let defaultTheme = isDarkMode == true ? Theme.darkOriginal : Theme.original
             applyTheme(defaultTheme)
         }
+    }
+    
+    // MARK: - Reading Direction Functions
+
+    func toggleReadingDirection() {
+        readingDirection = readingDirection == .horizontal ? .vertical : .horizontal
+        applyReadingDirection()
+    }
+
+    func applyReadingDirection() {
+        guard let webView = webView else { return }
+        
+        // Temporarily disable position updates
+        preventPositionUpdates = true
+        
+        // Store current position
+        let currentPosition = state.exploredCharCount
+        
+        let script = """
+        (function() {
+            const body = document.body;
+            
+            // Remove existing direction classes
+            body.classList.remove('horizontal-text', 'vertical-text');
+            
+            // Add new direction class
+            body.classList.add('\(readingDirection == .horizontal ? "horizontal-text" : "vertical-text")');
+            
+            // Apply appropriate padding based on direction
+            if (body.classList.contains('vertical-text')) {
+                body.style.paddingTop = '70px';
+                body.style.paddingBottom = '70px';
+                body.style.paddingLeft = '16px';
+                body.style.paddingRight = '16px';
+            } else {
+                body.style.paddingTop = '16px';
+                body.style.paddingBottom = '16px';
+                body.style.paddingLeft = '16px';
+                body.style.paddingRight = '16px';
+            }
+            
+            // Save current reading position
+            const currentPosition = getCurrentCharacterPosition();
+            
+            // After a small delay to let the layout update
+            setTimeout(() => {
+                // Restore reading position
+                scrollToCharacterPosition(\(currentPosition));
+                console.log('Reading direction changed to \(readingDirection == .horizontal ? "horizontal" : "vertical")');
+            }, 200);
+            
+            return true;
+        })();
+        """
+        
+        webView.evaluateJavaScript(script) { [weak self] result, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("DEBUG: Error applying reading direction: \(error)")
+            } else {
+                print("DEBUG: Reading direction applied: \(self.readingDirection)")
+                
+                // Save preference to UserDefaults
+                let directionValue = self.readingDirection == .horizontal ? "horizontal" : "vertical"
+                UserDefaults.standard.set(directionValue, forKey: "preferred_reading_direction")
+                print("DEBUG: Saved reading direction preference: \(directionValue)")
+            }
+            
+            // Re-enable position updates after a delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.preventPositionUpdates = false
+            }
+        }
+    }
+
+    func loadDirectionPreferences() {
+        let savedDirection = UserDefaults.standard.string(forKey: "preferred_reading_direction") ?? "horizontal"
+        readingDirection = savedDirection == "horizontal" ? .horizontal : .vertical
+        
+        print("DEBUG: Loaded reading direction preference: \(readingDirection)")
     }
     
     // MARK: - Bookmarking/Autosave Functions

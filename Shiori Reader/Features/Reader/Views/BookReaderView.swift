@@ -78,7 +78,7 @@ struct BookReaderView: View {
                 VStack() {
                     // Tap areas for top and bottom control bars
                     Rectangle()
-                        .frame(maxWidth: .infinity, maxHeight: 125)
+                        .frame(maxWidth: .infinity, maxHeight: 80)
                         .ignoresSafeArea(.all)
                         .opacity(0.000001)
                         .onTapGesture {
@@ -191,8 +191,6 @@ struct BookReaderView: View {
         .task {
             await viewModel.loadEPUB()
             await viewModel.loadProgress()
-            viewModel.loadFontPreferences()
-            viewModel.loadThemePreferences()
             if !viewModel.isCurrentPositionSaved {
                 viewModel.autoSaveProgress()
             }
