@@ -137,6 +137,14 @@ struct SingleWebView: UIViewRepresentable {
         webView.scrollView.alwaysBounceVertical = true
         webView.scrollView.decelerationRate = .normal
         
+        if isVertical {
+            webView.scrollView.contentOffset.y = 0 // Lock vertical position
+            
+            // Allow the scroll view to scroll beyond bounds (important for RTL text)
+            webView.scrollView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+            webView.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+        }
+        
         viewModel.setWebView(webView)
         
         // Load the content immediately
@@ -174,11 +182,18 @@ struct SingleWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            
+            
             // Calculate total character count when content loads
             DispatchQueue.main.async {
                 self.parent.viewModel.updatePositionData()
                 // Notify the ViewModel that WebView content is fully loaded and ready for position restoration
                 self.parent.viewModel.webViewContentLoaded()
+                
+                // Debug vertical layout
+                if self.parent.viewModel.readingDirection == .vertical {
+                    self.parent.viewModel.debugVerticalLayout()
+                }
                 
                 // Force reapply direction after page load
                 print("DEBUG: Direction after navigation complete: \(self.parent.viewModel.readingDirection)")
@@ -222,16 +237,16 @@ struct SingleWebView: UIViewRepresentable {
                 }
             }
             
-            // Call the debug function after a slight delay to ensure all styles are applied
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                webView.evaluateJavaScript("if (typeof debugHtmlAndCss === 'function') { debugHtmlAndCss(); } else { console.log('Debug function not found!'); }") { result, error in
-                    if let error = error {
-                        print("Error running debug script: \(error)")
-                    } else {
-                        print("Debug function called")
-                    }
-                }
-            }
+//            // Call the debug function after a slight delay to ensure all styles are applied
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//                webView.evaluateJavaScript("if (typeof debugHtmlAndCss === 'function') { debugHtmlAndCss(); } else { console.log('Debug function not found!'); }") { result, error in
+//                    if let error = error {
+//                        print("Error running debug script: \(error)")
+//                    } else {
+//                        print("Debug function called")
+//                    }
+//                }
+//            }
         }
         
         
@@ -348,6 +363,11 @@ struct SingleWebView: UIViewRepresentable {
                     max-width: 100%;
                     box-sizing: border-box;
                 }
+        
+                html {
+                    overflow-x: auto !important;
+                    overflow-y: hidden !important;
+                }
                 
                 body {
                     font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS Mincho", serif;
@@ -362,16 +382,19 @@ struct SingleWebView: UIViewRepresentable {
                 body.vertical-text {
                     writing-mode: vertical-rl;
                     text-orientation: upright;
-                    overflow-x: auto;
-                    overflow-y: hidden;
+                    width: fit-content !important; /* Let the content determine width */
+                    display: inline-block !important; /* Important for vertical text */
                     height: 100vh;
-                    width: 100vw;
+                    width: auto !important;
+                    min-width: 200%;
                     padding-top: 50px !important;
                     padding-bottom: 50px !important;
                     margin-bottom: 0 !important;
                 }
         
                 body.vertical-text #content {
+                    display: inline-block !important;
+                    min-height: 80vh !important;
                     margin-bottom: 0 !important;
                     padding-bottom: 0 !important;
                 }
@@ -471,7 +494,7 @@ struct SingleWebView: UIViewRepresentable {
                 }
             </style>
         </head>
-        <body>
+        <body class="\(viewModel.readingDirection == .horizontal ? "horizontal-text" : "vertical-text")">
             <div id="content">
                 \(processedChapters.joined(separator: "\n"))
             </div>

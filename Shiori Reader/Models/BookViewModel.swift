@@ -205,42 +205,19 @@ class BookViewModel: ObservableObject {
                 
                 print("DEBUG: Attempting to restore to position \(savedExploredCount) of \(savedTotalCount) chars")
                 
-                // Improved restoration script that's less prone to issues
+                // Simply use our scrollToCharacterPosition function which handles both modes
                 let script = """
                 (function() {
-                    // Get the content element
-                    const content = document.getElementById('content');
-                    if (!content) {
-                        console.error('Content element not found');
-                        return false;
-                    }
+                    // This function comes from positionManagement.js
+                    scrollToCharacterPosition(\(savedExploredCount));
                     
-                    // Calculate the target position based on saved character count
-                    const targetRatio = \(Double(savedExploredCount)) / \(Double(savedTotalCount));
-                    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-                    const targetPosition = Math.max(0, Math.round(scrollHeight * targetRatio));
-                    
-                    // Block any scroll event handlers temporarily to prevent overriding our position
-                    const oldScrollHandler = window.onscroll;
-                    window.onscroll = null;
-                    
-                    // Actually perform the scroll
-                    window.scrollTo({
-                        top: targetPosition,
-                        left: 0,
-                        behavior: 'auto'
-                    });
-                    
-                    // After a short delay, restore the scroll handler
-                    setTimeout(function() {
-                        window.onscroll = oldScrollHandler;
-                    }, 100);
-                    
+                    // Confirm the current mode for debugging
+                    const isVerticalMode = document.body.classList.contains('vertical-text');
                     return {
                         success: true,
-                        targetRatio: targetRatio,
-                        targetPosition: targetPosition,
-                        scrollHeight: scrollHeight
+                        verticalMode: isVerticalMode,
+                        scrollX: window.scrollX,
+                        scrollY: window.scrollY
                     };
                 })();
                 """
@@ -248,10 +225,8 @@ class BookViewModel: ObservableObject {
                 webView.evaluateJavaScript(script) { result, error in
                     if let error = error {
                         print("DEBUG: Error restoring position: \(error)")
-                    } else if let resultDict = result as? [String: Any],
-                              let success = resultDict["success"] as? Bool,
-                              success {
-                        print("DEBUG: Successfully restored to character position \(savedExploredCount) (ratio: \(resultDict["targetRatio"] ?? "unknown"), position: \(resultDict["targetPosition"] ?? "unknown"))")
+                    } else if let resultDict = result as? [String: Any] {
+                        print("DEBUG: Position restoration attempt - Vertical mode: \(resultDict["verticalMode"] ?? "unknown"), scrollX: \(resultDict["scrollX"] ?? 0), scrollY: \(resultDict["scrollY"] ?? 0)")
                         
                         // Disable position updates briefly to avoid overwriting restored position
                         self.preventPositionUpdates = true
@@ -832,36 +807,76 @@ class BookViewModel: ObservableObject {
         // Store current position
         let currentPosition = state.exploredCharCount
         
+        // Force CSS layout to adjust properly based on direction
         let script = """
         (function() {
             const body = document.body;
+            const html = document.documentElement;
+            
+            console.log('Applying reading direction: \(readingDirection == .horizontal ? "horizontal" : "vertical")');
             
             // Remove existing direction classes
             body.classList.remove('horizontal-text', 'vertical-text');
             
-            // Add new direction class
-            body.classList.add('\(readingDirection == .horizontal ? "horizontal-text" : "vertical-text")');
-            
-            // Apply appropriate padding based on direction
-            if (body.classList.contains('vertical-text')) {
+            // Configure for vertical text mode
+            if ('\(readingDirection == .vertical ? "true" : "false")' === 'true') {
+                // Add vertical mode class
+                body.classList.add('vertical-text');
+                
+                // Set explicit CSS properties
+                body.style.writingMode = 'vertical-rl';
+                body.style.textOrientation = 'upright';
+                body.style.width = 'auto';
+                body.style.minWidth = '200%';
+                body.style.height = '100vh';
+                
+                // Force correct overflow settings
+                html.style.overflowX = 'auto';
+                html.style.overflowY = 'hidden';
+                body.style.overflowX = 'auto';
+                body.style.overflowY = 'hidden';
+                
+                // Add some padding for safe area
                 body.style.paddingTop = '70px';
                 body.style.paddingLeft = '16px';
                 body.style.paddingRight = '16px';
             } else {
+                // Add horizontal mode class
+                body.classList.add('horizontal-text');
+                
+                // Set explicit CSS properties
+                body.style.writingMode = 'horizontal-tb';
+                body.style.textOrientation = 'mixed';
+                body.style.width = '100%';
+                body.style.minWidth = 'auto';
+                
+                // Force correct overflow settings
+                html.style.overflowX = 'hidden';
+                html.style.overflowY = 'auto';
+                body.style.overflowX = 'hidden';
+                body.style.overflowY = 'auto';
+                
+                // Reset padding
                 body.style.paddingTop = '16px';
                 body.style.paddingLeft = '16px';
                 body.style.paddingRight = '16px';
             }
             
-            // Save current reading position
-            const currentPosition = getCurrentCharacterPosition();
+            // Force layout recalculation
+            document.body.offsetHeight;
             
-            // After a small delay to let the layout update
+            // Debug the dimensions after changing mode
             setTimeout(() => {
-                // Restore reading position
+                console.log('After direction change:');
+                console.log('scrollWidth: ' + document.documentElement.scrollWidth);
+                console.log('clientWidth: ' + document.documentElement.clientWidth);
+                console.log('scrollHeight: ' + document.documentElement.scrollHeight);
+                console.log('Body classList: ' + body.className);
+                console.log('Writing mode: ' + getComputedStyle(body).writingMode);
+                
+                // Restore reading position after layout changes
                 scrollToCharacterPosition(\(currentPosition));
-                console.log('Reading direction changed to \(readingDirection == .horizontal ? "horizontal" : "vertical")');
-            }, 200);
+            }, 100);
             
             return true;
         })();
@@ -1032,23 +1047,38 @@ class BookViewModel: ObservableObject {
             const textContent = content.textContent;
             const totalCharCount = textContent.length;
             
-            // Get current scroll position
-            const scrollY = window.scrollY;
-            const viewportHeight = window.innerHeight;
-            const scrollHeight = document.documentElement.scrollHeight;
-            const maxScroll = scrollHeight - viewportHeight;
-            const scrollRatio = maxScroll > 0 ? scrollY / maxScroll : 0;
+            // Always check current mode
+            const isVerticalMode = document.body.classList.contains('vertical-text');
+            
+            let scrollRatio;
+            if (isVerticalMode) {
+                // Horizontal scrolling for vertical text
+                const scrollX = window.scrollX;
+                const viewportWidth = window.innerWidth;
+                const scrollWidth = document.documentElement.scrollWidth;
+                const maxScroll = scrollWidth - viewportWidth;
+                
+                // Use absolute value of scrollX since it's negative when scrolling left
+                scrollRatio = maxScroll > 0 ? Math.abs(scrollX) / maxScroll : 0;
+            } else {
+                // Vertical scrolling for horizontal text
+                const scrollY = window.scrollY;
+                const viewportHeight = window.innerHeight;
+                const scrollHeight = document.documentElement.scrollHeight;
+                const maxScroll = scrollHeight - viewportHeight;
+                scrollRatio = maxScroll > 0 ? scrollY / maxScroll : 0;
+            }
             
             // Calculate character position
             const exploredCharCount = Math.round(totalCharCount * scrollRatio);
             
-            // Return all data
             return {
                 exploredChars: exploredCharCount,
                 totalChars: totalCharCount,
                 scrollRatio: scrollRatio,
-                scrollY: scrollY,
-                scrollHeight: scrollHeight
+                scrollX: window.scrollX,
+                scrollY: window.scrollY,
+                isVerticalMode: isVerticalMode
             };
         })();
         """
@@ -1068,13 +1098,18 @@ class BookViewModel: ObservableObject {
                 self.state.exploredCharCount = exploredChars
                 self.state.totalCharCount = totalChars
                 
+                // Additional logging to debug vertical mode
+                if let isVertical = data["isVerticalMode"] as? Bool {
+                    print("DEBUG: Position updated in \(isVertical ? "vertical" : "horizontal") mode - chars: \(exploredChars)/\(totalChars)")
+                } else {
+                    print("DEBUG: Position updated - chars: \(exploredChars)/\(totalChars)")
+                }
+                
                 // Calculate progress based on character position
                 let progress = Double(exploredChars) / Double(totalChars)
                 if abs(self.book.readingProgress - progress) > 0.01 {
                     self.book.readingProgress = progress
                 }
-                
-                print("DEBUG: Position updated - chars: \(exploredChars)/\(totalChars)")
             }
         }
     }
@@ -1094,5 +1129,90 @@ class BookViewModel: ObservableObject {
         state.currentPage = currentPage
         state.totalPages = 100
     }
+    
+    func debugVerticalLayout() {
+        guard let webView = webView else { return }
+        
+        let script = """
+        (function() {
+            const isVertical = document.body.classList.contains('vertical-text');
+            const body = document.body;
+            const html = document.documentElement;
+            const content = document.getElementById('content');
+            
+            return {
+                isVerticalMode: isVertical,
+                bodyClasses: body.className,
+                writingMode: getComputedStyle(body).writingMode,
+                textOrientation: getComputedStyle(body).textOrientation,
+                bodyWidth: body.offsetWidth,
+                bodyScrollWidth: body.scrollWidth,
+                bodyStyle: {
+                    width: body.style.width,
+                    minWidth: body.style.minWidth,
+                    overflowX: body.style.overflowX,
+                    overflowY: body.style.overflowY
+                },
+                htmlScrollWidth: html.scrollWidth,
+                htmlClientWidth: html.clientWidth,
+                htmlScrollLeft: html.scrollLeft,
+                contentDimensions: content ? {
+                    scrollWidth: content.scrollWidth,
+                    offsetWidth: content.offsetWidth,
+                    rect: {
+                        width: content.getBoundingClientRect().width,
+                        height: content.getBoundingClientRect().height
+                    }
+                } : null,
+                windowDimensions: {
+                    innerWidth: window.innerWidth,
+                    innerHeight: window.innerHeight,
+                    scrollX: window.scrollX
+                }
+            };
+        })();
+        """
+        
+        webView.evaluateJavaScript(script) { result, error in
+            if let error = error {
+                print("DEBUG: Error getting layout info: \(error)")
+            } else if let info = result as? [String: Any] {
+                print("DEBUG: ===== VERTICAL LAYOUT DEBUG =====")
+                print("DEBUG: Is vertical mode: \(info["isVerticalMode"] ?? "unknown")")
+                print("DEBUG: Body classes: \(info["bodyClasses"] ?? "unknown")")
+                print("DEBUG: Writing mode: \(info["writingMode"] ?? "unknown")")
+                print("DEBUG: Body width: \(info["bodyWidth"] ?? "unknown")")
+                print("DEBUG: Body scroll width: \(info["bodyScrollWidth"] ?? "unknown")")
+                
+                if let bodyStyle = info["bodyStyle"] as? [String: Any] {
+                    print("DEBUG: Body style - width: \(bodyStyle["width"] ?? "unset"), minWidth: \(bodyStyle["minWidth"] ?? "unset")")
+                    print("DEBUG: Body style - overflowX: \(bodyStyle["overflowX"] ?? "unset"), overflowY: \(bodyStyle["overflowY"] ?? "unset")")
+                }
+                
+                print("DEBUG: HTML scroll width: \(info["htmlScrollWidth"] ?? "unknown")")
+                print("DEBUG: HTML client width: \(info["htmlClientWidth"] ?? "unknown")")
+                print("DEBUG: HTML scroll left: \(info["htmlScrollLeft"] ?? "unknown")")
+                
+                if let contentDims = info["contentDimensions"] as? [String: Any] {
+                    print("DEBUG: Content scroll width: \(contentDims["scrollWidth"] ?? "unknown")")
+                    print("DEBUG: Content offset width: \(contentDims["offsetWidth"] ?? "unknown")")
+                    
+                    if let rect = contentDims["rect"] as? [String: Any] {
+                        print("DEBUG: Content rect width: \(rect["width"] ?? "unknown"), height: \(rect["height"] ?? "unknown")")
+                    }
+                }
+                
+                if let windowDims = info["windowDimensions"] as? [String: Any] {
+                    print("DEBUG: Window inner width: \(windowDims["innerWidth"] ?? "unknown")")
+                    print("DEBUG: Window inner height: \(windowDims["innerHeight"] ?? "unknown")")
+                    print("DEBUG: Window scrollX: \(windowDims["scrollX"] ?? "unknown")")
+                }
+                
+                print("DEBUG: ================================")
+            }
+        }
+    }
         
 }
+
+

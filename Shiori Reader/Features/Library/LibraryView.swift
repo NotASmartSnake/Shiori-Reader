@@ -153,7 +153,7 @@ struct BookCell: View {
             }
             
             HStack {
-                Text("\(Int(book.readingProgress * 100))%")
+                Text(String(format: "%.2f%%", book.readingProgress * 100))
                     .font(.caption)
                     .foregroundStyle(.gray)
                 Spacer()

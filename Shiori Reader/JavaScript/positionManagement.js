@@ -163,36 +163,115 @@ function findElementAtCharPosition(targetPosition) {
 
 // Function to scroll to a specific character position
 function scrollToCharacterPosition(charPosition) {
-    const result = findElementAtCharPosition(charPosition);
-    if (!result) {
-        console.error('Could not find element at character position: ' + charPosition);
+    // Store all debug values
+    let debug = {};
+    
+    // Force check vertical mode on each call
+    const isVerticalMode = document.body.classList.contains('vertical-text');
+    debug.isVerticalMode = isVerticalMode;
+    debug.charPosition = charPosition;
+    
+    const content = document.getElementById('content');
+    if (!content) {
+        console.log("DEBUG: Content element not found");
         return false;
     }
     
-    console.log('Found element at char position ' + charPosition + ':',
-               result.element.tagName,
-               'with text starting with "' + result.element.textContent.substring(0, 20) + '..."');
+    const totalChars = content.textContent.length;
+    debug.totalChars = totalChars;
     
-    // Scroll the element into view with center alignment
-    result.element.scrollIntoView({
-        behavior: 'auto',
-        block: 'center'
-    });
+    const ratio = charPosition / totalChars;
+    debug.ratio = ratio;
     
-    return true;
+    if (isVerticalMode) {
+        // For vertical text (horizontal scrolling)
+        console.log("DEBUG: Using horizontal scrolling for vertical text");
+        
+        // Get scroll dimensions
+        const scrollWidth = document.documentElement.scrollWidth;
+        const viewportWidth = window.innerWidth;
+        const maxScrollX = scrollWidth - viewportWidth;
+        debug.scrollWidth = scrollWidth;
+        debug.viewportWidth = viewportWidth;
+        debug.maxScrollX = maxScrollX;
+        
+        // Important: Calculate target position with negative value
+        // Since scrolling from right to left means negative scrollX values
+        const targetX = Math.round(-maxScrollX * ratio);
+        debug.targetX = targetX;
+        
+        console.log("DEBUG: Target horizontal scroll: " + targetX + "px of " + maxScrollX + "px");
+        
+        // Use the more reliable scrollTo with options object
+        window.scrollTo({
+            left: targetX,
+            top: 0,
+            behavior: 'auto'
+        });
+        
+        console.log("DEBUG: Applied window.scrollTo with options, targetX: " + targetX);
+        
+        // Double-check scrolling worked
+        setTimeout(() => {
+            if (Math.abs(window.scrollX - targetX) > 5) {
+                // Try again with a different method
+                document.documentElement.scrollLeft = targetX;
+                window.scroll(targetX, 0);
+            }
+        }, 50);
+        
+        // Check the result for debugging
+        debug.afterScrollX = window.scrollX;
+        debug.afterScrollLeft1 = document.documentElement.scrollLeft;
+        debug.afterScrollLeft2 = document.body.scrollLeft;
+    } else {
+        // For horizontal text (vertical scrolling)
+        console.log("DEBUG: Using vertical scrolling for horizontal text");
+        
+        const scrollHeight = document.documentElement.scrollHeight;
+        const viewportHeight = window.innerHeight;
+        const maxScrollY = scrollHeight - viewportHeight;
+        debug.scrollHeight = scrollHeight;
+        debug.viewportHeight = viewportHeight;
+        debug.maxScrollY = maxScrollY;
+        
+        const targetY = Math.round(maxScrollY * ratio);
+        debug.targetY = targetY;
+        
+        console.log("DEBUG: Target vertical scroll: " + targetY + "px of " + maxScrollY + "px");
+        
+        window.scrollTo(0, targetY);
+        console.log("DEBUG: Applied window.scrollTo(0, " + targetY + ")");
+        
+        debug.afterScrollY = window.scrollY;
+        console.log("DEBUG: After scroll - window.scrollY: " + window.scrollY);
+    }
+    
+    // Return full debug info
+    return debug;
 }
 
-// Improved function to get character position at current scroll position
 function getCurrentCharacterPosition() {
     const content = document.getElementById('content');
     if (!content) return { explored: 0, total: 0 };
     
     const totalChars = content.textContent.length;
-    const scrollY = window.scrollY;
-    const viewportHeight = window.innerHeight;
-    const scrollHeight = document.documentElement.scrollHeight;
-    const maxScroll = scrollHeight - viewportHeight;
-    const ratio = maxScroll > 0 ? scrollY / maxScroll : 0;
+    
+    // Detect if we're in vertical mode
+    const isVerticalMode = document.body.classList.contains('vertical-text');
+    
+    let ratio;
+    if (isVerticalMode) {
+        // For vertical text (horizontal scrolling)
+        const scrollX = window.scrollX;
+        const scrollWidth = document.documentElement.scrollWidth - window.innerWidth;
+        ratio = scrollWidth > 0 ? scrollX / scrollWidth : 0;
+    } else {
+        // For horizontal text (vertical scrolling)
+        const scrollY = window.scrollY;
+        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+        ratio = scrollHeight > 0 ? scrollY / scrollHeight : 0;
+    }
     
     // Calculate character count
     const exploredChars = Math.round(totalChars * ratio);
@@ -201,10 +280,9 @@ function getCurrentCharacterPosition() {
         explored: exploredChars,
         total: totalChars,
         ratio: ratio,
-        scrollY: scrollY
+        isVerticalMode: isVerticalMode
     };
 }
-
 // Utility to handle font size changes with exact character position preservation
 function changeFontSizePreservingCharPosition(fontSize, charPosition) {
     // Save exact character position
@@ -219,4 +297,64 @@ function changeFontSizePreservingCharPosition(fontSize, charPosition) {
         scrollToCharacterPosition(position);
         console.log('Restored to exact character position:', position);
     }, 50);
+}
+
+function debugVerticalScrolling(charPosition) {
+    // Collect detailed info about the current state
+    const content = document.getElementById('content');
+    const isVerticalMode = document.body.classList.contains('vertical-text');
+    const bodyClasses = document.body.className;
+    
+    // Get all computed style information
+    const bodyStyles = window.getComputedStyle(document.body);
+    const htmlStyles = window.getComputedStyle(document.documentElement);
+    
+    // Get current scroll positions and dimensions
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const scrollWidth = document.documentElement.scrollWidth;
+    const scrollHeight = document.documentElement.scrollHeight;
+    const clientWidth = document.documentElement.clientWidth;
+    const clientHeight = document.documentElement.clientHeight;
+    
+    // Check content dimensions
+    const contentRect = content ? content.getBoundingClientRect() : null;
+    const contentWidth = contentRect ? contentRect.width : 0;
+    const contentHeight = contentRect ? contentRect.height : 0;
+    
+    // Check writing mode and text orientation
+    const writingMode = bodyStyles.writingMode;
+    const textOrientation = bodyStyles.textOrientation;
+    
+    // Check overflow settings
+    const overflowX = bodyStyles.overflowX;
+    const overflowY = bodyStyles.overflowY;
+    
+    // Calculate what the scroll position should be
+    const totalChars = content ? content.textContent.length : 0;
+    const ratio = charPosition / totalChars;
+    const expectedHorizontalScroll = (scrollWidth - clientWidth) * ratio;
+    
+    // Return all debug information
+    return {
+        debug: "Vertical Scrolling Debug",
+        charPosition: charPosition,
+        isVerticalMode: isVerticalMode,
+        bodyClasses: bodyClasses,
+        writingMode: writingMode,
+        textOrientation: textOrientation,
+        scrollX: scrollX,
+        scrollY: scrollY,
+        scrollWidth: scrollWidth,
+        scrollHeight: scrollHeight,
+        clientWidth: clientWidth,
+        clientHeight: clientHeight,
+        contentWidth: contentWidth,
+        contentHeight: contentHeight,
+        overflowX: overflowX,
+        overflowY: overflowY,
+        totalChars: totalChars,
+        ratio: ratio,
+        expectedHorizontalScroll: expectedHorizontalScroll
+    };
 }

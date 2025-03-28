@@ -5,7 +5,6 @@
 //  Created by Russell Graviet on 3/17/25.
 //
 
-// Calculate total character count once when page loads
 let totalChars = document.getElementById('content').textContent.length;
 let ticking = false;
 
@@ -19,23 +18,19 @@ document.addEventListener('scroll', function() {
             let progress, scrollHeight;
             
             if (isVerticalMode) {
-                // For vertical text, we need to account for the extra padding
-                const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-top') || '50');
-                const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-bottom') || '34');
-                const extraTopPadding = 60; // Match the value from CSS
-                
-                // Total vertical insets to account for
-                const totalVerticalInsets = safeAreaTop + safeAreaBottom + extraTopPadding + 32; // 32 for the base padding (16px × 2)
-                
-                // Get adjusted scroll width that doesn't include our padding
+                // For vertical text (RTL), we need the total scrollable width
                 const scrollWidth = document.documentElement.scrollWidth;
-                const adjustedScrollWidth = scrollWidth - totalVerticalInsets;
+                const viewportWidth = window.innerWidth;
+                const maxScrollX = scrollWidth - viewportWidth;
                 
-                // Calculate progress based on adjusted values
-                progress = window.scrollX / (adjustedScrollWidth > 0 ? adjustedScrollWidth : scrollWidth);
-
+                // Calculate progress based on negative scrollX values
+                // As we scroll left, scrollX becomes more negative
+                progress = maxScrollX > 0 ? Math.abs(window.scrollX) / maxScrollX : 0;
+                
+                // Check if the scroll position is actually being maintained
+                console.log("Tracking: scrollX = " + window.scrollX + " of maxScrollX = " + maxScrollX);
             } else {
-                // For horizontal text, use vertical scrolling (your existing code)
+                // For horizontal text, use vertical scrolling (original code)
                 scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
                 progress = window.scrollY / scrollHeight;
             }
@@ -57,3 +52,27 @@ document.addEventListener('scroll', function() {
         ticking = true;
     }
 }, { passive: true });
+
+// Debug function to check scroll dimensions
+function debugScrollDimensions() {
+    const isVerticalMode = document.body.classList.contains('vertical-text');
+    console.log("DEBUG: Reading direction: " + (isVerticalMode ? "vertical" : "horizontal"));
+    console.log("DEBUG: document.documentElement.scrollWidth: " + document.documentElement.scrollWidth);
+    console.log("DEBUG: document.documentElement.clientWidth: " + document.documentElement.clientWidth);
+    console.log("DEBUG: document.documentElement.scrollHeight: " + document.documentElement.scrollHeight);
+    console.log("DEBUG: document.documentElement.clientHeight: " + document.documentElement.clientHeight);
+    console.log("DEBUG: window.innerWidth: " + window.innerWidth);
+    console.log("DEBUG: window.innerHeight: " + window.innerHeight);
+    
+    const content = document.getElementById('content');
+    if (content) {
+        console.log("DEBUG: content.scrollWidth: " + content.scrollWidth);
+        console.log("DEBUG: content.offsetWidth: " + content.offsetWidth);
+        console.log("DEBUG: content.getBoundingClientRect().width: " + content.getBoundingClientRect().width);
+    }
+}
+
+// Call this function when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(debugScrollDimensions, 500);
+});

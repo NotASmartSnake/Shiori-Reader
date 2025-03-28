@@ -32,7 +32,7 @@ struct TableOfContentsSheet: View {
                         .padding(.trailing, 15)
                         .padding(.bottom, 3)
                     
-                    Text("\(String(format: "%.1f", viewModel.book.readingProgress * 100))%")
+                    Text("\(String(format: "%.2f", viewModel.book.readingProgress * 100))%")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         

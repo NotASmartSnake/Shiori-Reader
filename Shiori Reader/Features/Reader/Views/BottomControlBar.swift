@@ -17,7 +17,7 @@ struct BottomControlBar: View {
     var body: some View {
         VStack(spacing: 0) {
             // Progress text
-            Text("\(Int(progress * 100))%")
+            Text(String(format: "%.2f%%", progress * 100))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.top, 8)
