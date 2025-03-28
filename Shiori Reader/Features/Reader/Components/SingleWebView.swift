@@ -38,6 +38,14 @@ struct SingleWebView: UIViewRepresentable {
             config.userContentController.addUserScript(safeAreaScript)
         }
         
+        if let scrollLockScript = loadJavaScriptFile("scrollLock") {
+            config.userContentController.addUserScript(scrollLockScript)
+        }
+        
+        if let debugHTMLScript = loadJavaScriptFile("debugHTML") {
+            config.userContentController.addUserScript(debugHTMLScript)
+        }
+        
         // Add support for safe area insets
         let viewportScript = WKUserScript(
             source: """
@@ -51,21 +59,6 @@ struct SingleWebView: UIViewRepresentable {
         )
         config.userContentController.addUserScript(viewportScript)
         
-        let webView = WKWebView(frame: .zero, configuration: config)
-        webView.navigationDelegate = context.coordinator
-        webView.backgroundColor = .clear
-        webView.isOpaque = false
-        webView.scrollView.backgroundColor = .clear
-        webView.scrollView.contentInsetAdjustmentBehavior = .never
-        
-        let directionClass = viewModel.readingDirection == .horizontal ? "horizontal-text" : "vertical-text"
-        webView.evaluateJavaScript("""
-            document.addEventListener('DOMContentLoaded', function() {
-                document.body.className = '\(directionClass)';
-                console.log('Set initial reading direction: \(directionClass)');
-            });
-        """)
-        
         // Allow console.log output to show in terminal
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
         
@@ -78,6 +71,65 @@ struct SingleWebView: UIViewRepresentable {
             """, injectionTime: .atDocumentStart, forMainFrameOnly: false)
         config.userContentController.addUserScript(loggingScript)
         config.userContentController.add(context.coordinator, name: "consoleLog")
+        
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        webView.backgroundColor = .clear
+        webView.isOpaque = false
+        webView.scrollView.backgroundColor = .clear
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        
+        // Ensure proper bounds and frame
+        webView.frame = UIScreen.main.bounds
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        
+        // This ensures proper scrolling based on reading direction
+        let isVertical = viewModel.readingDirection == .vertical
+        webView.scrollView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+        webView.scrollView.alwaysBounceVertical = !isVertical
+        webView.scrollView.alwaysBounceHorizontal = isVertical
+        
+        // Configure scroll indicators
+        webView.scrollView.showsVerticalScrollIndicator = !isVertical
+        webView.scrollView.showsHorizontalScrollIndicator = isVertical
+        
+        // Disable user zoom
+        webView.scrollView.bouncesZoom = false
+        
+        // Apply CSS to control overflow in the appropriate direction
+        let overflowScript = """
+        document.addEventListener('DOMContentLoaded', function() {
+            if (\(isVertical)) {
+                // Vertical text mode - horizontal scrolling
+                document.body.style.overflowX = 'auto';
+                document.body.style.overflowY = 'hidden';
+                document.documentElement.style.overflowX = 'auto';
+                document.documentElement.style.overflowY = 'hidden';
+            } else {
+                // Horizontal text mode - vertical scrolling
+                document.body.style.overflowX = 'hidden';
+                document.body.style.overflowY = 'auto';
+                document.documentElement.style.overflowX = 'hidden';
+                document.documentElement.style.overflowY = 'auto';
+            }
+        });
+        """
+        
+        let overflowScriptObj = WKUserScript(
+            source: overflowScript,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        )
+        
+        webView.configuration.userContentController.addUserScript(overflowScriptObj)
+        
+        let directionClass = viewModel.readingDirection == .horizontal ? "horizontal-text" : "vertical-text"
+        webView.evaluateJavaScript("""
+            document.addEventListener('DOMContentLoaded', function() {
+                document.body.className = '\(directionClass)';
+                console.log('Set initial reading direction: \(directionClass)');
+            });
+        """)
         
         // Ensure proper scrolling behavior
         webView.scrollView.isScrollEnabled = true
@@ -136,16 +188,49 @@ struct SingleWebView: UIViewRepresentable {
                 webView.evaluateJavaScript(script, completionHandler: { result, error in
                     print("DEBUG: Direction class reapplied: \(directionClass)")
                     
-                    // Add additional vertical-specific styles if needed
-                    if directionClass == "vertical-text" {
-                        let verticalStyles = """
-                        document.body.style.paddingTop = '70px';
-                        document.body.style.paddingBottom = '70px';
-                        """
-                        webView.evaluateJavaScript(verticalStyles)
-                        print("DEBUG: Applied vertical-specific styles")
-                    }
                 })
+                
+                // Apply scroll constraints again after content is loaded
+                let isVertical = self.parent.viewModel.readingDirection == .vertical
+                
+                // Reset scroll position to ensure no unwanted scrolling in locked direction
+                if isVertical {
+                    webView.scrollView.contentOffset.y = 0
+                } else {
+                    webView.scrollView.contentOffset.x = 0
+                }
+                
+                // Apply CSS overflow constraints directly
+                let overflowScript = """
+                if (\(isVertical)) {
+                    document.body.style.overflowX = 'auto';
+                    document.body.style.overflowY = 'hidden';
+                    document.documentElement.style.overflowX = 'auto';
+                    document.documentElement.style.overflowY = 'hidden';
+                } else {
+                    document.body.style.overflowX = 'hidden';
+                    document.body.style.overflowY = 'auto';
+                    document.documentElement.style.overflowX = 'hidden';
+                    document.documentElement.style.overflowY = 'auto';
+                }
+                """
+                
+                webView.evaluateJavaScript(overflowScript) { _, error in
+                    if let error = error {
+                        print("Error applying overflow constraints: \(error)")
+                    }
+                }
+            }
+            
+            // Call the debug function after a slight delay to ensure all styles are applied
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                webView.evaluateJavaScript("if (typeof debugHtmlAndCss === 'function') { debugHtmlAndCss(); } else { console.log('Debug function not found!'); }") { result, error in
+                    if let error = error {
+                        print("Error running debug script: \(error)")
+                    } else {
+                        print("Debug function called")
+                    }
+                }
             }
         }
         
@@ -281,8 +366,14 @@ struct SingleWebView: UIViewRepresentable {
                     overflow-y: hidden;
                     height: 100vh;
                     width: 100vw;
-                    padding-top: 70px !important;
-                    padding-bottom: 70px !important;
+                    padding-top: 50px !important;
+                    padding-bottom: 50px !important;
+                    margin-bottom: 0 !important;
+                }
+        
+                body.vertical-text #content {
+                    margin-bottom: 0 !important;
+                    padding-bottom: 0 !important;
                 }
 
                 /* For horizontal text (default) */
@@ -342,6 +433,14 @@ struct SingleWebView: UIViewRepresentable {
                     margin-bottom: 2em;
                     padding-bottom: 2em;
                 }
+        
+                /* Override for vertical reading (left margin/padding instead of bottom) */
+                body.vertical-text .chapter {
+                    margin-bottom: 0 !important; /* Remove the bottom margin */
+                    padding-bottom: 0 !important; /* Remove the bottom padding */
+                    margin-left: 2em !important; /* Add margin to the left instead */
+                    padding-left: 2em !important; /* Add padding to the left instead */
+                }
                 
                 .chapter:last-child {
                     border-bottom: none;
@@ -389,12 +488,6 @@ struct SingleWebView: UIViewRepresentable {
         (function() {
             // Force add the class to the body
             document.body.className = '\(directionClass)';
-            
-            // For vertical mode, force extra top padding 
-            if (document.body.classList.contains('vertical-text')) {
-                document.body.style.paddingTop = '70px';
-                document.body.style.paddingBottom = '70px';
-            }
             
             console.log('Applied reading direction: \(directionClass)');
         })();
@@ -607,7 +700,7 @@ struct SingleWebView: UIViewRepresentable {
         title: "実力至上主義者の教室",
         coverImage: "COTECover",
         readingProgress: 0.1,
-        filePath: "hakomari.epub"
+        filePath: "honzuki.epub"
     ))
     .environmentObject(isReadingBook)
 }

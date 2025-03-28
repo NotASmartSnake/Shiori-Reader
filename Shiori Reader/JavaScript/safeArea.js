@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.body.classList.contains('vertical-text')) {
         // Set large fixed padding to avoid dynamic island
         document.body.style.paddingTop = '70px';
-        document.body.style.paddingBottom = '70px';
         document.body.style.paddingLeft = '16px';
         document.body.style.paddingRight = '16px';
     }

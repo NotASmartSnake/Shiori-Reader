@@ -845,12 +845,10 @@ class BookViewModel: ObservableObject {
             // Apply appropriate padding based on direction
             if (body.classList.contains('vertical-text')) {
                 body.style.paddingTop = '70px';
-                body.style.paddingBottom = '70px';
                 body.style.paddingLeft = '16px';
                 body.style.paddingRight = '16px';
             } else {
                 body.style.paddingTop = '16px';
-                body.style.paddingBottom = '16px';
                 body.style.paddingLeft = '16px';
                 body.style.paddingRight = '16px';
             }

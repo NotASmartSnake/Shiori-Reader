@@ -26,6 +26,8 @@ struct BookReaderView: View {
     var body: some View {
         
         ZStack {
+            viewModel.currentTheme.backgroundColor
+                .edgesIgnoringSafeArea(.all)
             
             if viewModel.isLoading {
                 ProgressView("Loading book...")
@@ -43,6 +45,7 @@ struct BookReaderView: View {
             } else if let content = viewModel.state.epubContent {
                 SingleWebView(viewModel: viewModel, content: content, baseURL: viewModel.state.epubBaseURL)
                     .ignoresSafeArea(.all)
+                    .lockScrollAxis(viewModel.readingDirection == .horizontal ? .vertical : .horizontal)
                     .simultaneousGesture(
                         DragGesture()
                             .onChanged { _ in
@@ -78,7 +81,7 @@ struct BookReaderView: View {
                 VStack() {
                     // Tap areas for top and bottom control bars
                     Rectangle()
-                        .frame(maxWidth: .infinity, maxHeight: 80)
+                        .frame(maxWidth: .infinity, maxHeight: 75)
                         .ignoresSafeArea(.all)
                         .opacity(0.000001)
                         .onTapGesture {
@@ -90,7 +93,7 @@ struct BookReaderView: View {
                     Spacer()
                     
                     Rectangle()
-                        .frame(maxWidth: .infinity, maxHeight: 80)
+                        .frame(maxWidth: .infinity, maxHeight: 75)
                         .ignoresSafeArea(.all)
                         .opacity(0.000001)
                         .onTapGesture {
