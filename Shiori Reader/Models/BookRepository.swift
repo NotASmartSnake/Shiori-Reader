@@ -18,38 +18,35 @@ class BookRepository {
     func loadEPUB(at path: String) async throws -> (EPUBContent, URL) {
         print("DEBUG: Attempting to load EPUB at path: \(path)")
         
-        // Check if the Books directory exists
-        if let booksDirectoryURL = Bundle.main.url(forResource: "Books", withExtension: nil) {
-            print("DEBUG: Books directory found at: \(booksDirectoryURL.path)")
-        } else {
-            print("DEBUG: Books directory NOT found in bundle")
+        // First, try to find the file in the app's Documents directory
+        let fileManager = FileManager.default
+        let documentsDirectory = try fileManager.url(
+            for: .documentDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: false
+        )
+        
+        let documentsPath = documentsDirectory.appendingPathComponent("Books/\(path)").path
+        if fileManager.fileExists(atPath: documentsPath) {
+            print("DEBUG: EPUB file found in Documents directory: \(documentsPath)")
+            return try epubParser.parseEPUB(at: documentsPath)
         }
         
-        // List contents of the bundle root
-        if let bundleURL = Bundle.main.resourceURL {
-            print("DEBUG: Bundle resource URL: \(bundleURL.path)")
-            do {
-                let contents = try FileManager.default.contentsOfDirectory(at: bundleURL, includingPropertiesForKeys: nil)
-                print("DEBUG: Bundle contents: \(contents.map { $0.lastPathComponent })")
-            } catch {
-                print("DEBUG: Error listing bundle contents: \(error)")
-            }
+        // If not found in Documents, try the bundle as before
+        if let bundlePath = Bundle.main.path(forResource: path, ofType: nil) {
+            print("DEBUG: EPUB file found in bundle: \(bundlePath)")
+            return try epubParser.parseEPUB(at: bundlePath)
         }
         
-        // Try to list all epub files
-        if let resourceURLs = Bundle.main.urls(forResourcesWithExtension: "epub", subdirectory: "Books") {
-            print("DEBUG: Found EPUB files: \(resourceURLs.map { $0.lastPathComponent })")
-        } else {
-            print("DEBUG: No EPUB resources found with extension")
+        // Try one more time with direct path
+        if fileManager.fileExists(atPath: path) {
+            print("DEBUG: EPUB file found at direct path: \(path)")
+            return try epubParser.parseEPUB(at: path)
         }
         
-        guard let epubPath = Bundle.main.path(forResource: path, ofType: nil) else {
-            print("DEBUG: File not found: \(path)")
-            throw EPUBError.fileNotFound
-        }
-        
-        print("DEBUG: EPUB file found at: \(epubPath)")
-        return try epubParser.parseEPUB(at: epubPath)
+        print("DEBUG: File not found: \(path)")
+        throw EPUBError.fileNotFound
     }
     
     @MainActor

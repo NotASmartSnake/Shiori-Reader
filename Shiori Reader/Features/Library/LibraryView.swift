@@ -11,23 +11,26 @@ struct LibraryView: View {
     @EnvironmentObject var isReadingBook: IsReadingBook
     @State private var books: [Book] = []
     @State private var lastViewedBookPath: String? = nil
+    @State private var showDocumentPicker = false
+    @State private var importStatus: ImportStatus = .idle
+    @State private var showImportAlert = false
     
     let initialBooks: [Book] = [
         Book(title: "COTE", coverImage: "COTECover", readingProgress: 0.4, filePath: "cote.epub"),
-        Book(title: "3 Days", coverImage: "3DaysCover", readingProgress: 0.56, filePath: "3Days.epub"),
-        Book(title: "Honzuki", coverImage: "AOABCover", readingProgress: 0.3, filePath: "honzuki.epub"),
-        Book(title: "Konosuba", coverImage: "KonosubaCover", readingProgress: 0.7, filePath: "konosuba.epub"),
-        Book(title: "Hakomari", coverImage: "HakomariCover", readingProgress: 0.6, filePath: "hakomari.epub"),
-        Book(title: "Danmachi", coverImage: "DanmachiCover", readingProgress: 0.1, filePath: "cote.epub"),
-        Book(title: "86", coverImage: "86Cover", readingProgress: 0.2, filePath: ""),
-        Book(title: "Love", coverImage: "LoveCover", readingProgress: 0.8, filePath: ""),
-        Book(title: "Mushoku", coverImage: "MushokuCover", readingProgress: 0.9, filePath: ""),
-        Book(title: "Oregairu", coverImage: "OregairuCover", readingProgress: 1.0, filePath: ""),
-        Book(title: "ReZero", coverImage: "ReZeroCover", readingProgress: 0.0, filePath: ""),
-        Book(title: "Slime", coverImage: "SlimeCover", readingProgress: 0.0, filePath: ""),
-        Book(title: "Overlord", coverImage: "OverlordCover", readingProgress: 0.0, filePath: ""),
-        Book(title: "Death", coverImage: "DeathCover", readingProgress: 0.0, filePath: ""),
-        Book(title: "No Game No Life", coverImage: "NoGameCover", readingProgress: 0.0, filePath: "")
+//        Book(title: "3 Days", coverImage: "3DaysCover", readingProgress: 0.56, filePath: "3Days.epub"),
+//        Book(title: "Honzuki", coverImage: "AOABCover", readingProgress: 0.3, filePath: "honzuki.epub"),
+//        Book(title: "Konosuba", coverImage: "KonosubaCover", readingProgress: 0.7, filePath: "konosuba.epub"),
+//        Book(title: "Hakomari", coverImage: "HakomariCover", readingProgress: 0.6, filePath: "hakomari.epub"),
+//        Book(title: "Danmachi", coverImage: "DanmachiCover", readingProgress: 0.1, filePath: "cote.epub"),
+//        Book(title: "86", coverImage: "86Cover", readingProgress: 0.2, filePath: ""),
+//        Book(title: "Love", coverImage: "LoveCover", readingProgress: 0.8, filePath: ""),
+//        Book(title: "Mushoku", coverImage: "MushokuCover", readingProgress: 0.9, filePath: ""),
+//        Book(title: "Oregairu", coverImage: "OregairuCover", readingProgress: 1.0, filePath: ""),
+//        Book(title: "ReZero", coverImage: "ReZeroCover", readingProgress: 0.0, filePath: ""),
+//        Book(title: "Slime", coverImage: "SlimeCover", readingProgress: 0.0, filePath: ""),
+//        Book(title: "Overlord", coverImage: "OverlordCover", readingProgress: 0.0, filePath: ""),
+//        Book(title: "Death", coverImage: "DeathCover", readingProgress: 0.0, filePath: ""),
+//        Book(title: "No Game No Life", coverImage: "NoGameCover", readingProgress: 0.0, filePath: "")
     ]
     
     let columns = [
@@ -53,11 +56,7 @@ struct LibraryView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        print("Settings tapped")
-                    }) {
-                        Image(systemName: "plus")
-                    }
+                    addImportButton()
                 }
             }
             .toolbarBackground(Color.black, for: .tabBar)
@@ -65,7 +64,7 @@ struct LibraryView: View {
             .navigationTitle("Library")
         }
         .onAppear {
-            // Load saved reading progress whenever the library appears
+            loadLibrary()
             loadSavedReadingProgress()
         }
         .onChange(of: isReadingBook.isReading) { _, isReading in
@@ -80,10 +79,25 @@ struct LibraryView: View {
     private func loadSavedReadingProgress() {
         print("DEBUG: Loading saved reading progress for all books")
         
-        // Start with the initial books data
-        var updatedBooks = initialBooks
+        // First load books from UserDefaults
+        var updatedBooks: [Book] = []
         
-        // Load saved progress for each book
+        if let booksData = UserDefaults.standard.data(forKey: "savedBooks") {
+            do {
+                let decoder = JSONDecoder()
+                updatedBooks = try decoder.decode([Book].self, from: booksData)
+                print("DEBUG: Loaded \(updatedBooks.count) books from UserDefaults")
+            } catch {
+                print("DEBUG: Failed to load books: \(error)")
+                // Fall back to initial books if we can't load saved books
+                updatedBooks = initialBooks
+            }
+        } else {
+            // No saved books, use initial books
+            updatedBooks = initialBooks
+        }
+        
+        // Now update reading progress for each book
         for index in 0..<updatedBooks.count {
             if !updatedBooks[index].filePath.isEmpty {
                 let key = "book_progress_\(updatedBooks[index].filePath)"
@@ -100,6 +114,69 @@ struct LibraryView: View {
         
         // Update the books array with the loaded progress
         books = updatedBooks
+    }
+    
+    func addImportButton() -> some View {
+            Button(action: {
+                showDocumentPicker = true
+            }) {
+                Image(systemName: "plus")
+                    .imageScale(.large)
+            }
+            .sheet(isPresented: $showDocumentPicker) {
+                DocumentImporter(status: $importStatus) { newBook in
+                    // Use DispatchQueue.main.async to avoid state changes during view updates
+                    DispatchQueue.main.async {
+                        // Add the book to the library
+                        books.append(newBook)
+                        
+                        // Save the updated library
+                        saveLibrary()
+                        
+                        // Reset status
+                        importStatus = .idle
+                    }
+                }
+            }
+            .alert(isPresented: $showImportAlert) {
+                Alert(
+                    title: Text("Import Book"),
+                    message: Text(importStatus.message),
+                    dismissButton: .default(Text("OK")) {
+                        if !importStatus.isSuccess {
+                            importStatus = .idle
+                        }
+                    }
+                )
+            }
+        }
+        
+    // Helper to save the library state
+    private func saveLibrary() {
+        do {
+            // Convert books to Data
+            let encoder = JSONEncoder()
+            let booksData = try encoder.encode(books)
+            
+            // Save to UserDefaults
+            UserDefaults.standard.set(booksData, forKey: "savedBooks")
+            print("DEBUG: Saved \(books.count) books to UserDefaults")
+        } catch {
+            print("DEBUG: Failed to save books: \(error)")
+        }
+    }
+    
+    private func loadLibrary() {
+        if let booksData = UserDefaults.standard.data(forKey: "savedBooks") {
+            do {
+                let decoder = JSONDecoder()
+                let savedBooks = try decoder.decode([Book].self, from: booksData)
+                books = savedBooks
+                print("DEBUG: Loaded \(books.count) books from UserDefaults")
+            } catch {
+                print("DEBUG: Failed to load books: \(error)")
+            }
+        }
     }
 }
 

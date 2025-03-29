@@ -13,6 +13,7 @@ class EPUBParser {
     private var imageDirs: [String] = []
     
     func parseEPUB(at filePath: String) throws -> (content: EPUBContent, baseURL: URL) {
+        print("DEBUG: Beginning EPUB parse of: \(filePath)")
         
         // Create a persistent directory
         let documentsURL = try fileManager.url(
@@ -28,7 +29,14 @@ class EPUBParser {
         // Clean existing directory
         try? fileManager.removeItem(at: extractionDir)
         try fileManager.createDirectory(at: extractionDir, withIntermediateDirectories: true)
-                
+        
+        // Explicitly check file existence
+        if !FileManager.default.fileExists(atPath: filePath) {
+            print("DEBUG: EPUB file does not exist at: \(filePath)")
+            throw EPUBError.fileNotFound
+        }
+           
+        print("DEBUG: Attempting to create Archive with URL: \(URL(fileURLWithPath: filePath))")
         // Extract EPUB contents
         do {
             let archive = try Archive(url: URL(fileURLWithPath: filePath), accessMode: .read)
@@ -102,6 +110,7 @@ class EPUBParser {
                 tableOfContents: tableOfContents
             ), extractionDir)
         } catch {
+            print("DEBUG: Archive creation error: \(error)")
             throw error
         }
     }

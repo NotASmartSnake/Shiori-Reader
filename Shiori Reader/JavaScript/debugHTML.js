@@ -8,7 +8,7 @@
 
 function debugHtmlAndCss() {
     // Print HTML structure of the body
-    const bodyHtml = document.body.innerHTML.substring(0, 2000); // First 2000 chars
+    const bodyHtml = document.body.innerHTML.substring(0, 5000); // First 2000 chars
     console.log("BODY HTML STRUCTURE:");
     console.log(bodyHtml);
     

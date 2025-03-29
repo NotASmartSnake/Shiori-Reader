@@ -96,6 +96,9 @@ struct SingleWebView: UIViewRepresentable {
         // Disable user zoom
         webView.scrollView.bouncesZoom = false
         
+        // Allow web inspection
+        webView.isInspectable = true
+        
         // Apply CSS to control overflow in the appropriate direction
         let overflowScript = """
         document.addEventListener('DOMContentLoaded', function() {
@@ -189,11 +192,6 @@ struct SingleWebView: UIViewRepresentable {
                 self.parent.viewModel.updatePositionData()
                 // Notify the ViewModel that WebView content is fully loaded and ready for position restoration
                 self.parent.viewModel.webViewContentLoaded()
-                
-                // Debug vertical layout
-                if self.parent.viewModel.readingDirection == .vertical {
-                    self.parent.viewModel.debugVerticalLayout()
-                }
                 
                 // Force reapply direction after page load
                 print("DEBUG: Direction after navigation complete: \(self.parent.viewModel.readingDirection)")
@@ -663,18 +661,29 @@ struct SingleWebView: UIViewRepresentable {
     }
     
     private func resolveImagePath(_ originalPath: String, baseURL: URL) -> String {
+        // Log original path for debugging
+        print("DEBUG: EPUB extraction baseURL: \(viewModel.state.epubBaseURL?.path ?? "nil")")
+        print("DEBUG: Resolving image path: \(originalPath)")
+        
         let cleanPath = originalPath
             .replacingOccurrences(of: "file://", with: "")
             .replacingOccurrences(of: "../", with: "")
             .replacingOccurrences(of: "./", with: "")
         
+        // Log cleaned path
+        print("DEBUG: Cleaned path: \(cleanPath)")
+        
         let imageName = cleanPath.components(separatedBy: "/").last ?? cleanPath
+        print("DEBUG: Image name: \(imageName)")
         
         // Try full path first if it contains directory info
         if cleanPath.contains("/") {
             let fullPath = baseURL.appendingPathComponent(cleanPath).path
+            print("DEBUG: Trying full path: \(fullPath)")
             if FileManager.default.fileExists(atPath: fullPath) {
-                return "file://\(fullPath)"
+                print("DEBUG: Found image at full path")
+                let url = URL(fileURLWithPath: fullPath)
+                return url.absoluteString
             }
         }
         
@@ -689,13 +698,17 @@ struct SingleWebView: UIViewRepresentable {
             baseURL.appendingPathComponent(imageName).path
         ]
         
-        // Try each possible path
+        // Try each possible path and log results
         for path in possiblePaths {
+            print("DEBUG: Trying possible path: \(path)")
             if FileManager.default.fileExists(atPath: path) {
-                return "file://\(path)"
+                print("DEBUG: Found image at path: \(path)")
+                let url = URL(fileURLWithPath: path)
+                return url.absoluteString
             }
         }
         
+        print("DEBUG: No matching path found, returning original: \(originalPath)")
         return originalPath
     }
     
@@ -723,7 +736,7 @@ struct SingleWebView: UIViewRepresentable {
         title: "実力至上主義者の教室",
         coverImage: "COTECover",
         readingProgress: 0.1,
-        filePath: "honzuki.epub"
+        filePath: "konosuba.epub"
     ))
     .environmentObject(isReadingBook)
 }

@@ -9,7 +9,7 @@ import SwiftUI
 @preconcurrency import WebKit
 
 struct BookReaderView: View {
-    @State private var showControls: Bool = true
+    @State private var showControls: Bool = false
     @State private var readingProgress: Double = 0.0
     @State private var showThemes: Bool = false
     @State private var showSearch: Bool = false
@@ -214,8 +214,7 @@ struct BookReaderView: View {
         .onAppear {
             print("DEBUG: BookReaderView appeared")
             viewModel.loadFontPreferences()
-            viewModel.loadThemePreferences()
-            
+            viewModel.loadThemePreferences()            
             Task {
                 print("DEBUG: Loading book and progress")
                 await viewModel.loadEPUB()
