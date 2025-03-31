@@ -76,7 +76,7 @@ class EPUBImportProcessor {
             while let fileURL = enumerator?.nextObject() as? URL {
                 // Check if this might be a cover image
                 let filename = fileURL.lastPathComponent.lowercased()
-                if (filename.contains("cover") || filename.contains("title")) &&
+                if (filename.contains("cover")) &&
                    (filename.hasSuffix(".jpg") || filename.hasSuffix(".jpeg") || filename.hasSuffix(".png")) {
                     if let imageData = try? Data(contentsOf: fileURL) {
                         try imageData.write(to: coverURL)
