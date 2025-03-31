@@ -9,7 +9,8 @@ import SwiftUI
 
 struct MainView: View {
     @State private var selectedIndex = 0
-    @StateObject private var isReadingBookState = IsReadingBook()
+    @EnvironmentObject private var isReadingBookState: IsReadingBook
+    @EnvironmentObject private var libraryManager: LibraryManager
     
     var body: some View {
         
@@ -17,11 +18,15 @@ struct MainView: View {
 
             VStack {
                 switch selectedIndex {
-                    case 0: LibraryView().environmentObject(isReadingBookState)
+                    case 0: LibraryView()
+                        .environmentObject(isReadingBookState)
+                        .environmentObject(libraryManager)
                     case 1: SavedWordsView()
                     case 2: SearchView()
                     case 3: SettingsView()
-                    default: LibraryView().environmentObject(isReadingBookState)
+                    default: LibraryView()
+                        .environmentObject(isReadingBookState)
+                        .environmentObject(libraryManager)
                 }
             }
 
@@ -47,5 +52,7 @@ class IsReadingBook: ObservableObject {
 
 #Preview {
     MainView()
+        .environmentObject(IsReadingBook())
+        .environmentObject(LibraryManager())
 }
 

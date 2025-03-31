@@ -10,10 +10,14 @@ import SwiftUI
 @main
 struct Shiori_ReaderApp: App {
     @AppStorage("isDarkMode") var isDarkMode: Bool?
+    @StateObject private var isReadingBookState = IsReadingBook()
+    @StateObject private var libraryManager = LibraryManager()
 
     var body: some Scene {
         WindowGroup {
             MainView()
+                .environmentObject(isReadingBookState)
+                .environmentObject(libraryManager)
                 .preferredColorScheme(
                     isDarkMode == nil ? nil : (isDarkMode! ? .dark : .light)
                 )

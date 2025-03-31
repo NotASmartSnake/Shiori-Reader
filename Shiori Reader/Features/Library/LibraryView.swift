@@ -9,7 +9,7 @@ import SwiftUI
 
 struct LibraryView: View {
     @EnvironmentObject var isReadingBook: IsReadingBook
-    @State private var books: [Book] = []
+    @EnvironmentObject private var libraryManager: LibraryManager
     @State private var lastViewedBookPath: String? = nil
     @State private var showDocumentPicker = false
     @State private var importStatus: ImportStatus = .idle
@@ -17,8 +17,8 @@ struct LibraryView: View {
     
     let initialBooks: [Book] = [
         Book(title: "COTE", coverImage: "COTECover", readingProgress: 0.4, filePath: "cote.epub"),
-//        Book(title: "3 Days", coverImage: "3DaysCover", readingProgress: 0.56, filePath: "3Days.epub"),
-//        Book(title: "Honzuki", coverImage: "AOABCover", readingProgress: 0.3, filePath: "honzuki.epub"),
+        Book(title: "3 Days", coverImage: "3DaysCover", readingProgress: 0.56, filePath: "3Days.epub"),
+        Book(title: "Honzuki", coverImage: "AOABCover", readingProgress: 0.3, filePath: "honzuki.epub"),
 //        Book(title: "Konosuba", coverImage: "KonosubaCover", readingProgress: 0.7, filePath: "konosuba.epub"),
 //        Book(title: "Hakomari", coverImage: "HakomariCover", readingProgress: 0.6, filePath: "hakomari.epub"),
 //        Book(title: "Danmachi", coverImage: "DanmachiCover", readingProgress: 0.1, filePath: "cote.epub"),
@@ -46,7 +46,7 @@ struct LibraryView: View {
                 ScrollView {
                     VStack {
                         // Extract grid to separate view
-                        BookGrid(books: books, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
+                        BookGrid(books: libraryManager.books, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
                         
                         Rectangle()
                             .frame(width: 0, height: 60)
@@ -64,56 +64,14 @@ struct LibraryView: View {
             .navigationTitle("Library")
         }
         .onAppear {
-            loadLibrary()
-            loadSavedReadingProgress()
+            libraryManager.loadLibrary()
         }
         .onChange(of: isReadingBook.isReading) { _, isReading in
             if !isReading && lastViewedBookPath != nil {
                 // We just returned from reading a book
-                loadSavedReadingProgress()
+                libraryManager.loadReadingProgress()
             }
         }
-    }
-    
-    // Load saved reading progress for all books
-    private func loadSavedReadingProgress() {
-        print("DEBUG: Loading saved reading progress for all books")
-        
-        // First load books from UserDefaults
-        var updatedBooks: [Book] = []
-        
-        if let booksData = UserDefaults.standard.data(forKey: "savedBooks") {
-            do {
-                let decoder = JSONDecoder()
-                updatedBooks = try decoder.decode([Book].self, from: booksData)
-                print("DEBUG: Loaded \(updatedBooks.count) books from UserDefaults")
-            } catch {
-                print("DEBUG: Failed to load books: \(error)")
-                // Fall back to initial books if we can't load saved books
-                updatedBooks = initialBooks
-            }
-        } else {
-            // No saved books, use initial books
-            updatedBooks = initialBooks
-        }
-        
-        // Now update reading progress for each book
-        for index in 0..<updatedBooks.count {
-            if !updatedBooks[index].filePath.isEmpty {
-                let key = "book_progress_\(updatedBooks[index].filePath)"
-                let savedProgress = UserDefaults.standard.double(forKey: key)
-                print("DEBUG: Book \(updatedBooks[index].title) - key: \(key), progress: \(savedProgress)")
-                
-                if savedProgress > 0 {
-                    // Update with the saved progress if it exists
-                    updatedBooks[index].readingProgress = savedProgress
-                    print("DEBUG: Loaded saved progress for \(updatedBooks[index].title): \(savedProgress)")
-                }
-            }
-        }
-        
-        // Update the books array with the loaded progress
-        books = updatedBooks
     }
     
     func addImportButton() -> some View {
@@ -125,17 +83,11 @@ struct LibraryView: View {
             }
             .sheet(isPresented: $showDocumentPicker) {
                 DocumentImporter(status: $importStatus) { newBook in
-                    // Use DispatchQueue.main.async to avoid state changes during view updates
-                    DispatchQueue.main.async {
-                        // Add the book to the library
-                        books.append(newBook)
-                        
-                        // Save the updated library
-                        saveLibrary()
-                        
-                        // Reset status
-                        importStatus = .idle
-                    }
+                    // Add the book to the library manager
+                    libraryManager.addBook(newBook)
+                    
+                    // Reset status
+                    importStatus = .idle
                 }
             }
             .alert(isPresented: $showImportAlert) {
@@ -150,100 +102,11 @@ struct LibraryView: View {
                 )
             }
         }
-        
-    // Helper to save the library state
-    private func saveLibrary() {
-        do {
-            // Convert books to Data
-            let encoder = JSONEncoder()
-            let booksData = try encoder.encode(books)
-            
-            // Save to UserDefaults
-            UserDefaults.standard.set(booksData, forKey: "savedBooks")
-            print("DEBUG: Saved \(books.count) books to UserDefaults")
-        } catch {
-            print("DEBUG: Failed to save books: \(error)")
-        }
-    }
-    
-    private func loadLibrary() {
-        if let booksData = UserDefaults.standard.data(forKey: "savedBooks") {
-            do {
-                let decoder = JSONDecoder()
-                let savedBooks = try decoder.decode([Book].self, from: booksData)
-                books = savedBooks
-                print("DEBUG: Loaded \(books.count) books from UserDefaults")
-            } catch {
-                print("DEBUG: Failed to load books: \(error)")
-            }
-        }
-    }
 }
 
-// Separate view for the grid
-struct BookGrid: View {
-    let books: [Book]
-    @ObservedObject var isReadingBook: IsReadingBook
-    @Binding var lastViewedBookPath: String?
-    
-    let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
-    
-    var body: some View {
-        LazyVGrid(columns: columns, spacing: 20) {
-            ForEach(books) { book in
-                BookCell(book: book, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
-            }
-        }
-        .padding(.horizontal, 10)
-    }
-}
-
-// Separate view for each cell
-struct BookCell: View {
-    let book: Book
-    @ObservedObject var isReadingBook: IsReadingBook
-    @Binding var lastViewedBookPath: String?
-    
-    var body: some View {
-        VStack {
-            NavigationLink(destination:
-                BookReaderView(book: book)
-                .onAppear {
-                    isReadingBook.setReading(true)
-                    lastViewedBookPath = book.filePath
-                    print("DEBUG: Book appeared, set lastViewedBookPath = \(book.filePath)")
-                }
-                .onDisappear {
-                    isReadingBook.setReading(false)
-                    print("DEBUG: Book disappeared")
-                }
-            ) {
-                Image(book.coverImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 200, height: 250)
-                    .cornerRadius(8)
-                    .shadow(radius: 4)
-            }
-            
-            HStack {
-                Text(String(format: "%.2f%%", book.readingProgress * 100))
-                    .font(.caption)
-                    .foregroundStyle(.gray)
-                Spacer()
-                Image(systemName: "ellipsis")
-                    .foregroundStyle(.gray)
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-        }
-    }
-}
 
 #Preview {
     LibraryView()
         .environmentObject(IsReadingBook())
+        .environmentObject(LibraryManager())
 }
