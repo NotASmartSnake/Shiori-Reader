@@ -11,26 +11,29 @@ struct Book: Identifiable, Equatable, Codable {
     let id: UUID
     let title: String
     let coverImage: String
+    let isLocalCover: Bool
     let filePath: String
     var readingProgress: Double
     
     enum CodingKeys: String, CodingKey {
-        case id, title, coverImage, filePath, readingProgress
+        case id, title, coverImage, isLocalCover, filePath, readingProgress
     }
     
-    init(title: String, coverImage: String, readingProgress: Double, filePath: String) {
+    init(title: String, coverImage: String, isLocalCover: Bool = false, readingProgress: Double, filePath: String) {
         self.id = UUID()
         self.title = title
         self.coverImage = coverImage
+        self.isLocalCover = isLocalCover
         self.readingProgress = readingProgress
         self.filePath = filePath
     }
     
     // Custom initializer that preserves an existing ID
-    init(id: UUID = UUID(), title: String, coverImage: String, readingProgress: Double, filePath: String) {
+    init(id: UUID = UUID(), title: String, coverImage: String, isLocalCover: Bool = false, readingProgress: Double, filePath: String) {
         self.id = id
         self.title = title
         self.coverImage = coverImage
+        self.isLocalCover = isLocalCover
         self.readingProgress = readingProgress
         self.filePath = filePath
     }
@@ -52,6 +55,7 @@ struct Book: Identifiable, Equatable, Codable {
             id: self.id,
             title: self.title,
             coverImage: self.coverImage,
+            isLocalCover: self.isLocalCover,
             readingProgress: newProgress,
             filePath: self.filePath
         )

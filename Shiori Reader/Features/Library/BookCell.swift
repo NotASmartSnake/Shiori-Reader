@@ -30,12 +30,7 @@ struct BookCell: View {
                     print("DEBUG: Book disappeared")
                 }
             ) {
-                Image(book.coverImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 200, height: 250)
-                    .cornerRadius(8)
-                    .shadow(radius: 4)
+                BookCoverImage(book: book)
             }
             
             HStack {
