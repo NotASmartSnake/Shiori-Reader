@@ -12,8 +12,11 @@ struct DictionaryPopupView: View {
     let matches: [DictionaryMatch]
     let onDismiss: () -> Void
     let sentenceContext: String
+    let bookTitle: String
     @State private var showAnkiSuccess = false
+    @State private var showSaveSuccess = false
     @State private var showingAnkiSettings = false
+    @EnvironmentObject private var wordsManager: SavedWordsManager
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -60,17 +63,32 @@ struct DictionaryPopupView: View {
                                 
                                 Spacer()
                                 
-                                // Add to Anki button
-                                Button(action: {
-                                    exportToAnki(entry)
-                                }) {
-                                    Image(systemName: "plus.rectangle.on.rectangle")
-                                        .foregroundColor(.blue)
-                                        .padding(8)
-                                        .background(Color.blue.opacity(0.1))
-                                        .cornerRadius(8)
+                                // Action buttons
+                                HStack(spacing: 10) {
+                                    // Save to Vocabulary button
+                                    Button(action: {
+                                        saveWordToVocabulary(entry)
+                                    }) {
+                                        Image(systemName: "bookmark")
+                                            .foregroundColor(.blue)
+                                            .padding(8)
+                                            .background(Color.blue.opacity(0.1))
+                                            .cornerRadius(8)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    // Add to Anki button
+                                    Button(action: {
+                                        exportToAnki(entry)
+                                    }) {
+                                        Image(systemName: "plus.rectangle.on.rectangle")
+                                            .foregroundColor(.blue)
+                                            .padding(8)
+                                            .background(Color.blue.opacity(0.1))
+                                            .cornerRadius(8)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
-                                .buttonStyle(PlainButtonStyle())
                             }
                             .padding(.vertical, 4)
                             
@@ -95,28 +113,54 @@ struct DictionaryPopupView: View {
         .cornerRadius(20)
         .shadow(radius: 5)
         .overlay(
-            showAnkiSuccess ?
-                VStack {
-                    Text("Added to Anki!")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(Color.green)
-                        .cornerRadius(10)
-                        .padding()
-                        .transition(.scale.combined(with: .opacity))
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.black.opacity(0.3))
-                .animation(.spring(), value: showAnkiSuccess)
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        withAnimation {
-                            showAnkiSuccess = false
+            ZStack {
+                // Existing Anki success overlay
+                if showAnkiSuccess {
+                    VStack {
+                        Text("Added to Anki!")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.green)
+                            .cornerRadius(10)
+                            .padding()
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.opacity(0.3))
+                    .animation(.spring(), value: showAnkiSuccess)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            withAnimation {
+                                showAnkiSuccess = false
+                            }
                         }
                     }
                 }
-                : nil
+                
+                // New Save success overlay
+                if showSaveSuccess {
+                    VStack {
+                        Text("Saved to Vocabulary!")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(10)
+                            .padding()
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .animation(.spring(), value: showSaveSuccess)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            withAnimation {
+                                showSaveSuccess = false
+                            }
+                        }
+                    }
+                }
+            }
         )
         .sheet(isPresented: $showingAnkiSettings) {
             NavigationView {
@@ -162,6 +206,33 @@ struct DictionaryPopupView: View {
             }
         )
     }
+    
+    private func saveWordToVocabulary(_ entry: DictionaryEntry) {
+        // Create a new SavedWord
+        let newWord = SavedWord(
+            word: entry.term,
+            reading: entry.reading,
+            definition: entry.meanings.joined(separator: "; "),
+            sentence: sentenceContext,
+            timeAdded: Date(),
+            sourceBook: bookTitle
+        )
+        
+        // Add to saved words manager
+        wordsManager.addWord(newWord)
+        
+        // Show success message
+        withAnimation {
+            showSaveSuccess = true
+            
+            // Hide success message after a delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                withAnimation {
+                    showSaveSuccess = false
+                }
+            }
+        }
+    }
 }
 
 
@@ -175,5 +246,6 @@ struct DictionaryPopupView: View {
         filePath: "hakomari.epub"
     ))
     .environmentObject(isReadingBook)
+    .environmentObject(SavedWordsManager())
 }
 

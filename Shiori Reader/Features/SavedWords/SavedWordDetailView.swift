@@ -16,7 +16,7 @@
 import SwiftUI
 
 struct SavedWordDetailView: View {
-    @ObservedObject var wordManager: SavedWordsManager
+    @EnvironmentObject var wordManager: SavedWordsManager
     @State private var editedWord: SavedWord
     @Environment(\.presentationMode) var presentationMode
     @State private var showDeleteConfirmation = false
@@ -30,8 +30,7 @@ struct SavedWordDetailView: View {
         return formatter
     }()
     
-    init(wordManager: SavedWordsManager, word: SavedWord) {
-        self.wordManager = wordManager
+    init(word: SavedWord) {
         self._editedWord = State(initialValue: word)
     }
     
@@ -245,7 +244,6 @@ struct SavedWordDetailView: View {
 #Preview {
     NavigationStack {
         SavedWordDetailView(
-            wordManager: SavedWordsManager(),
             word: SavedWord(
                 word: "勉強",
                 reading: "べんきょう",

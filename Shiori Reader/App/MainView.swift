@@ -11,6 +11,7 @@ struct MainView: View {
     @State private var selectedIndex = 0
     @EnvironmentObject private var isReadingBookState: IsReadingBook
     @EnvironmentObject private var libraryManager: LibraryManager
+    @EnvironmentObject private var savedWordsManager: SavedWordsManager
     
     var body: some View {
         
@@ -21,12 +22,15 @@ struct MainView: View {
                     case 0: LibraryView()
                         .environmentObject(isReadingBookState)
                         .environmentObject(libraryManager)
+                        .environmentObject(savedWordsManager)
                     case 1: SavedWordsView()
+                        .environmentObject(savedWordsManager)
                     case 2: SearchView()
                     case 3: SettingsView()
                     default: LibraryView()
                         .environmentObject(isReadingBookState)
                         .environmentObject(libraryManager)
+                        .environmentObject(savedWordsManager)
                 }
             }
 
@@ -54,5 +58,6 @@ class IsReadingBook: ObservableObject {
     MainView()
         .environmentObject(IsReadingBook())
         .environmentObject(LibraryManager())
+        .environmentObject(SavedWordsManager())
 }
 

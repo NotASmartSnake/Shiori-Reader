@@ -17,6 +17,7 @@ struct BookReaderView: View {
     @StateObject private var viewModel: BookViewModel
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var isReadingBook: IsReadingBook
+    @EnvironmentObject private var savedWordsManager: SavedWordsManager
     
     init(book: Book) {
         _viewModel = StateObject(wrappedValue: BookViewModel(book: book))
@@ -121,9 +122,10 @@ struct BookReaderView: View {
                                 onDismiss: {
                                     viewModel.showDictionary = false
                                 },
-                                sentenceContext: viewModel.currentSentenceContext
-                                
+                                sentenceContext: viewModel.currentSentenceContext,
+                                bookTitle: viewModel.book.title
                             )
+                            .environmentObject(savedWordsManager)
                             
                         }
                         .transition(.move(edge: .bottom))

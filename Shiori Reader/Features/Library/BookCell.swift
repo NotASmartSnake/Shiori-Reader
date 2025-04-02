@@ -15,11 +15,13 @@ struct BookCell: View {
     @State private var newTitle = ""
     @State private var showingDeleteConfirmation = false
     @EnvironmentObject private var libraryManager: LibraryManager
+    @EnvironmentObject private var savedWordsManager: SavedWordsManager
     
     var body: some View {
         VStack {
             NavigationLink(destination:
                 BookReaderView(book: book)
+                .environmentObject(savedWordsManager)
                 .onAppear {
                     isReadingBook.setReading(true)
                     lastViewedBookPath = book.filePath

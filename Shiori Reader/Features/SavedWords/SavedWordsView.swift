@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct SavedWordsView: View {
-    @StateObject private var wordsManager = SavedWordsManager()
+    @EnvironmentObject private var wordsManager: SavedWordsManager
     @State private var searchText = ""
     @State private var showSortOptions = false
     @State private var sortOption = SortOption.dateAdded
@@ -84,7 +84,7 @@ struct SavedWordsView: View {
                         // List of saved words
                         List {
                             ForEach(filteredWords) { word in
-                                NavigationLink(destination: SavedWordDetailView(wordManager: wordsManager, word: word)) {
+                                NavigationLink(destination: SavedWordDetailView(word: word)) {
                                     SavedWordRow(word: word)
                                 }
                             }
@@ -169,4 +169,5 @@ struct SavedWordRow: View {
 
 #Preview {
     SavedWordsView()
+        .environmentObject(SavedWordsManager())
 }
