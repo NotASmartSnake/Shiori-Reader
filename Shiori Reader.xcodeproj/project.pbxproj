@@ -38,6 +38,7 @@
 		51811C4F2D5E4D2D00E2D973 /* Shiori ReaderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Shiori ReaderTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		51811C592D5E4D2D00E2D973 /* Shiori ReaderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Shiori ReaderUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Heuristica-Bold.otf"; sourceTree = "<group>"; };
+		518DCEFC2D9DE1F200B45824 /* Shiori-Reader.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Shiori-Reader.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -97,6 +98,7 @@
 		51811C362D5E4D2C00E2D973 = {
 			isa = PBXGroup;
 			children = (
+				518DCEFC2D9DE1F200B45824 /* Shiori-Reader.entitlements */,
 				51811C412D5E4D2C00E2D973 /* Shiori Reader */,
 				51811C522D5E4D2D00E2D973 /* Shiori ReaderTests */,
 				51811C5C2D5E4D2D00E2D973 /* Shiori ReaderUITests */,
@@ -439,10 +441,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Shiori-Reader.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Shiori Reader/Preview Content\"";
 				DEVELOPMENT_TEAM = 489XS22D5R;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Shiori-Reader-Info.plist";
@@ -470,10 +474,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Shiori-Reader.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Shiori Reader/Preview Content\"";
 				DEVELOPMENT_TEAM = 489XS22D5R;
+				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Shiori-Reader-Info.plist";

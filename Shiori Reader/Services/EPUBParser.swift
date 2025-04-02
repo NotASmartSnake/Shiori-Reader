@@ -146,105 +146,169 @@ class EPUBParser {
     }
     
     private func findAndParseChapters(in directory: URL, images: [String: Data]) throws -> (chapters: [Chapter], spineOrder: [String]) {
+        
+        // First find the OPF file
+        let opfURL = try findOPFFile(in: directory)
+        
+        // Parse the OPF to get spine order
+        let opfContent = try String(contentsOf: opfURL, encoding: .utf8)
+        let spineOrder = try parseSpineOrder(from: opfContent, baseDirectory: opfURL.deletingLastPathComponent())
+        
+        // Create a dictionary to store chapters by their file path
+        var chapterDict: [String: Chapter] = [:]
+        
+        // Parse all HTML/XHTML files
+        let enumerator = fileManager.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )
+        
+        while let fileURL = enumerator?.nextObject() as? URL {
+            guard fileURL.pathExtension.lowercased() == "html" ||
+                  fileURL.pathExtension.lowercased() == "xhtml" else {
+                continue
+            }
             
-            // First find the OPF file
-            let opfURL = try findOPFFile(in: directory)
-            
-            // Parse the OPF to get spine order
-            let opfContent = try String(contentsOf: opfURL, encoding: .utf8)
-            let spineOrder = try parseSpineOrder(from: opfContent, baseDirectory: opfURL.deletingLastPathComponent())
-            
-            // Create a dictionary to store chapters by their file path
-            var chapterDict: [String: Chapter] = [:]
-            
-            // Parse all HTML/XHTML files
-            let enumerator = fileManager.enumerator(
-                at: directory,
-                includingPropertiesForKeys: [.isRegularFileKey],
-                options: [.skipsHiddenFiles]
+            let originalHTMLContent = try String(contentsOf: fileURL, encoding: .utf8) // Process HTML *before* creating the Chapter object
+            let processedHTMLContent = processChapterHTML(content: originalHTMLContent, htmlFileURL: fileURL, extractionBaseURL: directory)
+            let chapterImgRefs = findImageReferences(in: processedHTMLContent) // Use processed content here too if needed
+
+            chapterDict[fileURL.lastPathComponent] = Chapter(
+                title: extractTitle(from: processedHTMLContent) ?? "Untitled Chapter",
+                content: processedHTMLContent, // Store the MODIFIED content
+                images: chapterImgRefs,
+                filePath: fileURL.lastPathComponent
             )
             
-            while let fileURL = enumerator?.nextObject() as? URL {
-                guard fileURL.pathExtension.lowercased() == "html" ||
-                      fileURL.pathExtension.lowercased() == "xhtml" else {
-                    continue
-                }
-                
-                let htmlContent = try String(contentsOf: fileURL, encoding: .utf8)
-                let chapterImgRefs = findImageReferences(in: htmlContent)
-                
-                chapterDict[fileURL.lastPathComponent] = Chapter(
-                    title: extractTitle(from: htmlContent) ?? "Untitled Chapter",
-                    content: htmlContent,
-                    images: chapterImgRefs,
-                    filePath: fileURL.lastPathComponent
-                )
-                
-            }
-            
-            // Create ordered chapter array based on spine
-            var orderedChapters: [Chapter] = []
-            for href in spineOrder {
-                if let fileName = href.components(separatedBy: "/").last,
-                   let chapter = chapterDict[fileName] {
-                    orderedChapters.append(chapter)
-                }
-            }
-            
-            // Append any remaining chapters not in spine (should be rare)
-            for (fileName, chapter) in chapterDict {
-                if !spineOrder.contains(where: { $0.contains(fileName) }) {
-                    orderedChapters.append(chapter)
-                }
-            }
-            
-            return (orderedChapters, spineOrder)
         }
         
-        private func findOPFFile(in directory: URL) throws -> URL {
-            // First look for container.xml in META-INF
-            let containerURL = directory.appendingPathComponent("META-INF/container.xml")
-            
-            guard fileManager.fileExists(atPath: containerURL.path) else {
-                
-                // List contents of the META-INF directory if it exists
-                let metaInfDir = directory.appendingPathComponent("META-INF")
-                if fileManager.fileExists(atPath: metaInfDir.path, isDirectory: nil) {
-                    do {
-                        let contents = try fileManager.contentsOfDirectory(at: metaInfDir, includingPropertiesForKeys: nil)
-                    } catch {
-                        print("DEBUG: Error listing META-INF: \(error)")
+        // Create ordered chapter array based on spine
+        var orderedChapters: [Chapter] = []
+        for href in spineOrder {
+            if let fileName = href.components(separatedBy: "/").last,
+               let chapter = chapterDict[fileName] {
+                orderedChapters.append(chapter)
+            }
+        }
+        
+        // Append any remaining chapters not in spine (should be rare)
+        for (fileName, chapter) in chapterDict {
+            if !spineOrder.contains(where: { $0.contains(fileName) }) {
+                orderedChapters.append(chapter)
+            }
+        }
+        
+        return (orderedChapters, spineOrder)
+    }
+    
+    private func processChapterHTML(content: String, htmlFileURL: URL, extractionBaseURL: URL) -> String {
+        var modifiedContent = content
+        let fileManager = FileManager.default
+        let htmlDirectoryURL = htmlFileURL.deletingLastPathComponent()
+
+        // Regex for src attribute in img tags
+        let imgPattern = "<img[^>]+src=[\"']([^\"']+)[\"']"
+        if let imgRegex = try? NSRegularExpression(pattern: imgPattern, options: .caseInsensitive) {
+            let matches = imgRegex.matches(in: modifiedContent, range: NSRange(modifiedContent.startIndex..., in: modifiedContent))
+            for match in matches.reversed() { // Iterate reversed to avoid range issues
+                if let srcRange = Range(match.range(at: 1), in: modifiedContent),
+                   let fullTagRange = Range(match.range(at: 0), in: modifiedContent) {
+                    let originalSrc = String(modifiedContent[srcRange])
+
+                    // Resolve the absolute path of the image
+                    let absoluteImageURL = URL(string: originalSrc, relativeTo: htmlDirectoryURL)!.standardizedFileURL
+
+                    // Check if the file exists
+                    if fileManager.fileExists(atPath: absoluteImageURL.path) {
+                        // Calculate path relative to the extraction root
+                        if let relativePath = absoluteImageURL.path.replacingOccurrences(of: extractionBaseURL.path, with: "").removingPercentEncoding {
+                            let cleanedRelativePath = relativePath.starts(with: "/") ? String(relativePath.dropFirst()) : relativePath
+                            let newSrcAttribute = "src=\"\(cleanedRelativePath)\""
+                            // Replace only the src part within the tag
+                            let tagString = String(modifiedContent[fullTagRange])
+                            let updatedTag = tagString.replacingOccurrences(of: "src=[\"']\(originalSrc)[\"']", with: newSrcAttribute, options: .regularExpression)
+                            modifiedContent.replaceSubrange(fullTagRange, with: updatedTag)
+                         }
+                    } else {
+                         print("⚠️ Image not found during parsing: \(absoluteImageURL.path)")
                     }
-                } else {
-                    print("DEBUG: META-INF directory not found")
                 }
-                
+            }
+        }
+
+        // Add similar logic for xlink:href if needed (for SVG images)
+        let xlinkPattern = "<image[^>]+xlink:href=[\"']([^\"']+)[\"']"
+         if let xlinkRegex = try? NSRegularExpression(pattern: xlinkPattern, options: .caseInsensitive) {
+             let matches = xlinkRegex.matches(in: modifiedContent, range: NSRange(modifiedContent.startIndex..., in: modifiedContent))
+              for match in matches.reversed() {
+                 if let hrefRange = Range(match.range(at: 1), in: modifiedContent),
+                    let fullTagRange = Range(match.range(at: 0), in: modifiedContent) {
+                     let originalHref = String(modifiedContent[hrefRange])
+                     let absoluteImageURL = URL(string: originalHref, relativeTo: htmlDirectoryURL)!.standardizedFileURL
+                     if fileManager.fileExists(atPath: absoluteImageURL.path) {
+                         if let relativePath = absoluteImageURL.path.replacingOccurrences(of: extractionBaseURL.path, with: "").removingPercentEncoding {
+                             let cleanedRelativePath = relativePath.starts(with: "/") ? String(relativePath.dropFirst()) : relativePath
+                             let newHrefAttribute = "xlink:href=\"\(cleanedRelativePath)\""
+                             let tagString = String(modifiedContent[fullTagRange])
+                             let updatedTag = tagString.replacingOccurrences(of: "xlink:href=[\"']\(originalHref)[\"']", with: newHrefAttribute, options: .regularExpression)
+                             modifiedContent.replaceSubrange(fullTagRange, with: updatedTag)
+                         }
+                     } else {
+                         print("⚠️ SVG Image not found during parsing: \(absoluteImageURL.path)")
+                     }
+                 }
+             }
+         }
+
+
+        return modifiedContent
+    }
+        
+    private func findOPFFile(in directory: URL) throws -> URL {
+        // First look for container.xml in META-INF
+        let containerURL = directory.appendingPathComponent("META-INF/container.xml")
+        
+        guard fileManager.fileExists(atPath: containerURL.path) else {
+            
+            // List contents of the META-INF directory if it exists
+            let metaInfDir = directory.appendingPathComponent("META-INF")
+            if fileManager.fileExists(atPath: metaInfDir.path, isDirectory: nil) {
+                do {
+                    let contents = try fileManager.contentsOfDirectory(at: metaInfDir, includingPropertiesForKeys: nil)
+                } catch {
+                    print("DEBUG: Error listing META-INF: \(error)")
+                }
+            } else {
+                print("DEBUG: META-INF directory not found")
+            }
+            
+            throw EPUBError.invalidArchive
+        }
+        
+        do {
+            let containerContent = try String(contentsOf: containerURL, encoding: .utf8)
+            
+            // Extract root file path from container.xml
+            let rootFilePattern = "rootfile[^>]+full-path=\"([^\"]+)\""
+            guard let regex = try? NSRegularExpression(pattern: rootFilePattern),
+                  let match = regex.firstMatch(in: containerContent, range: NSRange(containerContent.startIndex..., in: containerContent)),
+                  let range = Range(match.range(at: 1), in: containerContent) else {
                 throw EPUBError.invalidArchive
             }
             
-            do {
-                let containerContent = try String(contentsOf: containerURL, encoding: .utf8)
-                
-                // Extract root file path from container.xml
-                let rootFilePattern = "rootfile[^>]+full-path=\"([^\"]+)\""
-                guard let regex = try? NSRegularExpression(pattern: rootFilePattern),
-                      let match = regex.firstMatch(in: containerContent, range: NSRange(containerContent.startIndex..., in: containerContent)),
-                      let range = Range(match.range(at: 1), in: containerContent) else {
-                    throw EPUBError.invalidArchive
-                }
-                
-                let opfPath = String(containerContent[range])
-                
-                let opfURL = directory.appendingPathComponent(opfPath)
-                if fileManager.fileExists(atPath: opfURL.path) {
-                    return opfURL
-                } else {
-                    throw EPUBError.fileNotFound
-                }
-            } catch {
-                throw error
+            let opfPath = String(containerContent[range])
+            
+            let opfURL = directory.appendingPathComponent(opfPath)
+            if fileManager.fileExists(atPath: opfURL.path) {
+                return opfURL
+            } else {
+                throw EPUBError.fileNotFound
             }
+        } catch {
+            throw error
         }
+    }
         
     private func parseSpineOrder(from opfContent: String, baseDirectory: URL) throws -> [String] {
         var spineOrder: [String] = []

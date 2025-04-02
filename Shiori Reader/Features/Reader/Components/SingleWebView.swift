@@ -185,8 +185,6 @@ struct SingleWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            
-            
             // Calculate total character count when content loads
             DispatchQueue.main.async {
                 self.parent.viewModel.updatePositionData()
@@ -313,7 +311,10 @@ struct SingleWebView: UIViewRepresentable {
     
     // Separate method to load content once
     private func loadContent(webView: WKWebView, coordinator: Coordinator) {
-        guard let baseURL = baseURL else { return }
+        guard let baseURL = baseURL else {
+            print("ERROR: Base URL is nil in loadContent")
+            return
+        }
         
         let processedChapters = content.chapters.enumerated().map { index, chapter -> String in
             // Extract filename without extension for better ID matching
@@ -326,10 +327,7 @@ struct SingleWebView: UIViewRepresentable {
             if processedContent.contains("<body") {
                 processedContent = extractBodyContent(processedContent)
             }
-            
-            // Process image paths
-            processedContent = processImagePaths(processedContent, baseURL: baseURL)
-            
+                 
             return """
                 <div class='chapter' id='chapter-\(index + 1)' data-filename='\(filename)'>
                     <div class='chapter-content'>\(processedContent)</div>
@@ -500,8 +498,25 @@ struct SingleWebView: UIViewRepresentable {
         </html>
         """
         
-        // Load the HTML only once
-        webView.loadHTMLString(combinedHTML, baseURL: baseURL)
+        let tempHTMLFileName = "currentBookView.html"
+        // Save it inside the book's extraction directory (baseURL)
+        let tempHTMLURL = baseURL.appendingPathComponent(tempHTMLFileName)
+        
+        do {
+            try combinedHTML.write(to: tempHTMLURL, atomically: true, encoding: .utf8)
+            print("DEBUG: Saved combined HTML to: \(tempHTMLURL.path)")
+
+            // Load using loadFileURL
+            // Grant access to the entire extraction directory
+            print("DEBUG: Loading \(tempHTMLURL.lastPathComponent) with read access to: \(baseURL.path)")
+            webView.loadFileURL(tempHTMLURL, allowingReadAccessTo: baseURL)
+            coordinator.contentLoaded = true
+
+        } catch {
+            print("ERROR: Failed to save temporary HTML or load file URL: \(error)")
+            // Fallback or error handling
+            webView.loadHTMLString("<html><body>Error loading book content.</body></html>", baseURL: nil)
+        }
         
         // Apply reading direction class
         let directionClass = viewModel.readingDirection == .horizontal ? "horizontal-text" : "vertical-text"
@@ -514,12 +529,13 @@ struct SingleWebView: UIViewRepresentable {
         })();
         """
         webView.evaluateJavaScript(directionScript)
-        
-        let actualDirection = viewModel.readingDirection
-        print("DEBUG: Applying direction class: \(actualDirection == .horizontal ? "horizontal-text" : "vertical-text")")
-        
-        // Mark that content is loaded
+
         coordinator.contentLoaded = true
+        
+        ///
+        
+        // Load the HTML only once
+//        webView.loadHTMLString(combinedHTML, baseURL: baseURL)
     }
     
     
@@ -623,93 +639,6 @@ struct SingleWebView: UIViewRepresentable {
         }
         
         return html
-    }
-    
-    private func processImagePaths(_ content: String, baseURL: URL) -> String {
-        var processed = content
-        
-        let patterns = [
-            "src=\"([^\"]+)\"",
-            "src='([^']+)'",
-            "xlink:href=\"([^\"]+)\"",
-            "xlink:href='([^']+)'"
-        ]
-        
-        for pattern in patterns {
-            if let regex = try? NSRegularExpression(pattern: pattern) {
-                let matches = regex.matches(
-                    in: processed,
-                    range: NSRange(processed.startIndex..., in: processed)
-                )
-                
-                for match in matches.reversed() {
-                    if let pathRange = Range(match.range(at: 1), in: processed),
-                       let fullRange = Range(match.range(at: 0), in: processed) {
-                        let originalPath = String(processed[pathRange])
-                        let resolvedPath = resolveImagePath(originalPath, baseURL: baseURL)
-                        let attributeName = pattern.contains("src") ? "src" : "xlink:href"
-                        processed = processed.replacingCharacters(
-                            in: fullRange,
-                            with: "\(attributeName)=\"\(resolvedPath)\""
-                        )
-                    }
-                }
-            }
-        }
-        
-        return processed
-    }
-    
-    private func resolveImagePath(_ originalPath: String, baseURL: URL) -> String {
-        // Log original path for debugging
-        print("DEBUG: EPUB extraction baseURL: \(viewModel.state.epubBaseURL?.path ?? "nil")")
-        print("DEBUG: Resolving image path: \(originalPath)")
-        
-        let cleanPath = originalPath
-            .replacingOccurrences(of: "file://", with: "")
-            .replacingOccurrences(of: "../", with: "")
-            .replacingOccurrences(of: "./", with: "")
-        
-        // Log cleaned path
-        print("DEBUG: Cleaned path: \(cleanPath)")
-        
-        let imageName = cleanPath.components(separatedBy: "/").last ?? cleanPath
-        print("DEBUG: Image name: \(imageName)")
-        
-        // Try full path first if it contains directory info
-        if cleanPath.contains("/") {
-            let fullPath = baseURL.appendingPathComponent(cleanPath).path
-            print("DEBUG: Trying full path: \(fullPath)")
-            if FileManager.default.fileExists(atPath: fullPath) {
-                print("DEBUG: Found image at full path")
-                let url = URL(fileURLWithPath: fullPath)
-                return url.absoluteString
-            }
-        }
-        
-        // Common image directory patterns to check
-        let possiblePaths = [
-            baseURL.appendingPathComponent("images/\(imageName)").path,
-            baseURL.appendingPathComponent("Images/\(imageName)").path,
-            baseURL.appendingPathComponent("item/image/\(imageName)").path,
-            baseURL.appendingPathComponent("OEBPS/images/\(imageName)").path,
-            baseURL.appendingPathComponent("OEBPS/Images/\(imageName)").path,
-            baseURL.appendingPathComponent("image/\(imageName)").path,
-            baseURL.appendingPathComponent(imageName).path
-        ]
-        
-        // Try each possible path and log results
-        for path in possiblePaths {
-            print("DEBUG: Trying possible path: \(path)")
-            if FileManager.default.fileExists(atPath: path) {
-                print("DEBUG: Found image at path: \(path)")
-                let url = URL(fileURLWithPath: path)
-                return url.absoluteString
-            }
-        }
-        
-        print("DEBUG: No matching path found, returning original: \(originalPath)")
-        return originalPath
     }
     
     private func loadJavaScriptFile(_ filename: String) -> WKUserScript? {
