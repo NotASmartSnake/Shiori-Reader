@@ -44,6 +44,7 @@ struct Book: Identifiable, Equatable, Codable {
             id: self.id,
             title: newTitle,
             coverImage: self.coverImage,
+            isLocalCover: self.isLocalCover, // Add this line to preserve the property
             readingProgress: self.readingProgress,
             filePath: self.filePath
         )
