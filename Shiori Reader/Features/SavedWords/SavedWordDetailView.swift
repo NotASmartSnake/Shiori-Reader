@@ -21,6 +21,8 @@ struct SavedWordDetailView: View {
     @Environment(\.presentationMode) var presentationMode
     @State private var showDeleteConfirmation = false
     @State private var isEditing = false
+    @State private var showAnkiSuccess = false
+    @State private var showingAnkiSettings = false
     
     // Create a date formatter for displaying the date added
     private let dateFormatter: DateFormatter = {
@@ -186,6 +188,24 @@ struct SavedWordDetailView: View {
                         .padding(.top, 20)
                     }
                     
+                    // Add to Anki button
+                    Button(action: {
+                        exportToAnki()
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.rectangle.on.rectangle")
+                            Text("Add to Anki")
+                        }
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue.opacity(0.1))
+                        .foregroundColor(.blue)
+                        .cornerRadius(10)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, isEditing ? 10 : 20)
+                    
                     // Delete button
                     Button(action: {
                         showDeleteConfirmation = true
@@ -202,7 +222,7 @@ struct SavedWordDetailView: View {
                         .cornerRadius(10)
                     }
                     .padding(.horizontal)
-                    .padding(.top, isEditing ? 10 : 20)
+                    .padding(.top, 10)
                     .padding(.bottom, 30)
                     .alert(isPresented: $showDeleteConfirmation) {
                         Alert(
@@ -229,6 +249,46 @@ struct SavedWordDetailView: View {
                 }
             }
         }
+        .overlay(
+            ZStack {
+                // Anki success overlay
+                if showAnkiSuccess {
+                    VStack {
+                        Text("Added to Anki!")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Color.green)
+                            .cornerRadius(10)
+                            .padding()
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.opacity(0.3))
+                    .animation(.spring(), value: showAnkiSuccess)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            withAnimation {
+                                showAnkiSuccess = false
+                            }
+                        }
+                    }
+                }
+            }
+        )
+        .sheet(isPresented: $showingAnkiSettings) {
+            NavigationView {
+                AnkiSettingsView()
+                    .navigationTitle("Anki Settings")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                showingAnkiSettings = false
+                            }
+                        }
+                    }
+            }
+        }
     }
     
     private func saveChanges() {
@@ -238,6 +298,36 @@ struct SavedWordDetailView: View {
     private func deleteWord() {
         wordManager.deleteWord(with: editedWord.id)
         presentationMode.wrappedValue.dismiss()
+    }
+    
+    private func exportToAnki() {
+        // Check if Anki is configured
+        if !AnkiExportService.shared.isConfigured() {
+            // Show the settings sheet
+            showingAnkiSettings = true
+            return
+        }
+        
+        AnkiExportService.shared.addVocabularyCard(
+            word: editedWord.word,
+            reading: editedWord.reading,
+            definition: editedWord.definition,
+            sentence: editedWord.sentence,
+            completion: { success in
+                if success {
+                    withAnimation {
+                        showAnkiSuccess = true
+                        
+                        // Hide success message after a delay
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            withAnimation {
+                                showAnkiSuccess = false
+                            }
+                        }
+                    }
+                }
+            }
+        )
     }
 }
 
