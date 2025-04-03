@@ -17,10 +17,17 @@ struct BottomControlBar: View {
     var body: some View {
         VStack(spacing: 0) {
             // Progress text
-            Text(String(format: "%.2f%%", progress * 100))
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.top, 8)
+            if viewModel.isPaginated && viewModel.totalPages > 0 {
+                Text("Page \(viewModel.currentPage) of \(viewModel.totalPages)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 8)
+            } else {
+                Text(String(format: "%.2f%%", progress * 100))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.top, 8)
+            }
             
             // Control buttons
             HStack {
@@ -39,17 +46,7 @@ struct BottomControlBar: View {
                 Spacer()
                 
                 // Right-aligned buttons
-                HStack(spacing: 20) {
-                    Button(action: {
-                        showSearch.toggle()
-                    }) {
-                        Image(systemName: "magnifyingglass")
-                            .imageScale(.large)
-                    }
-                    .sheet(isPresented: $showSearch) {
-                        SearchSheet(showSearch: $showSearch)
-                    }
-                    
+                HStack(spacing: 20) {                    
                     Button(action: {
                         withAnimation(.spring(duration: 0.25)) {
                             showThemes.toggle()
@@ -90,4 +87,5 @@ struct BottomControlBar: View {
 
 #Preview {
     BookReaderView(book: Book(title: "ようこそ実力至上主義の教室へ (Additional Title Text)", coverImage: "COTECover", readingProgress: 0.1, filePath: "konosuba.epub"))
+        .environmentObject(SavedWordsManager())
 }

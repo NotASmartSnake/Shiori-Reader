@@ -32,6 +32,9 @@ class BookViewModel: ObservableObject {
     @Published var fontSize: Int = 18
     @Published var currentSentenceContext: String = ""
     @Published var readingDirection: ReadingDirection = .horizontal
+    @Published var isPaginated: Bool = false
+    @Published var currentPage: Int = 1
+    @Published var totalPages: Int = 1
     
     // MARK: - Private Properties
     private var webView: WKWebView?
@@ -49,6 +52,7 @@ class BookViewModel: ObservableObject {
         loadDirectionPreferences()
         loadFontPreferences()
         loadThemePreferences()
+        loadPaginationPreference()
     }
     
     func loadEPUB() async {
@@ -80,6 +84,69 @@ class BookViewModel: ObservableObject {
     func webViewContentLoaded() {
         initialLoadCompleted = true
         self.restoreScrollPosition()
+    }
+    
+    // MARK: - Pagination Handling
+    
+    private func loadPaginationPreference() {
+        isPaginated = UserDefaults.standard.bool(forKey: "preferred_pagination_mode")
+    }
+
+    private func savePaginationPreference() {
+        UserDefaults.standard.set(isPaginated, forKey: "preferred_pagination_mode")
+    }
+    
+    func togglePagination() {
+        isPaginated.toggle()
+        savePaginationPreference()
+        
+        if let webView = getWebView() {
+            let script = isPaginated ?
+                "window.paginationAPI.enable();" :
+                "window.paginationAPI.disable();"
+            
+            webView.evaluateJavaScript(script) { result, error in
+                if let error = error {
+                    print("ERROR: Failed to toggle pagination: \(error)")
+                } else {
+                    print("DEBUG: Pagination toggled to \(self.isPaginated)")
+                }
+            }
+        }
+    }
+
+    func handlePageChange(currentPage: Int, totalPages: Int, progress: Double) {
+        self.currentPage = currentPage
+        self.totalPages = totalPages
+        
+        // Update progress
+        Task {
+            await updateProgressAndAutoSave(progress)
+        }
+    }
+
+    func goToNextPage() {
+        guard isPaginated, let webView = getWebView() else { return }
+        
+        webView.evaluateJavaScript("window.paginationAPI.nextPage();")
+    }
+
+    func goToPreviousPage() {
+        guard isPaginated, let webView = getWebView() else { return }
+        
+        webView.evaluateJavaScript("window.paginationAPI.previousPage();")
+    }
+
+    func goToPage(_ page: Int) {
+        guard isPaginated, let webView = getWebView() else { return }
+        
+        webView.evaluateJavaScript("window.paginationAPI.goToPage(\(page - 1));")
+    }
+
+    func jumpToProgress(_ progress: Double) {
+        guard isPaginated, let webView = getWebView() else { return }
+        
+        webView.evaluateJavaScript("window.paginationAPI.jumpToPosition(\(progress));")
     }
     
     // MARK: - Dictionary Management

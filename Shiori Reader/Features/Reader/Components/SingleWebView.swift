@@ -14,6 +14,7 @@ struct SingleWebView: UIViewRepresentable {
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
         config.userContentController.add(context.coordinator, name: "pageInfoHandler")
         config.userContentController.add(context.coordinator, name: "scrollTrackingHandler")
+        config.userContentController.add(context.coordinator, name: "paginationHandler")
         config.userContentController.add(context.coordinator, name: "wordTapped")
         config.userContentController.add(context.coordinator, name: "dismissDictionary")
         
@@ -24,6 +25,10 @@ struct SingleWebView: UIViewRepresentable {
         
         if let scrollTrackingScript = loadJavaScriptFile("scrollTracking") {
             config.userContentController.addUserScript(scrollTrackingScript)
+        }
+        
+        if let paginationScript = loadJavaScriptFile("pagination") {
+            config.userContentController.addUserScript(paginationScript)
         }
         
         if let positionManagementScript = loadJavaScriptFile("positionManagement") {
@@ -288,6 +293,32 @@ struct SingleWebView: UIViewRepresentable {
                 }
             } else if message.name == "consoleLog" {
                 print("JS Console: \(message.body)")
+            } else if message.name == "paginationHandler",
+               let info = message.body as? [String: Any],
+               let action = info["action"] as? String {
+                
+                switch action {
+                case "pageChanged":
+                    let currentPage = info["currentPage"] as? Int ?? 1
+                    let totalPages = info["totalPages"] as? Int ?? 1
+                    let progress = info["progress"] as? Double ?? 0
+                    
+                    DispatchQueue.main.async {
+                        self.parent.viewModel.handlePageChange(
+                            currentPage: currentPage,
+                            totalPages: totalPages,
+                            progress: progress
+                        )
+                    }
+                    
+                case "paginationDisabled":
+                    DispatchQueue.main.async {
+                        self.parent.viewModel.isPaginated = false
+                    }
+                    
+                default:
+                    break
+                }
             }
         }
         
@@ -354,6 +385,8 @@ struct SingleWebView: UIViewRepresentable {
                     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
                     --safe-area-left: env(safe-area-inset-left, 0px);
                     --safe-area-right: env(safe-area-inset-right, 0px);
+                    --page-width: 100vw;
+                    --page-height: 100vh;
                 }
         
                 /* Global reset - apply to all elements */
@@ -361,21 +394,31 @@ struct SingleWebView: UIViewRepresentable {
                     font-size: var(--shiori-font-size) !important;
                     max-width: 100%;
                     box-sizing: border-box;
+                    font-weight: normal !important;
+                    line-height: 1.8;
                 }
         
                 html {
-                    overflow-x: auto !important;
-                    overflow-y: hidden !important;
+                    height: 100%;
+                    width: 100%;
+                    /* These overflows will be managed by JS/body classes */
+                    overflow: hidden; /* Start with overflow hidden */
                 }
                 
                 body {
                     font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS Mincho", serif;
-                    font-size: var(--shiori-font-size) !important;
-                    line-height: 1.8;
-                    padding: 0;
-                    margin: 0;
                     background-color: var(--shiori-background-color);
                     color: var(--shiori-text-color);
+                    padding: 0;
+                    margin: 0;
+                    height: 100%; /* Ensure body takes full height */
+                    width: 100%;  /* Ensure body takes full width */
+                    box-sizing: border-box;
+                    overflow: hidden; /* Initially hide overflow */
+                }
+        
+                #content {
+                    box-sizing: border-box;
                 }
         
                 /* --- Horizontal Text Mode --- */
@@ -392,6 +435,8 @@ struct SingleWebView: UIViewRepresentable {
                 body.vertical-text {
                     writing-mode: vertical-rl;
                     text-orientation: upright;
+                    overflow-y: hidden;
+                    overflow-x: auto; /* Allow horizontal scroll */
                     display: inline-block !important;
                     height: 100vh;
                     min-width: 100%;
@@ -404,13 +449,36 @@ struct SingleWebView: UIViewRepresentable {
                     box-sizing: border-box;
                 }
         
-                body.vertical-text #content {
+                #content.vertical-text {
                     display: inline-block !important;
                     height: 100%;
                     margin: 0 !important;
                     padding: 0 !important;
                     box-sizing: border-box;
                     vertical-align: top;
+                }
+        
+                /* --- Chapter Styling --- */
+                .chapter, .chapter * {
+                    font-size: var(--shiori-font-size) !important;
+                }
+                
+                .chapter-content, .chapter-content * {
+                    font-size: var(--shiori-font-size) !important;
+                }
+        
+                .chapter {
+                    margin-bottom: 2em;
+                    padding-bottom: 2em;
+                    box-sizing: border-box;
+                }
+        
+                .chapter:last-child {
+                    border-bottom: none;
+                }
+                
+                .chapter-content {
+                    width: 100%;
                 }
         
                 /* --- Image Styling --- */
@@ -470,14 +538,6 @@ struct SingleWebView: UIViewRepresentable {
                     font-size: var(--shiori-font-size) !important;
                 }
                 
-                .chapter, .chapter * {
-                    font-size: var(--shiori-font-size) !important;
-                }
-                
-                .chapter-content, .chapter-content * {
-                    font-size: var(--shiori-font-size) !important;
-                }
-                
                 /* Specific element overrides */
                 p, div, span, h1, h2, h3, h4, h5, h6 {
                     font-size: var(--shiori-font-size) !important;
@@ -502,11 +562,6 @@ struct SingleWebView: UIViewRepresentable {
                 .main {
                     font-weight: normal !important;
                 }
-                
-                .chapter {
-                    margin-bottom: 2em;
-                    padding-bottom: 2em;
-                }
         
                 /* Override for vertical reading (left margin/padding instead of bottom) */
                 body.vertical-text .chapter {
@@ -518,14 +573,6 @@ struct SingleWebView: UIViewRepresentable {
                     height: 100%; /* Chapters should take full height */
                     vertical-align: top;
                     box-sizing: border-box;
-                }
-                
-                .chapter:last-child {
-                    border-bottom: none;
-                }
-                
-                .chapter-content {
-                    width: 100%;
                 }
                 
                 p {

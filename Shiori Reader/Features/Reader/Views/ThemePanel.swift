@@ -107,6 +107,54 @@ struct ThemePanel: View {
                     }
                     .foregroundStyle(.primary)
                     
+                }
+                .padding(.horizontal)
+            }
+            
+            // Theme options grid
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 15) {
+                // Only show themes appropriate for the current mode
+                let themesToShow = isDarkMode == true ?
+                    Theme.darkThemes : Theme.lightThemes
+                
+                ForEach(themesToShow) { theme in
+                    ThemeOption(
+                        name: theme.name.replacingOccurrences(of: "Dark ", with: ""),
+                        backgroundColor: theme.backgroundColor,
+                        textColor: theme.textColor,
+                        isSelected: viewModel.currentTheme.name == theme.name
+                    )
+                    .onTapGesture {
+                        viewModel.applyTheme(theme)
+                    }
+                }
+            }
+            .padding(.horizontal)
+            
+//            // Customization bar
+//            RoundedRectangle(cornerRadius: 15)
+//                .fill(colorScheme == .dark ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.gray.opacity(0.15)))
+//                .frame(width: 180, height: 40)
+//                .overlay(
+//                    HStack {
+//                        Image(systemName: "gear")
+//                            .font(.headline)
+//                        Text("Customize")
+//                            .font(.headline)
+//                            .foregroundColor(.primary)
+//                            .padding(.horizontal, 10)
+//                    }
+//                        .padding(.horizontal)
+//                )
+//                .padding(.top, 5)
+            
+            ZStack {
+                HStack {
+                    // Reading direction toggle
                     Menu {
                         Button(action: {
                             viewModel.readingDirection = .horizontal
@@ -147,51 +195,50 @@ struct ThemePanel: View {
                     }
                     .foregroundStyle(.primary)
                     
-                }
-                .padding(.horizontal)
-            }
-            
-            
-            // Theme options grid
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 15) {
-                // Only show themes appropriate for the current mode
-                let themesToShow = isDarkMode == true ?
-                    Theme.darkThemes : Theme.lightThemes
-                
-                ForEach(themesToShow) { theme in
-                    ThemeOption(
-                        name: theme.name.replacingOccurrences(of: "Dark ", with: ""),
-                        backgroundColor: theme.backgroundColor,
-                        textColor: theme.textColor,
-                        isSelected: viewModel.currentTheme.name == theme.name
-                    )
-                    .onTapGesture {
-                        viewModel.applyTheme(theme)
+                    // Pagination toggle
+                    Menu {
+                        Button(action: {
+                            if viewModel.isPaginated {
+                                viewModel.togglePagination()
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "scroll")
+                                Text("Continuous")
+                                Spacer()
+                                if viewModel.isPaginated == false {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                        
+                        Button(action: {
+                            if !viewModel.isPaginated {
+                                viewModel.togglePagination()
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "book")
+                                Text("Paginated")
+                                Spacer()
+                                if viewModel.isPaginated == true {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            PaginationIcon(isPaginated: viewModel.isPaginated)
+                                .font(.title2)
+                                .padding(.horizontal, 20)
+                        }
+                        .frame(height: 40)
+                        .background(colorScheme == .dark ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.gray.opacity(0.15)))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
+                    .foregroundStyle(.primary)
                 }
             }
-            .padding(.horizontal)
-            
-            // Customization bar
-            RoundedRectangle(cornerRadius: 15)
-                .fill(colorScheme == .dark ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.gray.opacity(0.15)))
-                .frame(width: 180, height: 40)
-                .overlay(
-                    HStack {
-                        Image(systemName: "gear")
-                            .font(.headline)
-                        Text("Customize")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                            .padding(.horizontal, 10)
-                    }
-                        .padding(.horizontal)
-                )
-                .padding(.top, 5)
             
             Spacer()
         }
@@ -257,6 +304,14 @@ struct ReadingDirectionIcon: View {
     
     var body: some View {
         Image(systemName: direction == .horizontal ? "arrow.right" : "arrow.down")
+    }
+}
+
+struct PaginationIcon: View {
+    var isPaginated: Bool
+    
+    var body: some View {
+        Image(systemName: isPaginated ? "book" : "scroll")
     }
 }
 

@@ -189,6 +189,28 @@ struct BookReaderView: View {
                     }
                 }
                 
+                if viewModel.isPaginated {
+                    // Left edge tap area (previous page)
+                    HStack {
+                        Rectangle()
+                            .frame(width: 60)
+                            .opacity(0.001)
+                            .onTapGesture {
+                                viewModel.goToPreviousPage()
+                            }
+                        
+                        Spacer()
+                        
+                        // Right edge tap area (next page)
+                        Rectangle()
+                            .frame(width: 60)
+                            .opacity(0.001)
+                            .onTapGesture {
+                                viewModel.goToNextPage()
+                            }
+                    }
+                    .ignoresSafeArea()
+                }
 
             }
             
