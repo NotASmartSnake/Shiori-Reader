@@ -15,24 +15,6 @@ struct LibraryView: View {
     @State private var importStatus: ImportStatus = .idle
     @State private var showImportAlert = false
     
-    let initialBooks: [Book] = [
-        Book(title: "COTE", coverImage: "COTECover", readingProgress: 0.4, filePath: "cote.epub"),
-        Book(title: "3 Days", coverImage: "3DaysCover", readingProgress: 0.56, filePath: "3Days.epub"),
-        Book(title: "Honzuki", coverImage: "AOABCover", readingProgress: 0.3, filePath: "honzuki.epub"),
-//        Book(title: "Konosuba", coverImage: "KonosubaCover", readingProgress: 0.7, filePath: "konosuba.epub"),
-//        Book(title: "Hakomari", coverImage: "HakomariCover", readingProgress: 0.6, filePath: "hakomari.epub"),
-//        Book(title: "Danmachi", coverImage: "DanmachiCover", readingProgress: 0.1, filePath: "cote.epub"),
-//        Book(title: "86", coverImage: "86Cover", readingProgress: 0.2, filePath: ""),
-//        Book(title: "Love", coverImage: "LoveCover", readingProgress: 0.8, filePath: ""),
-//        Book(title: "Mushoku", coverImage: "MushokuCover", readingProgress: 0.9, filePath: ""),
-//        Book(title: "Oregairu", coverImage: "OregairuCover", readingProgress: 1.0, filePath: ""),
-//        Book(title: "ReZero", coverImage: "ReZeroCover", readingProgress: 0.0, filePath: ""),
-//        Book(title: "Slime", coverImage: "SlimeCover", readingProgress: 0.0, filePath: ""),
-//        Book(title: "Overlord", coverImage: "OverlordCover", readingProgress: 0.0, filePath: ""),
-//        Book(title: "Death", coverImage: "DeathCover", readingProgress: 0.0, filePath: ""),
-//        Book(title: "No Game No Life", coverImage: "NoGameCover", readingProgress: 0.0, filePath: "")
-    ]
-    
     let columns = [
         GridItem(.flexible()),
         GridItem(.flexible())
@@ -109,4 +91,5 @@ struct LibraryView: View {
     LibraryView()
         .environmentObject(IsReadingBook())
         .environmentObject(LibraryManager())
+        .environmentObject(SavedWordsManager())
 }
