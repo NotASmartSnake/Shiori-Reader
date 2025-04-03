@@ -13,6 +13,8 @@ struct EntryDetailView: View {
     let entry: DictionaryEntry
     @Environment(\.dismiss) private var dismiss
     @State private var showSavedConfirmation = false
+    @State private var showAnkiSuccess = false
+    @State private var showingAnkiSettings = false
     
     var body: some View {
         NavigationStack {
@@ -125,24 +127,24 @@ struct EntryDetailView: View {
                             .cornerRadius(10)
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 30)
-                        .overlay {
-                            if showSavedConfirmation {
-                                VStack {
-                                    Text("Saved!")
-                                        .font(.headline)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 10)
-                                        .background(Color.green)
-                                        .cornerRadius(8)
-                                        .shadow(radius: 3)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .transition(.scale.combined(with: .opacity))
-                                .animation(.spring(), value: showSavedConfirmation)
+                        
+                        // Add to Anki button
+                        Button(action: {
+                            exportToAnki()
+                        }) {
+                            HStack {
+                                Image(systemName: "plus.rectangle.on.rectangle")
+                                Text("Add to Anki")
                             }
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.indigo)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
                         }
+                        .padding(.horizontal)
+                        .padding(.bottom, 30)
                     }
                 }
             }
@@ -155,6 +157,88 @@ struct EntryDetailView: View {
                     }
                 }
             }
+            .overlay(
+                ZStack {
+                    // Saved confirmation overlay
+                    if showSavedConfirmation {
+                        VStack {
+                            Text("Saved!")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.green)
+                                .cornerRadius(8)
+                                .shadow(radius: 3)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .transition(.scale.combined(with: .opacity))
+                        .animation(.spring(), value: showSavedConfirmation)
+                    }
+                    
+                    // Anki success overlay
+                    if showAnkiSuccess {
+                        VStack {
+                            Text("Added to Anki!")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.green)
+                                .cornerRadius(8)
+                                .shadow(radius: 3)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .transition(.scale.combined(with: .opacity))
+                        .animation(.spring(), value: showAnkiSuccess)
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                withAnimation {
+                                    showAnkiSuccess = false
+                                }
+                            }
+                        }
+                    }
+                }
+            )
+            .sheet(isPresented: $showingAnkiSettings) {
+                NavigationView {
+                    AnkiSettingsView()
+                        .navigationTitle("Anki Settings")
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    showingAnkiSettings = false
+                                }
+                            }
+                        }
+                }
+            }
         }
+    }
+    
+    // Function to handle exporting to Anki
+    private func exportToAnki() {
+        // Check if Anki is configured
+        if !AnkiExportService.shared.isConfigured() {
+            // Show the settings sheet
+            showingAnkiSettings = true
+            return
+        }
+        
+        // Export the word to Anki
+        AnkiExportService.shared.addVocabularyCard(
+            word: entry.term,
+            reading: entry.reading,
+            definition: entry.meanings.joined(separator: "; "),
+            sentence: "", // No sentence from search results
+            completion: { success in
+                if success {
+                    withAnimation {
+                        showAnkiSuccess = true
+                    }
+                }
+            }
+        )
     }
 }

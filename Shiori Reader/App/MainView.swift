@@ -26,6 +26,7 @@ struct MainView: View {
                     case 1: SavedWordsView()
                         .environmentObject(savedWordsManager)
                     case 2: SearchView()
+                        .environmentObject(savedWordsManager)
                     case 3: SettingsView()
                     default: LibraryView()
                         .environmentObject(isReadingBookState)
