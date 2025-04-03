@@ -369,47 +369,99 @@ struct SingleWebView: UIViewRepresentable {
                     font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS Mincho", serif;
                     font-size: var(--shiori-font-size) !important;
                     line-height: 1.8;
-                    padding: 16px;
+                    padding: 0;
+                    margin: 0;
                     background-color: var(--shiori-background-color);
                     color: var(--shiori-text-color);
                 }
         
-                /* For vertical text */
-                body.vertical-text {
-                    writing-mode: vertical-rl;
-                    text-orientation: upright;
-                    width: fit-content !important; /* Let the content determine width */
-                    display: inline-block !important; /* Important for vertical text */
-                    height: 100vh;
-                    width: auto !important;
-                    min-width: 200%;
-                    padding-top: 50px !important;
-                    padding-bottom: 50px !important;
-                    margin-bottom: 0 !important;
-                }
-        
-                body.vertical-text #content {
-                    display: inline-block !important;
-                    min-height: 80vh !important;
-                    margin-bottom: 0 !important;
-                    padding-bottom: 0 !important;
-                }
-
-                /* For horizontal text (default) */
+                /* --- Horizontal Text Mode --- */
                 body.horizontal-text {
                     writing-mode: horizontal-tb;
                     overflow-x: hidden;
                     overflow-y: auto;
+                    padding: 30px;
+                    padding-top: 50px;
+                    padding-bottom: 50px;
+                }
+        
+                /* --- Vertical Text Mode --- */
+                body.vertical-text {
+                    writing-mode: vertical-rl;
+                    text-orientation: upright;
+                    display: inline-block !important;
+                    height: 100vh;
+                    min-width: 100%;
+                    width: auto !important;
+                    margin: 0 !important;
+                    padding-top: 60px !important;
+                    padding-bottom: 40px !important;
+                    padding-right: 16px !important;
+                    padding-left: 16px !important; 
+                    box-sizing: border-box;
+                }
+        
+                body.vertical-text #content {
+                    display: inline-block !important;
+                    height: 100%;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    box-sizing: border-box;
+                    vertical-align: top;
+                }
+        
+                /* --- Image Styling --- */
+                /* Generic image styling (mostly for horizontal) */
+                img {
+                    max-width: 100% !important;
+                    height: auto !important;
+                    display: block;
+                    margin: 1em auto;
+                    box-sizing: border-box;
                 }
         
                 /* Specific adjustments for vertical text */
                 body.vertical-text img {
-                    max-height: 90vh !important;
+                    display: inline-block !important;
+                    max-height: calc(100vh - 100px); /* this actually works */
                     max-width: none !important;
                     height: auto !important;
                     width: auto !important;
+                    margin: 0;
+                    margin-left: 1em;
+                    vertical-align: middle;
                 }
         
+                /* --- SVG Styling --- */
+                /* Generic SVG styling */
+                 svg {
+                     display: inline-block; 
+                     max-width: 100%; /* Prevent overflow in horizontal */
+                     height: auto;
+                     margin: 1em auto; /* Center like images */
+                     box-sizing: border-box;
+                 }
+        
+                /* Vertical specific SVG styling */
+                body.vertical-text svg {
+                    display: inline-block !important; 
+                    max-height: calc(100vh - 100px) !important;
+                    max-width: none !important; 
+                    height: auto !important; 
+                    width: auto !important; 
+                    margin: 0; 
+                    margin-left: 1em; 
+                    vertical-align: middle;
+                }
+        
+                /* Target the <image> tag inside SVG for vertical */
+                body.vertical-text svg image {
+                    /* Make the inner image fill the constrained SVG container */
+                    width: 100% !important;
+                    height: 100% !important;
+                    object-fit: contain !important;
+                }
+
                 /* More specific selectors with !important to ensure they override */
                 #content, #content * {
                     font-size: var(--shiori-font-size) !important;
@@ -455,10 +507,14 @@ struct SingleWebView: UIViewRepresentable {
         
                 /* Override for vertical reading (left margin/padding instead of bottom) */
                 body.vertical-text .chapter {
-                    margin-bottom: 0 !important; /* Remove the bottom margin */
-                    padding-bottom: 0 !important; /* Remove the bottom padding */
-                    margin-left: 2em !important; /* Add margin to the left instead */
-                    padding-left: 2em !important; /* Add padding to the left instead */
+                    margin-bottom: 0 !important; 
+                    padding-bottom: 0 !important; 
+                    margin-left: 2em !important;
+                    padding-left: 2em !important;
+                    display: inline-block; /* Ensure chapters flow correctly */
+                    height: 100%; /* Chapters should take full height */
+                    vertical-align: top;
+                    box-sizing: border-box;
                 }
                 
                 .chapter:last-child {
@@ -467,13 +523,6 @@ struct SingleWebView: UIViewRepresentable {
                 
                 .chapter-content {
                     width: 100%;
-                }
-                
-                img {
-                    max-width: 100% !important;
-                    height: auto !important;
-                    display: block;
-                    margin: 1em auto;
                 }
                 
                 p {
@@ -665,7 +714,8 @@ struct SingleWebView: UIViewRepresentable {
         title: "実力至上主義者の教室",
         coverImage: "COTECover",
         readingProgress: 0.1,
-        filePath: "konosuba.epub"
+        filePath: "honzuki.epub"
     ))
     .environmentObject(isReadingBook)
+    .environmentObject(SavedWordsManager())
 }

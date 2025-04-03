@@ -260,7 +260,16 @@ class EPUBParser {
                  }
              }
          }
-
+        
+        // Removing preserveAspectRatio="none" and width/height attributes from SVG
+        // You'll need a more robust HTML/XML parser for production, but regex can work for targeted replacement
+        let svgPattern = "<svg([^>]*)preserveAspectRatio=[\"']none[\"']([^>]*)>"
+        if let svgRegex = try? NSRegularExpression(pattern: svgPattern, options: .caseInsensitive) {
+            modifiedContent = svgRegex.stringByReplacingMatches(in: modifiedContent,
+                                                                options: [],
+                                                                range: NSRange(modifiedContent.startIndex..., in: modifiedContent),
+                                                                withTemplate: "<svg$1$2>")
+        }
 
         return modifiedContent
     }
