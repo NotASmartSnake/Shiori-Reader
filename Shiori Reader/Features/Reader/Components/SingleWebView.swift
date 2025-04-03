@@ -140,6 +140,9 @@ struct SingleWebView: UIViewRepresentable {
         webView.scrollView.alwaysBounceVertical = true
         webView.scrollView.decelerationRate = .normal
         
+        // Disable the default "tap status bar to scroll to top" behavior
+        webView.scrollView.scrollsToTop = false
+        
         if isVertical {
             webView.scrollView.contentOffset.y = 0 // Lock vertical position
             
