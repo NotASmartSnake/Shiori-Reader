@@ -13,7 +13,6 @@ class SearchViewModel: ObservableObject {
     @Published var searchResults: [DictionaryEntry] = []
     @Published var isSearching: Bool = false
     @Published var selectedEntry: DictionaryEntry?
-    @Published var savedWordsManager = SavedWordsManager()
     
     private var searchTask: DispatchWorkItem?
     private var cancellables = Set<AnyCancellable>()
@@ -83,20 +82,6 @@ class SearchViewModel: ObservableObject {
         searchResults = []
     }
     
-    func saveWordToList(_ entry: DictionaryEntry) {
-        // Create a new SavedWord from the dictionary entry
-        let newSavedWord = SavedWord(
-            word: entry.term,
-            reading: entry.reading,
-            definition: entry.meanings.joined(separator: "; "),
-            sentence: "", // Empty for now, user can add later
-            timeAdded: Date(),
-            sourceBook: "Search" // Indicate this was from search rather than reading
-        )
-        
-        // Add to saved words
-        savedWordsManager.addWord(newSavedWord)
-    }
 }
 
 // Helper extension to check for Japanese characters

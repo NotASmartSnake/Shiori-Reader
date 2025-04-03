@@ -9,8 +9,8 @@ import SwiftUI
 
 // Detail view for dictionary entry
 struct EntryDetailView: View {
+    @EnvironmentObject private var savedWordsManager: SavedWordsManager
     let entry: DictionaryEntry
-    let onSave: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var showSavedConfirmation = false
     
@@ -93,7 +93,19 @@ struct EntryDetailView: View {
                         
                         // Save button
                         Button(action: {
-                            onSave()
+                            // Create a new SavedWord
+                            let newSavedWord = SavedWord(
+                                word: entry.term,
+                                reading: entry.reading,
+                                definition: entry.meanings.joined(separator: "; "),
+                                sentence: "", // Empty for now, user can add later
+                                timeAdded: Date(),
+                                sourceBook: "Search" // Indicate this was from search
+                            )
+                            
+                            // Add to saved words
+                            savedWordsManager.addWord(newSavedWord)
+                            
                             showSavedConfirmation = true
                             
                             // Dismiss after delay

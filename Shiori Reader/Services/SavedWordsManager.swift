@@ -12,7 +12,7 @@ class SavedWordsManager: ObservableObject {
     @Published var savedWords: [SavedWord] = []
     
     init() {
-        loadDummyData()
+//        loadDummyData()
     }
     
     private func loadDummyData() {

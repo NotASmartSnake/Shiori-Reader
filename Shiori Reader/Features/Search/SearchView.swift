@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct SearchView: View {
+    @EnvironmentObject private var wordsManager: SavedWordsManager
     @StateObject private var viewModel = SearchViewModel()
     @State private var showingEntryDetail = false
     
@@ -110,9 +111,8 @@ struct SearchView: View {
             .navigationTitle("Dictionary")
             .sheet(isPresented: $showingEntryDetail) {
                 if let entry = viewModel.selectedEntry {
-                    EntryDetailView(entry: entry, onSave: {
-                        viewModel.saveWordToList(entry)
-                    })
+                    EntryDetailView(entry: entry)
+                        .environmentObject(wordsManager)
                 }
             }
         }
@@ -121,4 +121,5 @@ struct SearchView: View {
 
 #Preview {
     SearchView()
+        .environmentObject(SavedWordsManager())
 }
