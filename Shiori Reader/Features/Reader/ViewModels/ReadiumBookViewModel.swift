@@ -25,8 +25,8 @@ class ReadiumBookViewModel: ObservableObject {
     // --- Published State for UI ---
     @Published private(set) var publication: Publication?
     @Published private(set) var isLoading: Bool = false
-    @Published private(set) var errorMessage: String?
     @Published private(set) var initialLocation: Locator?
+    @Published var errorMessage: String?
     @Published var preferences = EPUBPreferences() // Using new Preferences API
     @Published private(set) var tableOfContents: [ReadiumShared.Link] = []
 
