@@ -16,21 +16,27 @@ struct Shiori_ReaderApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainView()
-                .environmentObject(isReadingBookState)
-                .environmentObject(libraryManager)
-                .environmentObject(savedWordsManager)
-                .preferredColorScheme(
-                    isDarkMode == nil ? nil : (isDarkMode! ? .dark : .light)
-                )
-                .onOpenURL { url in
-                    // Handle URL callback from AnkiMobile
-                    if url.scheme == "shiori" {
-                        // The app was opened via the URL scheme
-                        // Post a notification that a card was successfully added
-                        NotificationCenter.default.post(name: Notification.Name("AnkiCardAdded"), object: nil)
-                    }
-                }
+            ReaderView(book: Book(
+                title: "実力至上主義者の教室",
+                coverImage: "COTECover",
+                readingProgress: 0.1,
+                filePath: "konosuba.epub"
+            ))
+//            MainView()
+//                .environmentObject(isReadingBookState)
+//                .environmentObject(libraryManager)
+//                .environmentObject(savedWordsManager)
+//                .preferredColorScheme(
+//                    isDarkMode == nil ? nil : (isDarkMode! ? .dark : .light)
+//                )
+//                .onOpenURL { url in
+//                    // Handle URL callback from AnkiMobile
+//                    if url.scheme == "shiori" {
+//                        // The app was opened via the URL scheme
+//                        // Post a notification that a card was successfully added
+//                        NotificationCenter.default.post(name: Notification.Name("AnkiCardAdded"), object: nil)
+//                    }
+//                }
         }
     }
 }

@@ -10,34 +10,26 @@ import SwiftUI
 import ReadiumShared // For Locator
 
 struct ReaderView: View {
-    // Use StateObject if this view owns the VM, ObservedObject if passed from parent
     @StateObject var viewModel: ReadiumBookViewModel
-
-    // State for overlay visibility
     @State private var showOverlay = true
-
-    // State for presenting sheets
     @State private var showSearchSheet = false
     @State private var showSettingsSheet = false
     @State private var showTocSheet = false
-
-    // Environment action to dismiss the view (go back)
     @Environment(\.dismiss) var dismiss
 
-    // --- Initializer ---
-    // Keep your existing initializer that takes a Book
     init(book: Book) {
         _viewModel = StateObject(wrappedValue: ReadiumBookViewModel(book: book))
     }
 
-    // --- Body ---
     var body: some View {
-        // Use ZStack to layer content and overlay controls
         ZStack {
             // Layer 1: Main Content (Loading/Error/Navigator)
             contentLayer
 
-            // Layer 2: Overlay UI (only shown if showOverlay is true)
+            // Layer 2: Transparent Tap Area for Toggling Overlay
+            tapAreas
+            
+            // Layer 3: Overlay UI (only shown if showOverlay is true)
             if showOverlay {
                 overlayControls
             }
@@ -81,11 +73,32 @@ struct ReaderView: View {
                 Text("").frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .onTapGesture {
-            // Toggle overlay visibility on tap
-            withAnimation(.easeInOut(duration: 0.2)) { // Add subtle animation
-                showOverlay.toggle()
-            }
+    }
+    
+    /// The tap areas to toggle the overlay controls.
+    private var tapAreas: some View {
+        VStack {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showOverlay.toggle()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: 100)
+                .ignoresSafeArea(edges: .all)
+            
+            Spacer()
+            
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showOverlay.toggle()
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: 75)
+                .ignoresSafeArea(edges: .all)
         }
     }
 
