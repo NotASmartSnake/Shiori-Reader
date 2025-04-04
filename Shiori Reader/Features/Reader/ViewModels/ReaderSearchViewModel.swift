@@ -167,20 +167,22 @@ class ReaderSearchViewModel: ObservableObject {
     }
 
     /// Determines the actual query string based on the search mode.
-    /// Note: Deinflection needs a different strategy (handled in initial search logic for now).
     private func getEffectiveQuery(_ query: String) -> String {
         if JapaneseSearchHelper.shared.containsJapanese(query) && searchMode == .deinflect {
-            // For deinflect, we might need to pass multiple terms or let the backend handle it.
-            // The reference SearchViewModel doesn't show multi-term logic.
-            // Let's assume for now the initial `publication.search` handles the query as is,
-            // and deinflection logic might need to be *within* the SearchService if supported,
-            // or handled by searching multiple times as previously attempted (but that was complex).
-            // Returning the original query here, assuming the SearchService might handle modes.
-             print("Warning: Deinflection search strategy needs review based on SearchService capabilities.")
-             return JapaneseSearchHelper.shared.getDictionaryForms(query).joined(separator: " ") // Simplistic approach: join terms
-
+            // Try to get the primary dictionary form (lemma) of the main word
+            if let primaryForm = JapaneseSearchHelper.shared.getPrimaryDictionaryForm(query), primaryForm != query {
+                 // Use the specific lemma if it was found and is different from the input
+                 print("DEBUG [ReaderSearchViewModel]: Using deinflected primary form for search: '\(primaryForm)' (from query '\(query)')")
+                 return primaryForm
+            } else {
+                 // Fallback: If no useful primary form found, or if input was already base form,
+                 // search using the original user query.
+                 print("DEBUG [ReaderSearchViewModel]: No different primary form found, using original query for search: '\(query)'")
+                 return query
+            }
         } else {
-            return query // Normal search
+            // Standard search mode, use the query as is
+            return query
         }
     }
 }

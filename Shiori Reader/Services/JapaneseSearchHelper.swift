@@ -53,28 +53,46 @@ class JapaneseSearchHelper {
         return regex.firstMatch(in: text, options: [], range: range) != nil
     }
     
-    /// Get the dictionary form of Japanese words to improve search
-    func getDictionaryForms(_ text: String) -> [String] {
-        guard let tokenizer = tokenizer else {
-            return [text]
+    func getAllDictionaryForms(_ text: String) -> [String] { // Renamed for clarity
+        guard let tokenizer = tokenizer, !text.isEmpty else {
+            return [text].filter { !$0.isEmpty }
         }
-        
-        var results = [text] // Always include the original text
-        
-        // Get annotations for the text
+        var uniqueForms: Set<String> = [text]
         let tokens = tokenizer.tokenize(text: text)
-        
         for token in tokens {
-            // Use the reading and surface form instead of trying to access internal features
-            // Most basic approach - just add the base form
-            if token.base != token.reading && token.base != text {
-                results.append(token.base)
+            let dictForm = token.dictionaryForm
+            if !dictForm.isEmpty {
+                uniqueForms.insert(dictForm)
             }
-            
-            // We don't have direct access to dictionary forms through the public API
-            // so we'll just use the base forms which are still helpful
         }
-        
-        return results
+        let result = Array(uniqueForms)
+        print("DEBUG [JapaneseSearchHelper]: All Dictionary forms for '\(text)': \(result)")
+        return result
+    }
+    
+    /// Attempts to find the dictionary form of the first primary content word (verb/adjective).
+    /// Returns nil if no suitable token is found or if the dictionary form is empty.
+    func getPrimaryDictionaryForm(_ text: String) -> String? {
+        guard let tokenizer = tokenizer, !text.isEmpty else {
+            return nil
+        }
+        let tokens = tokenizer.tokenize(text: text)
+
+        // Find the first token that is a verb or adjective
+        if let mainToken = tokens.first(where: { $0.partOfSpeech == .verb || $0.partOfSpeech == .adjective }) {
+            let dictForm = mainToken.dictionaryForm
+            // Return the dictionary form only if it's not empty
+            if !dictForm.isEmpty {
+                print("DEBUG [JapaneseSearchHelper]: Primary form found for '\(text)': \(dictForm)")
+                return dictForm
+            } else {
+                 print("DEBUG [JapaneseSearchHelper]: Primary token (\(mainToken.base)) found for '\(text)', but dictionary form is empty.")
+                 return nil
+            }
+        } else {
+             print("DEBUG [JapaneseSearchHelper]: No primary verb/adjective token found in '\(text)'.")
+            // Optional: Could add fallback to first noun here if desired
+            return nil
+        }
     }
 }
