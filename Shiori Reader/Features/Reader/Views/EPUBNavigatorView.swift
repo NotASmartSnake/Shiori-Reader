@@ -60,20 +60,31 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: EPUBNavigatorViewController, context: Context) {
-        print("DEBUG [EPUBNavigatorView]: Updating EPUBNavigatorViewController (likely due to preference change)...")
-        
-        // Handle any pending navigation requests
-        if let link = viewModel.pendingNavigationLink {
-            print("DEBUG: Navigating to link: \(link.href)")
+        // Log entry point
+        print("DEBUG [EPUBNavigatorView]: updateUIViewController called.") // Add this to confirm it runs
+
+        // 1. Submit Preferences
+        print("DEBUG [EPUBNavigatorView]: Submitting preferences...")
+        uiViewController.submitPreferences(viewModel.preferences)
+        print("DEBUG [EPUBNavigatorView]: Submitted preferences.")
+
+        // 2. Handle Navigation Request using Locator
+        if let targetLocator = viewModel.navigationRequest {
+            print("DEBUG [EPUBNavigatorView]: Detected navigation request for locator: \(targetLocator.href)")
             
-            // Use Task to handle the async call
+            // Clear the request immediately on the main thread to prevent re-triggering
+            // Do this *before* starting the async navigation task
+            viewModel.clearNavigationRequest() // Call synchronously on main thread
+            
+            // Perform the actual navigation asynchronously
             Task {
-                await uiViewController.go(to: link)
-                
-                // Clear the pending link after navigation
-                await MainActor.run {
-                    viewModel.pendingNavigationLink = nil
-                }
+                print("DEBUG [EPUBNavigatorView]: Starting async task to navigate to locator...")
+                let success = await uiViewController.go(to: targetLocator, options: .init(animated: false))
+                print("DEBUG [EPUBNavigatorView]: Navigation to locator finished. Success: \(success)")
+                // Optional: If !success, maybe set an error message on viewModel?
+                // if !success {
+                //     viewModel.errorMessage = "Failed to navigate to requested location."
+                // }
             }
         }
         

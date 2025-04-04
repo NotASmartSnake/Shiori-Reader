@@ -36,6 +36,7 @@ class ReadiumBookViewModel: ObservableObject {
     @Published var currentSentenceContext: String = ""
     @Published var state = BookState() // Temporary bridge to your existing state model
     @Published var pendingNavigationLink: ReadiumShared.Link? = nil
+    @Published var navigationRequest: Locator? = nil
 
     private var cancellables = Set<AnyCancellable>()
     weak var navigatorController: EPUBNavigatorViewController?
@@ -232,19 +233,56 @@ class ReadiumBookViewModel: ObservableObject {
         self.navigatorController = navigator
     }
     
-    func navigateToLink(_ link: ReadiumShared.Link) {
-        guard let publication = publication else {
-            print("ERROR: Cannot navigate - publication is nil")
-            return
-        }
-        
-        Task {
-            await MainActor.run {
-                self.pendingNavigationLink = link
-                print("DEBUG: Set pending navigation to link: \(link.href)")
-            }
+    /// Call this to request navigation to a specific locator.
+    func requestNavigation(to locator: Locator) {
+        // Normalize the locator before publishing the request
+        let normalizedLocator = publication?.normalizeLocator(locator) ?? locator
+        print("DEBUG [ReadiumBookViewModel]: Navigation requested to locator: \(normalizedLocator.href)")
+        self.navigationRequest = normalizedLocator
+    }
+
+    /// Call this after the navigation attempt has been made by the actual navigator view.
+    func clearNavigationRequest() {
+        if navigationRequest != nil {
+             print("DEBUG [ReadiumBookViewModel]: Scheduling navigation request to be cleared.")
+             // Schedule the actual modification for the next run loop cycle
+             DispatchQueue.main.async {
+                 if self.navigationRequest != nil {
+                     print("DEBUG [ReadiumBookViewModel]: Executing clear navigation request.")
+                     self.navigationRequest = nil
+                 }
+             }
         }
     }
+
+    /// Renamed/Updated method for TOC or similar link navigation
+    func requestNavigation(to link: ReadiumShared.Link) {
+         print("DEBUG [ReadiumBookViewModel]: Navigation requested to link: \(link.href)")
+         // Resolve the Link to a Locator before requesting navigation
+         Task {
+             if let locator = await publication?.locate(link) {
+                 self.requestNavigation(to: locator)
+             } else {
+                 print("WARN [ReadiumBookViewModel]: Could not create locator for link: \(link.href)")
+             }
+         }
+     }
+
+    // Keep your existing navigateToLink if used elsewhere, or rename it like above
+    func navigateToLink(_ link: ReadiumShared.Link) {
+         print("DEBUG [ReadiumBookViewModel]: Request to navigate to link: \(link.href)")
+         // This now becomes a request
+         requestNavigation(to: link)
+     }
+    
+//    func navigateToLink(_ link: ReadiumShared.Link) {
+//        Task {
+//            await MainActor.run {
+//                self.pendingNavigationLink = link
+//                print("DEBUG: Set pending navigation to link: \(link.href)")
+//            }
+//        }
+//    }
     
     func handleLocationUpdate(_ locator: Locator) {
         print("DEBUG [ReadiumBookViewModel]: handleLocationUpdate called with locator progression: \(locator.locations.progression ?? -1.0)") // Added

@@ -121,27 +121,7 @@ struct ReaderView: View {
 
                 // Right Buttons
                 // Search Button
-                Button {
-                    showSearchSheet = true
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .imageScale(.large)
-                        .padding(8)
-                }
-                .foregroundStyle(.blue)
-                .sheet(isPresented: $showSearchSheet) {
-                    // Placeholder Search View
-                    NavigationView { // Add NavigationView for title/bar
-                        Text("Search View Placeholder")
-                            .navigationTitle("Search")
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") { showSearchSheet = false }
-                                }
-                            }
-                    }
-                }
+                searchButton()
 
                 // Bookmark Button
                 Button {
@@ -196,12 +176,8 @@ struct ReaderView: View {
                              ForEach(viewModel.tableOfContents, id: \.href) { link in
                                  Button(link.title ?? "Unknown Chapter") {
                                      print("Navigate to: \(link.title ?? link.href)")
-                                     // Need a way to tell the navigator to go to this link
-                                     // This might require calling a method on the viewModel
-                                     // or interacting directly with the navigator instance
-                                     // (which is tricky with UIViewControllerRepresentable)
-                                     viewModel.navigateToLink(link) // Add this method to ViewModel
-                                     showTocSheet = false // Dismiss sheet after selection
+                                     viewModel.navigateToLink(link)
+                                     showTocSheet = false
                                  }
                              }
                          }
@@ -246,26 +222,35 @@ struct ReaderView: View {
         }
         .padding()
     }
+    
+    func searchButton() -> some View {
+        Button(action: {
+            showSearchSheet = true
+        }) {
+            Image(systemName: "magnifyingglass")
+                .imageScale(.large)
+                .padding(8)
+        }
+        .foregroundStyle(.blue)
+        .sheet(isPresented: $showSearchSheet) {
+            if let publication = viewModel.publication {
+                ReaderSearchView(
+                    viewModel: ReaderSearchViewModel(
+                        publication: publication,
+                        readiumViewModel: self.viewModel
+                    ),
+                    isShowing: $showSearchSheet
+                )
+            }
+        }
+    }
 }
-
-// --- Preview ---
-// Update your preview provider if needed
-// #Preview {
-//     // You'll need a way to provide a dummy Book for the preview
-//     // and potentially mock EnvironmentObjects if your LibraryView relies on them heavily
-//     NavigationView { // Add NavigationView for preview context
-//          ReaderView(book: Book(title: "Preview Book", coverImage: "", readingProgress: 0.0, filePath: "dummy.epub"))
-//              // .environmentObject(IsReadingBook()) // If needed
-//              // .environmentObject(LibraryManager()) // If needed
-//              // .environmentObject(SavedWordsManager()) // If needed
-//     }
-//}
 
 #Preview {
     ReaderView(book: Book(
         title: "実力至上主義者の教室",
         coverImage: "COTECover",
         readingProgress: 0.1,
-        filePath: "konosuba.epub"
+        filePath: "honzuki.epub"
     ))
 }
