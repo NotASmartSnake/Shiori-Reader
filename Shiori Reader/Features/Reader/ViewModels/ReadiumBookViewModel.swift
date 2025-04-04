@@ -35,8 +35,10 @@ class ReadiumBookViewModel: ObservableObject {
     @Published var selectedWord = ""
     @Published var currentSentenceContext: String = ""
     @Published var state = BookState() // Temporary bridge to your existing state model
+    @Published var pendingNavigationLink: ReadiumShared.Link? = nil
 
     private var cancellables = Set<AnyCancellable>()
+    weak var navigatorController: EPUBNavigatorViewController?
 
     // MARK: - Initialization
     init(book: Book) {
@@ -226,11 +228,22 @@ class ReadiumBookViewModel: ObservableObject {
     
     // MARK: - Navigator Interface Methods
     
-    // These methods will be called by your SwiftUI view when interacting with the navigator
+    func setNavigatorController(_ navigator: EPUBNavigatorViewController) {
+        self.navigatorController = navigator
+    }
     
     func navigateToLink(_ link: ReadiumShared.Link) {
-        print("DEBUG [ReadiumBookViewModel]: Request to navigate to link: \(link.href)")
-        // This will be handled by the SwiftUI view that contains the navigator
+        guard let publication = publication else {
+            print("ERROR: Cannot navigate - publication is nil")
+            return
+        }
+        
+        Task {
+            await MainActor.run {
+                self.pendingNavigationLink = link
+                print("DEBUG: Set pending navigation to link: \(link.href)")
+            }
+        }
     }
     
     func handleLocationUpdate(_ locator: Locator) {

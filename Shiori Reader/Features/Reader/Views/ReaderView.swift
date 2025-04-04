@@ -193,7 +193,6 @@ struct ReaderView: View {
                     // Placeholder TOC View
                      NavigationView {
                          List {
-                            // TODO: Populate with viewModel.tableOfContents
                              ForEach(viewModel.tableOfContents, id: \.href) { link in
                                  Button(link.title ?? "Unknown Chapter") {
                                      print("Navigate to: \(link.title ?? link.href)")

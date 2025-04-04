@@ -60,9 +60,23 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: EPUBNavigatorViewController, context: Context) {
-        // Called when SwiftUI state referenced by this View changes.
-        // Primarily used here to update navigator preferences.
         print("DEBUG [EPUBNavigatorView]: Updating EPUBNavigatorViewController (likely due to preference change)...")
+        
+        // Handle any pending navigation requests
+        if let link = viewModel.pendingNavigationLink {
+            print("DEBUG: Navigating to link: \(link.href)")
+            
+            // Use Task to handle the async call
+            Task {
+                await uiViewController.go(to: link)
+                
+                // Clear the pending link after navigation
+                await MainActor.run {
+                    viewModel.pendingNavigationLink = nil
+                }
+            }
+        }
+        
         // Use the view model's current preferences
         uiViewController.submitPreferences(viewModel.preferences)
         print("DEBUG [EPUBNavigatorView]: Submitted preferences to navigator.")
@@ -90,6 +104,7 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
         init(_ parent: EPUBNavigatorView, viewModel: ReadiumBookViewModel) {
             self.parent = parent
             self.viewModel = viewModel
+            super.init()
             print("DEBUG [Coordinator]: Initialized.")
         }
 
