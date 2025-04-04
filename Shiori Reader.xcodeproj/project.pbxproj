@@ -9,7 +9,11 @@
 /* Begin PBXBuildFile section */
 		516EAA672D83777C00F57059 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 516EAA662D83777C00F57059 /* GRDB */; };
 		51811C942D5EDE5F00E2D973 /* Heuristica-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */; };
-		51811CA42D5F1CBA00E2D973 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 51811CA32D5F1CBA00E2D973 /* ZIPFoundation */; };
+		519BA2482D9F694B0039501B /* ReadiumAdapterGCDWebServer in Frameworks */ = {isa = PBXBuildFile; productRef = 519BA2472D9F694B0039501B /* ReadiumAdapterGCDWebServer */; };
+		519BA24A2D9F694B0039501B /* ReadiumNavigator in Frameworks */ = {isa = PBXBuildFile; productRef = 519BA2492D9F694B0039501B /* ReadiumNavigator */; };
+		519BA24C2D9F694B0039501B /* ReadiumOPDS in Frameworks */ = {isa = PBXBuildFile; productRef = 519BA24B2D9F694B0039501B /* ReadiumOPDS */; };
+		519BA24E2D9F694B0039501B /* ReadiumShared in Frameworks */ = {isa = PBXBuildFile; productRef = 519BA24D2D9F694B0039501B /* ReadiumShared */; };
+		519BA2502D9F694B0039501B /* ReadiumStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = 519BA24F2D9F694B0039501B /* ReadiumStreamer */; };
 		51B6094E2D94B3CF003A7AF5 /* CharacterFilter in Frameworks */ = {isa = PBXBuildFile; productRef = 51B6094D2D94B3CF003A7AF5 /* CharacterFilter */; };
 		51B609502D94B3CF003A7AF5 /* IPADic in Frameworks */ = {isa = PBXBuildFile; productRef = 51B6094F2D94B3CF003A7AF5 /* IPADic */; };
 		51B609522D94B3CF003A7AF5 /* Mecab-Swift in Frameworks */ = {isa = PBXBuildFile; productRef = 51B609512D94B3CF003A7AF5 /* Mecab-Swift */; };
@@ -69,12 +73,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				519BA24C2D9F694B0039501B /* ReadiumOPDS in Frameworks */,
 				51B609502D94B3CF003A7AF5 /* IPADic in Frameworks */,
+				519BA24A2D9F694B0039501B /* ReadiumNavigator in Frameworks */,
+				519BA2482D9F694B0039501B /* ReadiumAdapterGCDWebServer in Frameworks */,
 				51B6094E2D94B3CF003A7AF5 /* CharacterFilter in Frameworks */,
 				51B609522D94B3CF003A7AF5 /* Mecab-Swift in Frameworks */,
-				51811CA42D5F1CBA00E2D973 /* ZIPFoundation in Frameworks */,
 				516EAA672D83777C00F57059 /* GRDB in Frameworks */,
+				519BA24E2D9F694B0039501B /* ReadiumShared in Frameworks */,
 				51B609542D94B3CF003A7AF5 /* StringTools in Frameworks */,
+				519BA2502D9F694B0039501B /* ReadiumStreamer in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -147,12 +155,16 @@
 			);
 			name = "Shiori Reader";
 			packageProductDependencies = (
-				51811CA32D5F1CBA00E2D973 /* ZIPFoundation */,
 				516EAA662D83777C00F57059 /* GRDB */,
 				51B6094D2D94B3CF003A7AF5 /* CharacterFilter */,
 				51B6094F2D94B3CF003A7AF5 /* IPADic */,
 				51B609512D94B3CF003A7AF5 /* Mecab-Swift */,
 				51B609532D94B3CF003A7AF5 /* StringTools */,
+				519BA2472D9F694B0039501B /* ReadiumAdapterGCDWebServer */,
+				519BA2492D9F694B0039501B /* ReadiumNavigator */,
+				519BA24B2D9F694B0039501B /* ReadiumOPDS */,
+				519BA24D2D9F694B0039501B /* ReadiumShared */,
+				519BA24F2D9F694B0039501B /* ReadiumStreamer */,
 			);
 			productName = "Shiori Reader";
 			productReference = 51811C3F2D5E4D2C00E2D973 /* Shiori Reader.app */;
@@ -237,10 +249,10 @@
 			mainGroup = 51811C362D5E4D2C00E2D973;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				51811CA02D5F1BD300E2D973 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 				516EAA5A2D836F9400F57059 /* XCRemoteSwiftPackageReference "SQLite.swift" */,
 				516EAA652D83777C00F57059 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 				51B6094C2D94B3CF003A7AF5 /* XCRemoteSwiftPackageReference "Mecab-Swift" */,
+				519BA2462D9F694B0039501B /* XCRemoteSwiftPackageReference "swift-toolkit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 51811C402D5E4D2C00E2D973 /* Products */;
@@ -628,12 +640,12 @@
 				kind = branch;
 			};
 		};
-		51811CA02D5F1BD300E2D973 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+		519BA2462D9F694B0039501B /* XCRemoteSwiftPackageReference "swift-toolkit" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
+			repositoryURL = "https://github.com/readium/swift-toolkit.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.9.19;
+				minimumVersion = 3.2.0;
 			};
 		};
 		51B6094C2D94B3CF003A7AF5 /* XCRemoteSwiftPackageReference "Mecab-Swift" */ = {
@@ -652,10 +664,30 @@
 			package = 516EAA652D83777C00F57059 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
 		};
-		51811CA32D5F1CBA00E2D973 /* ZIPFoundation */ = {
+		519BA2472D9F694B0039501B /* ReadiumAdapterGCDWebServer */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 51811CA02D5F1BD300E2D973 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
-			productName = ZIPFoundation;
+			package = 519BA2462D9F694B0039501B /* XCRemoteSwiftPackageReference "swift-toolkit" */;
+			productName = ReadiumAdapterGCDWebServer;
+		};
+		519BA2492D9F694B0039501B /* ReadiumNavigator */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 519BA2462D9F694B0039501B /* XCRemoteSwiftPackageReference "swift-toolkit" */;
+			productName = ReadiumNavigator;
+		};
+		519BA24B2D9F694B0039501B /* ReadiumOPDS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 519BA2462D9F694B0039501B /* XCRemoteSwiftPackageReference "swift-toolkit" */;
+			productName = ReadiumOPDS;
+		};
+		519BA24D2D9F694B0039501B /* ReadiumShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 519BA2462D9F694B0039501B /* XCRemoteSwiftPackageReference "swift-toolkit" */;
+			productName = ReadiumShared;
+		};
+		519BA24F2D9F694B0039501B /* ReadiumStreamer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 519BA2462D9F694B0039501B /* XCRemoteSwiftPackageReference "swift-toolkit" */;
+			productName = ReadiumStreamer;
 		};
 		51B6094D2D94B3CF003A7AF5 /* CharacterFilter */ = {
 			isa = XCSwiftPackageProductDependency;

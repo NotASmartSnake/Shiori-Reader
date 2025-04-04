@@ -50,94 +50,100 @@ class EPUBImportProcessor {
     }
     
     private func extractCoverImage(from url: URL) async throws -> String? {
-        do {
-            let epubParser = EPUBParser()
-            let (content, extractionDir) = try epubParser.parseEPUB(at: url.path)
-            
-            let fileManager = FileManager.default
-            
-            // Create a directory for covers if it doesn't exist
-            let documentsDirectory = try fileManager.url(
-                for: .documentDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
-            )
-            let coversDirectory = documentsDirectory.appendingPathComponent("BookCovers", isDirectory: true)
-            try fileManager.createDirectory(at: coversDirectory, withIntermediateDirectories: true, attributes: nil)
-            
-            // Generate a unique filename for this book's cover
-            let bookId = UUID().uuidString
-            let coverFilename = "cover_\(bookId)"
-            let coverURL = coversDirectory.appendingPathComponent("\(coverFilename).jpg")
-            
-            // 1. First try to find covers by name pattern
-            let enumerator = fileManager.enumerator(at: extractionDir, includingPropertiesForKeys: nil)
-            while let fileURL = enumerator?.nextObject() as? URL {
-                // Check if this might be a cover image
-                let filename = fileURL.lastPathComponent.lowercased()
-                if (filename.contains("cover")) &&
-                   (filename.hasSuffix(".jpg") || filename.hasSuffix(".jpeg") || filename.hasSuffix(".png")) {
-                    if let imageData = try? Data(contentsOf: fileURL) {
-                        try imageData.write(to: coverURL)
-                        print("DEBUG: Found and saved cover from filename pattern: \(filename)")
-                        return coverFilename
-                    }
-                }
-            }
-            
-            // 2. Look through the content's images for likely cover candidates
-            var largestImageData: Data?
-            var largestSize = 0
-            
-            for (_, imageData) in content.images {
-                let size = imageData.count
-                if size > largestSize {
-                    largestSize = size
-                    largestImageData = imageData
-                }
-            }
-            
-            if let imageData = largestImageData {
-                try imageData.write(to: coverURL)
-                print("DEBUG: Saved largest image as cover")
-                return coverFilename
-            }
-            
-            print("DEBUG: No suitable cover image found in EPUB")
-            return nil
-            
-        } catch {
-            print("DEBUG: Error extracting cover: \(error)")
-            return nil
-        }
+//        do {
+//            let epubParser = EPUBParser()
+//            let (content, extractionDir) = try epubParser.parseEPUB(at: url.path)
+//            
+//            let fileManager = FileManager.default
+//            
+//            // Create a directory for covers if it doesn't exist
+//            let documentsDirectory = try fileManager.url(
+//                for: .documentDirectory,
+//                in: .userDomainMask,
+//                appropriateFor: nil,
+//                create: true
+//            )
+//            let coversDirectory = documentsDirectory.appendingPathComponent("BookCovers", isDirectory: true)
+//            try fileManager.createDirectory(at: coversDirectory, withIntermediateDirectories: true, attributes: nil)
+//            
+//            // Generate a unique filename for this book's cover
+//            let bookId = UUID().uuidString
+//            let coverFilename = "cover_\(bookId)"
+//            let coverURL = coversDirectory.appendingPathComponent("\(coverFilename).jpg")
+//            
+//            // 1. First try to find covers by name pattern
+//            let enumerator = fileManager.enumerator(at: extractionDir, includingPropertiesForKeys: nil)
+//            while let fileURL = enumerator?.nextObject() as? URL {
+//                // Check if this might be a cover image
+//                let filename = fileURL.lastPathComponent.lowercased()
+//                if (filename.contains("cover")) &&
+//                   (filename.hasSuffix(".jpg") || filename.hasSuffix(".jpeg") || filename.hasSuffix(".png")) {
+//                    if let imageData = try? Data(contentsOf: fileURL) {
+//                        try imageData.write(to: coverURL)
+//                        print("DEBUG: Found and saved cover from filename pattern: \(filename)")
+//                        return coverFilename
+//                    }
+//                }
+//            }
+//            
+//            // 2. Look through the content's images for likely cover candidates
+//            var largestImageData: Data?
+//            var largestSize = 0
+//            
+//            for (_, imageData) in content.images {
+//                let size = imageData.count
+//                if size > largestSize {
+//                    largestSize = size
+//                    largestImageData = imageData
+//                }
+//            }
+//            
+//            if let imageData = largestImageData {
+//                try imageData.write(to: coverURL)
+//                print("DEBUG: Saved largest image as cover")
+//                return coverFilename
+//            }
+//            
+//            print("DEBUG: No suitable cover image found in EPUB")
+//            return nil
+//            
+//        } catch {
+//            print("DEBUG: Error extracting cover: \(error)")
+//            return nil
+//        }
+        return nil
     }
     
     private func extractMetadata(from url: URL) async throws -> EPUBMetadata {
-        // Parse the .epub file to try to extract actual metadata
-        do {
-            let epubParser = EPUBParser()
-            let (content, _) = try epubParser.parseEPUB(at: url.path)
-            
-            // Create a more informative title by adding author name if available
-            var displayTitle = content.metadata.title
-            
-            // If author is not empty or "Unknown", append it to the title
-            if !content.metadata.author.isEmpty && content.metadata.author != "Unknown Author" {
-                displayTitle += " by \(content.metadata.author)"
-            }
-            
-            return content.metadata
-        } catch {
-            print("DEBUG: Error extracting metadata: \(error)")
-            
-            // Fallback to using filename as title if metadata extraction fails
-            return EPUBMetadata(
-                title: url.deletingPathExtension().lastPathComponent,
-                author: "Unknown Author",
-                language: "en"
-            )
-        }
+//        // Parse the .epub file to try to extract actual metadata
+//        do {
+//            let epubParser = EPUBParser()
+//            let (content, _) = try epubParser.parseEPUB(at: url.path)
+//            
+//            // Create a more informative title by adding author name if available
+//            var displayTitle = content.metadata.title
+//            
+//            // If author is not empty or "Unknown", append it to the title
+//            if !content.metadata.author.isEmpty && content.metadata.author != "Unknown Author" {
+//                displayTitle += " by \(content.metadata.author)"
+//            }
+//            
+//            return content.metadata
+//        } catch {
+//            print("DEBUG: Error extracting metadata: \(error)")
+//            
+//            // Fallback to using filename as title if metadata extraction fails
+//            return EPUBMetadata(
+//                title: url.deletingPathExtension().lastPathComponent,
+//                author: "Unknown Author",
+//                language: "en"
+//            )
+//        }
+        return EPUBMetadata(
+            title: url.deletingPathExtension().lastPathComponent,
+            author: "Unknown Author",
+            language: "en"
+        )
     }
     
     private func createTempDirectory() throws -> URL {
