@@ -14,7 +14,7 @@ import ReadiumNavigator
 struct EPUBNavigatorView: UIViewControllerRepresentable {
     // Use @ObservedObject if the ViewModel is passed in from a parent
     // Use @StateObject if this View *creates* and owns the ViewModel
-    @ObservedObject var viewModel: ReadiumBookViewModel
+    @ObservedObject var viewModel: BookViewModel
     let publication: Publication
     let initialLocation: Locator?
 
@@ -93,9 +93,9 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
         }
         
         var parent: EPUBNavigatorView
-        @ObservedObject var viewModel: ReadiumBookViewModel // Keep reference to update VM
+        @ObservedObject var viewModel: BookViewModel // Keep reference to update VM
 
-        init(_ parent: EPUBNavigatorView, viewModel: ReadiumBookViewModel) {
+        init(_ parent: EPUBNavigatorView, viewModel: BookViewModel) {
             self.parent = parent
             self.viewModel = viewModel
             super.init()

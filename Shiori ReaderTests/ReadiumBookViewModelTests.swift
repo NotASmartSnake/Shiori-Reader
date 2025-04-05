@@ -53,7 +53,7 @@ final class ReadiumBookViewModelTests: XCTestCase {
     // --- Test Cases ---
 
     func testInitialization_Defaults() throws {
-        let viewModel = ReadiumBookViewModel(book: testBook)
+        let viewModel = ReaderViewModel(book: testBook)
         // Inject or override UserDefaults for testing if needed, or rely on setup clearing
         // UserDefaults.standard = userDefaults // Be careful with overriding standard directly
 
@@ -66,7 +66,7 @@ final class ReadiumBookViewModelTests: XCTestCase {
     }
 
     func testLoadPublication_Success() async throws {
-        let viewModel = ReadiumBookViewModel(book: testBook)
+        let viewModel = ReaderViewModel(book: testBook)
 
         // Optional: Use Combine publishers to observe changes if needed for more complex checks
         // let pubExpectation = expectation(description: "Publication loaded")
@@ -86,7 +86,7 @@ final class ReadiumBookViewModelTests: XCTestCase {
 
     func testLoadPublication_FileNotFound() async throws {
         let badBook = Book(title: "Bad Path", coverImage: "", readingProgress: 0, filePath: "/non/existent/file.epub")
-        let viewModel = ReadiumBookViewModel(book: badBook)
+        let viewModel = ReaderViewModel(book: badBook)
 
         await viewModel.loadPublication()
 
@@ -98,7 +98,7 @@ final class ReadiumBookViewModelTests: XCTestCase {
 
     func testSaveAndLoadLocation() throws {
          // 1. Create ViewModel and save location
-        let viewModel1 = ReadiumBookViewModel(book: testBook)
+        let viewModel1 = ReaderViewModel(book: testBook)
         guard let testHref = RelativeURL(string: "/page1.xhtml"),
               let testMediaType = MediaType("application/xhtml+xml") else {
             XCTFail("Failed to create URL or MediaType for testLocator")
@@ -113,7 +113,7 @@ final class ReadiumBookViewModelTests: XCTestCase {
 
         // 2. Create a *new* ViewModel instance for the *same* book ID
         // Ensure the book ID is the same for loading to work
-        let viewModel2 = ReadiumBookViewModel(book: testBook)
+        let viewModel2 = ReaderViewModel(book: testBook)
 
         // 3. Assert the location was loaded
         XCTAssertNotNil(viewModel2.initialLocation)
@@ -122,7 +122,7 @@ final class ReadiumBookViewModelTests: XCTestCase {
     }
 
     func testHandleLocationUpdate() throws {
-        let viewModel = ReadiumBookViewModel(book: testBook)
+        let viewModel = ReaderViewModel(book: testBook)
         guard let newHref = RelativeURL(string: "/page2.xhtml"),
               let newMediaType = MediaType("application/xhtml+xml") else {
              XCTFail("Failed to create URL or MediaType for newLocator")

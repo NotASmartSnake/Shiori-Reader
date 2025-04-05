@@ -1,5 +1,5 @@
 //
-//  ReadiumBookViewModel.swift
+//  BookViewModel.swift
 //  Shiori Reader
 //
 //  Created by Russell Graviet on 4/3/25.
@@ -14,7 +14,7 @@ import ReadiumStreamer
 import ReadiumNavigator
 
 @MainActor
-class ReadiumBookViewModel: ObservableObject {
+class ReaderViewModel: ObservableObject {
     // --- Input ---
     @Published var book: Book
 

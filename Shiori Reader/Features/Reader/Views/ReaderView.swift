@@ -10,7 +10,7 @@ import SwiftUI
 import ReadiumShared // For Locator
 
 struct ReaderView: View {
-    @StateObject var viewModel: ReadiumBookViewModel
+    @StateObject var viewModel: BookViewModel
     @State private var showOverlay = true
     @State private var showSearchSheet = false
     @State private var showSettingsSheet = false
@@ -18,7 +18,7 @@ struct ReaderView: View {
     @Environment(\.dismiss) var dismiss
 
     init(book: Book) {
-        _viewModel = StateObject(wrappedValue: ReadiumBookViewModel(book: book))
+        _viewModel = StateObject(wrappedValue: BookViewModel(book: book))
     }
 
     var body: some View {

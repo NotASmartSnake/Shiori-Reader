@@ -18,7 +18,7 @@ class ReaderSearchViewModel: ObservableObject {
     @Published private(set) var hasMoreResults: Bool = false // Initially false until a search succeeds
 
     private let publication: Publication
-    private weak var readiumViewModel: ReadiumBookViewModel?
+    private weak var readiumViewModel: BookViewModel?
 
     // Task for the initial search call
     private var initialSearchTask: Task<Void, Never>? {
@@ -37,7 +37,7 @@ class ReaderSearchViewModel: ObservableObject {
         case fuzzy
     }
 
-    init(publication: Publication, readiumViewModel: ReadiumBookViewModel?) {
+    init(publication: Publication, readiumViewModel: BookViewModel?) {
         self.publication = publication
         self.readiumViewModel = readiumViewModel
     }

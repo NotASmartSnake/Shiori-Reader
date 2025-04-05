@@ -237,15 +237,4 @@ struct DictionaryPopupView: View {
 
 
 
-#Preview {
-    let isReadingBook = IsReadingBook()
-    return BookReaderView(book: Book(
-        title: "実力至上主義者の教室",
-        coverImage: "COTECover",
-        readingProgress: 0.1,
-        filePath: "hakomari.epub"
-    ))
-    .environmentObject(isReadingBook)
-    .environmentObject(SavedWordsManager())
-}
 
