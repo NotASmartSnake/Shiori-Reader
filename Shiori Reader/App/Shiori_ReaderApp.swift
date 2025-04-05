@@ -10,9 +10,9 @@ import SwiftUI
 @main
 struct Shiori_ReaderApp: App {
     @AppStorage("isDarkMode") var isDarkMode: Bool?
-    @StateObject private var isReadingBookState = IsReadingBook()
-    @StateObject private var libraryManager = LibraryManager()
-    @StateObject private var savedWordsManager = SavedWordsManager()
+//    @StateObject private var isReadingBookState = IsReadingBook()
+//    @StateObject private var libraryManager = LibraryManager()
+//    @StateObject private var savedWordsManager = SavedWordsManager()
 
     var body: some Scene {
         WindowGroup {
@@ -20,7 +20,7 @@ struct Shiori_ReaderApp: App {
                 title: "実力至上主義者の教室",
                 coverImage: "COTECover",
                 readingProgress: 0.1,
-                filePath: "konosuba.epub"
+                filePath: "honzuki.epub"
             ))
 //            MainView()
 //                .environmentObject(isReadingBookState)

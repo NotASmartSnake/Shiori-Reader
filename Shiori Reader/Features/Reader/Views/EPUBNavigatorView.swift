@@ -50,41 +50,26 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
             return navigator
 
         } catch {
-            // Handle initialization errors robustly in production
             print("ERROR [EPUBNavigatorView]: Failed to create EPUBNavigatorViewController: \(error)")
-            // Maybe update viewModel's error state here?
-            // viewModel.errorMessage = "Failed to create reader view: \(error.localizedDescription)"
-            // Returning a basic UIViewController or using fatalError during dev
             fatalError("Failed to initialize EPUBNavigatorViewController: \(error.localizedDescription)")
         }
     }
 
     func updateUIViewController(_ uiViewController: EPUBNavigatorViewController, context: Context) {
-        // Log entry point
-        print("DEBUG [EPUBNavigatorView]: updateUIViewController called.") // Add this to confirm it runs
+        print("DEBUG [EPUBNavigatorView]: updateUIViewController called.")
 
-        // 1. Submit Preferences
         print("DEBUG [EPUBNavigatorView]: Submitting preferences...")
         uiViewController.submitPreferences(viewModel.preferences)
         print("DEBUG [EPUBNavigatorView]: Submitted preferences.")
 
-        // 2. Handle Navigation Request using Locator
         if let targetLocator = viewModel.navigationRequest {
             print("DEBUG [EPUBNavigatorView]: Detected navigation request for locator: \(targetLocator.href)")
+            viewModel.clearNavigationRequest()
             
-            // Clear the request immediately on the main thread to prevent re-triggering
-            // Do this *before* starting the async navigation task
-            viewModel.clearNavigationRequest() // Call synchronously on main thread
-            
-            // Perform the actual navigation asynchronously
             Task {
                 print("DEBUG [EPUBNavigatorView]: Starting async task to navigate to locator...")
                 let success = await uiViewController.go(to: targetLocator, options: .init(animated: false))
                 print("DEBUG [EPUBNavigatorView]: Navigation to locator finished. Success: \(success)")
-                // Optional: If !success, maybe set an error message on viewModel?
-                // if !success {
-                //     viewModel.errorMessage = "Failed to navigate to requested location."
-                // }
             }
         }
         
@@ -102,8 +87,6 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
 
     // MARK: - Coordinator Class (Delegate Implementation)
 
-    // The Coordinator acts as the delegate for the EPUBNavigatorViewController
-    // It bridges events from the UIKit world (Navigator) back to SwiftUI/ViewModel.
     class Coordinator: NSObject, EPUBNavigatorDelegate {
         func navigator(_ navigator: any ReadiumNavigator.Navigator, didFailToLoadResourceAt href: ReadiumShared.RelativeURL, withError error: ReadiumShared.ReadError) {
             

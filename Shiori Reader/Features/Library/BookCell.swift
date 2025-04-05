@@ -20,7 +20,7 @@ struct BookCell: View {
     var body: some View {
         VStack {
             NavigationLink(destination:
-                BookReaderView(book: book)
+                ReaderView(book: book)
                 .environmentObject(savedWordsManager)
                 .onAppear {
                     isReadingBook.setReading(true)

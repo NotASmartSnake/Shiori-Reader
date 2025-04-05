@@ -64,66 +64,103 @@ class ReadiumBookViewModel: ObservableObject {
 
     // MARK: - Loading Publication
     func loadPublication() async {
-        guard publication == nil else { return }
-        guard !isLoading else { return }
-        isLoading = true
-        errorMessage = nil
-
-        guard let fileURL = getFileURL(for: book.filePath) else {
-            errorMessage = "EPUB file not found or invalid URL: \(book.filePath)"
-            isLoading = false
+        guard publication == nil else {
+            print("DEBUG [loadPublication]: Publication already loaded.") // Added
             return
         }
+        guard !isLoading else {
+            print("DEBUG [loadPublication]: Already loading.") // Added
+            return
+        }
+        isLoading = true
+        errorMessage = nil // Clear previous error
+        print("DEBUG [loadPublication]: Starting load process...") // Added
+
+        guard let fileURL = getFileURL(for: book.filePath) else {
+            // This part is NOT happening based on your logs
+            errorMessage = "EPUB file not found or invalid URL: \(book.filePath)"
+            isLoading = false
+            print("ERROR [loadPublication]: getFileURL failed.") // Added
+            return
+        }
+        print("DEBUG [loadPublication]: Got fileURL: \(fileURL.absoluteString)") // Added
 
         let url = fileURL.absoluteURL
-        
+
         do {
+            print("DEBUG [loadPublication]: Creating anyURL...") // Added
             guard let anyURL = url.anyURL else {
-                errorMessage = "Invalid URL format"
+                errorMessage = "Invalid URL format for anyURL" // More specific error
                 isLoading = false
+                print("ERROR [loadPublication]: Failed to create anyURL from \(url)") // Added
                 return
             }
-            
+            print("DEBUG [loadPublication]: Created anyURL: \(anyURL)") // Added
+
+            print("DEBUG [loadPublication]: Retrieving asset...") // Added
             let assetResult = await assetRetriever.retrieve(url: anyURL)
-            guard case .success(let asset) = assetResult else {
-                errorMessage = "Failed to retrieve asset"
-                isLoading = false
-                return
-            }
-            
-            // Open a Publication from the Asset
-            let result = await publicationOpener.open(
-                asset: asset,
-                allowUserInteraction: false,
-                sender: nil
-            )
-            
-            switch result {
+
+            // --- Log Asset Retrieval Result ---
+            switch assetResult {
+            case .success(let asset):
+                print("DEBUG [loadPublication]: Asset retrieved successfully. Format: \(asset.format)") // Added
+
+                // --- Open Publication ---
+                print("DEBUG [loadPublication]: Opening publication from asset...") // Added
+                let result = await publicationOpener.open(
+                    asset: asset,
+                    allowUserInteraction: false, // Should be false for background loading
+                    sender: nil
+                )
+
+                // --- Log Publication Opening Result ---
+                switch result {
                 case .success(let pub):
+                    print("DEBUG [loadPublication]: Publication opened successfully!") // Added
                     self.publication = pub
+                    // Start TOC loading (keep existing logic)
                     Task {
+                        print("DEBUG [loadPublication]: Starting TOC load...") // Added
                         let tocResult = await pub.tableOfContents()
                         if case .success(let toc) = tocResult {
+                            print("DEBUG [loadPublication]: TOC loaded with \(toc.count) items.") // Added
                             self.tableOfContents = toc
                         } else {
+                            print("ERROR [loadPublication]: Failed to load TOC.") // Added
                             self.tableOfContents = []
                         }
                     }
-                    self.errorMessage = nil
-                    
-                    // Determine base URL
+                    self.errorMessage = nil // Clear error on success
                     self.state.epubBaseURL = fileURL.deletingLastPathComponent()
-                    
-                    print("DEBUG [ReadiumBookViewModel]: Publication loaded successfully")
-                    
-                case .failure(let error):
-                    self.errorMessage = "Failed to load EPUB: \(error.localizedDescription)"
+                    print("DEBUG [loadPublication]: Publication setup complete.") // Added
+
+                case .failure(let openError):
+                    // Specific error during opening
+                    self.errorMessage = "Failed to open EPUB: \(openError.localizedDescription)" // Set specific error
                     self.publication = nil
                     self.tableOfContents = []
+                    print("ERROR [loadPublication]: publicationOpener.open failed: \(openError)") // Log specific error
+                }
+                // --- End Publication Opening ---
+
+            case .failure(let assetError):
+                // Specific error during asset retrieval
+                self.errorMessage = "Failed to retrieve asset: \(assetError.localizedDescription)" // Set specific error
+                self.publication = nil // Ensure publication is nil on asset error
+                print("ERROR [loadPublication]: assetRetriever.retrieve failed: \(assetError)") // Log specific error
             }
+            // --- End Asset Retrieval ---
+
+        } catch {
+            // Catch any unexpected synchronous errors in the do block (less likely here)
+             self.errorMessage = "Unexpected error during loading: \(error.localizedDescription)"
+             self.publication = nil
+             print("ERROR [loadPublication]: Caught unexpected error: \(error)")
         }
-        
+
+        // Ensure isLoading is set to false regardless of success or failure path within do-catch
         isLoading = false
+        print("DEBUG [loadPublication]: Load process finished. isLoading: \(isLoading), publication != nil: \(publication != nil), errorMessage: \(errorMessage ?? "None")") // Added final state log
     }
 
     // MARK: - Preferences
@@ -141,7 +178,8 @@ class ReadiumBookViewModel: ObservableObject {
                 fontFamily: nil,  // use publisher font
                 fontSize: 1.0,  // default scale
                 publisherStyles: true,  // allow publisher styles
-                scroll: false    // paginated by default
+                scroll: false,    // paginated by default
+                verticalText: false
             )
             print("DEBUG [ReadiumBookViewModel]: Using default preferences")
         }
@@ -200,25 +238,35 @@ class ReadiumBookViewModel: ObservableObject {
     // MARK: - Helper Functions
     private func getFileURL(for storedPath: String) -> URL? {
         let fileManager = FileManager.default
+        print("DEBUG [getFileURL] Checking path: \(storedPath)") // Add log
+
         if storedPath.starts(with: "/") && fileManager.fileExists(atPath: storedPath) {
+            print("DEBUG [getFileURL] Found as absolute path.") // Add log
             return URL(fileURLWithPath: storedPath)
         }
         do {
             let documentsDirectory = try fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
             let booksDirectory = documentsDirectory.appendingPathComponent("Books")
             let fileURLInBooks = booksDirectory.appendingPathComponent(storedPath)
+            print("DEBUG [getFileURL] Checking Documents/Books path: \(fileURLInBooks.path)") // Add log
             if fileManager.fileExists(atPath: fileURLInBooks.path) {
+                print("DEBUG [getFileURL] Found in Documents/Books.") // Add log
                 return fileURLInBooks
             }
-        } catch { print("ERROR: Couldn't access Documents directory: \(error)") }
+        } catch { print("ERROR [getFileURL]: Couldn't access Documents directory: \(error)") }
 
         let filename = URL(fileURLWithPath: storedPath).lastPathComponent
+        print("DEBUG [getFileURL] Checking Bundle for filename: \(filename)") // Add log
         if let bundleURL = Bundle.main.url(forResource: filename, withExtension: nil, subdirectory: "Books") ?? Bundle.main.url(forResource: filename, withExtension: nil) {
+             print("DEBUG [getFileURL] Found potential bundle URL: \(bundleURL.path)") // Add log
              if fileManager.fileExists(atPath: bundleURL.path) {
+                 print("DEBUG [getFileURL] Found in Bundle.") // Add log
                  return bundleURL
+             } else {
+                  print("DEBUG [getFileURL] Bundle URL exists but file not present at path.") // Add log
              }
         }
-        print("WARN: File not found for path: \(storedPath)")
+        print("WARN [getFileURL]: File not found for path: \(storedPath)") // Your existing log
         return nil
     }
 

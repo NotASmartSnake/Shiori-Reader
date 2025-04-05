@@ -34,9 +34,10 @@ struct ReaderView: View {
                 overlayControls
             }
         }
-        .navigationTitle(viewModel.book.title)
+        .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarHidden(!showOverlay)
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationBarHidden(true)
         .statusBarHidden(!showOverlay)
         .onAppear {
             if viewModel.publication == nil && !viewModel.isLoading {
