@@ -28,22 +28,6 @@ class BookRepository {
         )
         
         let documentsPath = documentsDirectory.appendingPathComponent("Books/\(path)").path
-//        if fileManager.fileExists(atPath: documentsPath) {
-//            print("DEBUG: EPUB file found in Documents directory: \(documentsPath)")
-//            return try epubParser.parseEPUB(at: documentsPath)
-//        }
-//        
-//        // If not found in Documents, try the bundle as before
-//        if let bundlePath = Bundle.main.path(forResource: path, ofType: nil) {
-//            print("DEBUG: EPUB file found in bundle: \(bundlePath)")
-//            return try epubParser.parseEPUB(at: bundlePath)
-//        }
-//        
-//        // Try one more time with direct path
-//        if fileManager.fileExists(atPath: path) {
-//            print("DEBUG: EPUB file found at direct path: \(path)")
-//            return try epubParser.parseEPUB(at: path)
-//        }
         
         print("DEBUG: File not found: \(path)")
         throw EPUBError.fileNotFound

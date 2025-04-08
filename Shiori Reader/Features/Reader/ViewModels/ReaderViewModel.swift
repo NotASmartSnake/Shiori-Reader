@@ -407,15 +407,6 @@ class ReaderViewModel: ObservableObject {
          requestNavigation(to: link)
      }
     
-//    func navigateToLink(_ link: ReadiumShared.Link) {
-//        Task {
-//            await MainActor.run {
-//                self.pendingNavigationLink = link
-//                print("DEBUG: Set pending navigation to link: \(link.href)")
-//            }
-//        }
-//    }
-    
     func handleLocationUpdate(_ locator: Locator) {
         print("DEBUG [ReadiumBookViewModel]: handleLocationUpdate called with locator progression: \(locator.locations.progression ?? -1.0)") // Added
         saveLocation(locator)
