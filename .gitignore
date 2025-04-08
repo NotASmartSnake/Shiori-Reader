@@ -21,6 +21,9 @@ Books/
 *.epub
 *.pdf
 
+# Documentation
+Documentation/
+
 # Ignore binary or local databases
 *.db
 
