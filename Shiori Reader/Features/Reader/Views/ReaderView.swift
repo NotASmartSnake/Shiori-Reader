@@ -282,7 +282,7 @@ struct ReaderView: View {
         title: "実力至上主義者の教室",
         coverImage: "COTECover",
         readingProgress: 0.1,
-        filePath: "cote.epub"
+        filePath: "3Days.epub"
     ))
     .environmentObject(SavedWordsManager())
 }
