@@ -12,6 +12,7 @@ import ReadiumShared
 import ReadiumOPDS
 import ReadiumStreamer
 import ReadiumNavigator
+import WebKit
 
 @MainActor
 class ReaderViewModel: ObservableObject {
@@ -31,12 +32,15 @@ class ReaderViewModel: ObservableObject {
     @Published private(set) var tableOfContents: [ReadiumShared.Link] = []
 
     // --- Other State ---
-    @Published var showDictionary = false
-    @Published var selectedWord = ""
-    @Published var currentSentenceContext: String = ""
     @Published var state = BookState() // Temporary bridge to your existing state model
     @Published var pendingNavigationLink: ReadiumShared.Link? = nil
     @Published var navigationRequest: Locator? = nil
+    
+    // Dictionary related properties
+    @Published var showDictionary = false
+    @Published var selectedWord = ""
+    @Published var dictionaryMatches: [DictionaryMatch] = []
+    @Published var currentSentenceContext: String = ""
 
     private var cancellables = Set<AnyCancellable>()
     weak var navigatorController: EPUBNavigatorViewController?
@@ -151,11 +155,6 @@ class ReaderViewModel: ObservableObject {
             }
             // --- End Asset Retrieval ---
 
-        } catch {
-            // Catch any unexpected synchronous errors in the do block (less likely here)
-             self.errorMessage = "Unexpected error during loading: \(error.localizedDescription)"
-             self.publication = nil
-             print("ERROR [loadPublication]: Caught unexpected error: \(error)")
         }
 
         // Ensure isLoading is set to false regardless of success or failure path within do-catch
@@ -272,8 +271,93 @@ class ReaderViewModel: ObservableObject {
 
     // MARK: - Dictionary Lookups
     
-    // Dictionary lookup methods can be kept from your original implementation
-    // as they're specific to your application's features
+    func handleWordSelection(text: String, options: [String: Any]) {
+        print("DEBUG [ReaderViewModel]: Word tapped - \(text) with options: \(options)")
+        
+        // Check if this is just an initialization message
+        if let type = options["type"] as? String, type == "initialization" {
+            print("DEBUG [ReaderViewModel]: Received initialization message, not showing dictionary")
+            return
+        }
+        
+        // Extract sentence context if available
+        var sentenceContext = ""
+        if let surroundingText = options["surroundingText"] as? String {
+            sentenceContext = surroundingText
+            print("DEBUG [ReaderViewModel]: Raw sentence context: \(sentenceContext)")
+            
+            // Clean up the sentence context
+            sentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Limit length if necessary (Anki URL has size limits)
+            if sentenceContext.count > 250 {
+                sentenceContext = String(sentenceContext.prefix(250)) + "..."
+            }
+            
+            print("DEBUG [ReaderViewModel]: Processed sentence context: \(sentenceContext)")
+        } else if let textFromClickedKanji = options["textFromClickedKanji"] as? String {
+            // Try alternative fields if surroundingText is not available
+            sentenceContext = textFromClickedKanji
+            print("DEBUG [ReaderViewModel]: Using textFromClickedKanji as context: \(sentenceContext)")
+        } else {
+            print("DEBUG [ReaderViewModel]: No context text found in options")
+        }
+        
+        // Set the selected word for display
+        self.selectedWord = text
+        
+        // Lookup words in the dictionary
+        getDictionaryMatches(text: text) { matches in
+            if !matches.isEmpty {
+                self.dictionaryMatches = matches
+                self.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
+                self.showDictionary = true
+            } else {
+                print("DEBUG [ReaderViewModel]: No dictionary matches found for \(text)")
+            }
+        }
+    }
+    
+    private func getDictionaryMatches(text: String, completion: @escaping ([DictionaryMatch]) -> Void) {
+        let lookupQueue = DispatchQueue(label: "com.shiori.dictionaryLookup", qos: .userInitiated)
+        
+        lookupQueue.async {
+            // Maximum word length to consider (adjust as needed)
+            let maxLength = min(27, text.count)
+            
+            // Store all valid matches
+            var matches: [DictionaryMatch] = []
+            
+            // Try words of decreasing length, starting from the longest
+            for length in stride(from: maxLength, through: 1, by: -1) {
+                // Make sure we don't exceed the text length
+                guard length <= text.count else { continue }
+                
+                // Extract the substring of current length
+                let endIndex = text.index(text.startIndex, offsetBy: length)
+                let candidateWord = String(text[..<endIndex])
+                
+                // Look up this word in the dictionary
+                let entries = DictionaryManager.shared.lookupWithDeinflection(word: candidateWord)
+                
+                // If we found matches, add this as a valid match
+                if !entries.isEmpty {
+                    let match = DictionaryMatch(word: candidateWord, entries: entries)
+                    matches.append(match)
+                    
+                    // Limit to a reasonable number of matches
+                    if matches.count >= 5 {
+                        break
+                    }
+                }
+            }
+            
+            // Return all matches found, ordered by length (longest first)
+            DispatchQueue.main.async {
+                completion(matches)
+            }
+        }
+    }
     
     // MARK: - Navigator Interface Methods
     

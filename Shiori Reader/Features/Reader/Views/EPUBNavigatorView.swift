@@ -10,11 +10,10 @@
 import SwiftUI
 import ReadiumShared
 import ReadiumNavigator
+import WebKit
 
 struct EPUBNavigatorView: UIViewControllerRepresentable {
-    // Use @ObservedObject if the ViewModel is passed in from a parent
-    // Use @StateObject if this View *creates* and owns the ViewModel
-    @ObservedObject var viewModel: BookViewModel
+    @ObservedObject var viewModel: ReaderViewModel
     let publication: Publication
     let initialLocation: Locator?
 
@@ -23,32 +22,27 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> EPUBNavigatorViewController {
         print("DEBUG [EPUBNavigatorView]: Making EPUBNavigatorViewController...")
 
-        // 1. Get the shared server instance from the ServerManager singleton
-        //    The ServerManager ensures the server is initialized.
         let server = ServerManager.shared.httpServer
 
         print("DEBUG [EPUBNavigatorView]: Using server instance provided by ServerManager.")
 
-        // 2. Prepare the Navigator Configuration
-        let config = EPUBNavigatorViewController.Configuration(
-            preferences: viewModel.preferences
-            // Add other configurations like editingActions if needed later
-            // editingActions: [ EditingAction(title: "Highlight", action: #selector(Coordinator.highlightSelection)) ]
-        )
+        let config = EPUBNavigatorViewController.Configuration()
 
-        // 3. Initialize the EPUBNavigatorViewController
         do {
             let navigator = try EPUBNavigatorViewController(
                 publication: publication,
                 initialLocation: initialLocation,
                 config: config,
-                httpServer: server // <-- Pass the shared instance
+                httpServer: server
             )
+            
             // Set the delegate to receive callbacks (like location changes)
             navigator.delegate = context.coordinator
-            print("DEBUG [EPUBNavigatorView]: EPUBNavigatorViewController created successfully.")
+            
+            // Store the navigator reference in the ViewModel
+            viewModel.setNavigatorController(navigator)
+            
             return navigator
-
         } catch {
             print("ERROR [EPUBNavigatorView]: Failed to create EPUBNavigatorViewController: \(error)")
             fatalError("Failed to initialize EPUBNavigatorViewController: \(error.localizedDescription)")
@@ -56,12 +50,9 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: EPUBNavigatorViewController, context: Context) {
-        print("DEBUG [EPUBNavigatorView]: updateUIViewController called.")
-
-        print("DEBUG [EPUBNavigatorView]: Submitting preferences...")
+        // Submit preferences when they change in the ViewModel
         uiViewController.submitPreferences(viewModel.preferences)
-        print("DEBUG [EPUBNavigatorView]: Submitted preferences.")
-
+        
         if let targetLocator = viewModel.navigationRequest {
             print("DEBUG [EPUBNavigatorView]: Detected navigation request for locator: \(targetLocator.href)")
             viewModel.clearNavigationRequest()
@@ -75,9 +66,8 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
         
         // Use the view model's current preferences
         uiViewController.submitPreferences(viewModel.preferences)
-        print("DEBUG [EPUBNavigatorView]: Submitted preferences to navigator.")
     }
-
+    
     // MARK: - Coordinator Setup
 
     func makeCoordinator() -> Coordinator {
@@ -87,29 +77,112 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
 
     // MARK: - Coordinator Class (Delegate Implementation)
 
-    class Coordinator: NSObject, EPUBNavigatorDelegate {
-        func navigator(_ navigator: any ReadiumNavigator.Navigator, didFailToLoadResourceAt href: ReadiumShared.RelativeURL, withError error: ReadiumShared.ReadError) {
-            
-        }
-        
+    class Coordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessageHandler {
         var parent: EPUBNavigatorView
-        @ObservedObject var viewModel: BookViewModel // Keep reference to update VM
-
-        init(_ parent: EPUBNavigatorView, viewModel: BookViewModel) {
+        @ObservedObject var viewModel: ReaderViewModel // Keep reference to update VM
+//        private var webViewManager: WebViewManager?
+        private var scriptsInjected = false
+        private var webView: WKWebView?
+        private let wordTapHandler: WordTapHandler
+        
+        init(_ parent: EPUBNavigatorView, viewModel: ReaderViewModel) {
             self.parent = parent
             self.viewModel = viewModel
+//            self.webViewManager = WebViewManager(viewModel: viewModel)
+            self.wordTapHandler = WordTapHandler(viewModel: viewModel)
             super.init()
             print("DEBUG [Coordinator]: Initialized.")
         }
-
-        // --- NavigatorDelegate Callbacks ---
+        
+        func navigator(_ navigator: Navigator, setupUserScripts userContentController: WKUserContentController) {
+            print("DEBUG [Coordinator]: setupUserScripts delegate method called!")
+            addMessageHandlers(userContentController)
+        }
+        
+        private func addMessageHandlers(_ userContentController: WKUserContentController) {
+            userContentController.add(self, name: "wordTapped")
+            userContentController.add(self, name: "dismissDictionary")
+            userContentController.add(self, name: "shioriLog")
+            print("DEBUG [Coordinator]: Added message handlers via delegate method")
+        }
 
         @MainActor // Ensure UI updates or VM calls happen on the main thread
         func navigator(_ navigator: Navigator, locationDidChange locator: Locator) {
-            // Called when the user navigates within the publication (scroll, turn page, tap link)
-            print("DEBUG [Coordinator]: Location did change (received from navigator): \(locator.locations.progression?.description ?? "N/A")%")
-            // Pass the updated location to the ViewModel
+            print("DEBUG [Coordinator]: Location changed to \(locator.href)")
+            
+            // Pass the updated location to ViewModel
             viewModel.handleLocationUpdate(locator)
+            
+            // Search for WebViews after a slight delay to ensure rendering is complete
+            if let epubNavigator = navigator as? EPUBNavigatorViewController {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.findAndSetupWebViews(in: epubNavigator.view)
+                }
+            }
+        }
+        
+        private func findAndSetupWebViews(in view: UIView) {
+            // First check for direct WebViews
+            if let webView = view as? WKWebView {
+                setupWebView(webView)
+            }
+            
+            // Then check children
+            for subview in view.subviews {
+                findAndSetupWebViews(in: subview)
+            }
+        }
+        
+        private func setupWebView(_ webView: WKWebView) {
+            // Register handlers - the WordTapHandler will check for duplicates
+            wordTapHandler.registerHandlers(for: webView)
+        }
+        
+        private func injectScripts(_ webView: WKWebView) {
+            // Load the word selection script
+            guard let scriptPath = Bundle.main.path(forResource: "wordSelection", ofType: "js"),
+                  let scriptContent = try? String(contentsOfFile: scriptPath, encoding: .utf8) else {
+                print("ERROR: Could not load wordSelection.js")
+                return
+            }
+            
+            // Create a wrapper script that ensures our script can communicate
+            let scriptWrapper = """
+            (function() {
+                // Set up window.webkit if it doesn't exist (unlikely but just in case)
+                window.webkit = window.webkit || {};
+                window.webkit.messageHandlers = window.webkit.messageHandlers || {};
+                
+                // Set up console logging
+                console.log('Script injection starting');
+                
+                // Main script content
+                \(scriptContent)
+                
+                // Verify script ran successfully
+                console.log('Script injection complete');
+                
+                // Test message
+                if (window.webkit.messageHandlers.wordTapped) {
+                    window.webkit.messageHandlers.wordTapped.postMessage({
+                        test: true,
+                        text: "Script injection test"
+                    });
+                    console.log('Test message sent');
+                } else {
+                    console.log('ERROR: Message handlers not available');
+                }
+            })();
+            """
+            
+            // Inject the script
+            webView.evaluateJavaScript(scriptWrapper) { result, error in
+                if let error = error {
+                    print("ERROR: Script injection failed: \(error)")
+                } else {
+                    print("DEBUG: Script injection completed with result: \(result ?? "nil")")
+                }
+            }
         }
 
         @MainActor // Ensure UI updates or VM calls happen on the main thread
@@ -119,33 +192,243 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
             // Update the ViewModel's error state so the UI can react
             viewModel.errorMessage = "Reader error: \(error.localizedDescription)"
         }
-
-        // --- Optional Delegate Methods (Uncomment and implement as needed) ---
-
-        /*
+        
+        func navigator(_ navigator: any ReadiumNavigator.Navigator, didFailToLoadResourceAt href: ReadiumShared.RelativeURL, withError error: ReadiumShared.ReadError) {
+            print("ERROR [Coordinator]: Failed to load resource \(href): \(error)")
+        }
+        
+        // Manual script injection as fallback
+        private func injectScriptsManually(navigator: EPUBNavigatorViewController) {
+            // Load the script content
+            guard let scriptPath = Bundle.main.path(forResource: "wordSelection", ofType: "js"),
+                  let scriptContent = try? String(contentsOfFile: scriptPath, encoding: .utf8) else {
+                print("ERROR [Coordinator]: Could not load wordSelection.js for manual injection")
+                return
+            }
+            
+            // Create a wrapper that first checks if R2NAVIGATOR_SEND_MESSAGE exists
+            // If not, set up a polyfill that uses webkit.messageHandlers
+            let wrappedScript = """
+            (function() {
+                // Create R2NAVIGATOR_SEND_MESSAGE polyfill if not available
+                if (typeof window.R2NAVIGATOR_SEND_MESSAGE !== 'function') {
+                    window.R2NAVIGATOR_SEND_MESSAGE = function(name, payload) {
+                        console.log('Using polyfill R2NAVIGATOR_SEND_MESSAGE for: ' + name);
+                        // Convert to string if it's not already
+                        if (typeof payload !== 'string') {
+                            try {
+                                payload = JSON.stringify(payload);
+                            } catch(e) {
+                                payload = String(payload);
+                            }
+                        }
+                        // Use webkit message handlers as fallback
+                        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers[name]) {
+                            window.webkit.messageHandlers[name].postMessage(payload);
+                        }
+                    };
+                }
+                
+                // Log a message to confirm script is running
+                if (window.R2NAVIGATOR_SEND_MESSAGE) {
+                    window.R2NAVIGATOR_SEND_MESSAGE('shioriLog', 'Manual script injection successful');
+                } else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.shioriLog) {
+                    window.webkit.messageHandlers.shioriLog.postMessage('Manual script injection successful (webkit)');
+                } else {
+                    console.log('Manual script injection successful but no communication channel available');
+                }
+                
+                // Now add the actual word selection script
+                \(scriptContent)
+            })();
+            """
+            
+            // Execute the script
+            Task {
+                let result = await navigator.evaluateJavaScript(wrappedScript)
+                print("DEBUG [Coordinator]: Manual script evaluation result: \(result)")
+                
+                // Also add message handlers manually
+                if let webView = getWebViewFromNavigator(navigator) {
+                    webView.configuration.userContentController.add(self, name: "wordTapped")
+                    webView.configuration.userContentController.add(self, name: "dismissDictionary")
+                    webView.configuration.userContentController.add(self, name: "shioriLog")
+                    print("DEBUG [Coordinator]: Added message handlers manually to WebView")
+                }
+            }
+        }
+        
+        // Helper to get the WebView from the navigator for manual handler addition
+        private func getWebViewFromNavigator(_ navigator: EPUBNavigatorViewController) -> WKWebView? {
+            // This is a bit fragile but necessary to get the WKWebView when we can't use the delegate method
+            // Navigate through the view hierarchy to find the WKWebView
+            for subview in navigator.view.subviews {
+                if let webView = findWebView(in: subview) {
+                    return webView
+                }
+            }
+            return nil
+        }
+        
+        private func findWebView(in view: UIView) -> WKWebView? {
+            if let webView = view as? WKWebView {
+                return webView
+            }
+            for subview in view.subviews {
+                if let webView = findWebView(in: subview) {
+                    return webView
+                }
+            }
+            return nil
+        }
+        
+        // This handles messages sent via `window.webkit.messageHandlers.yourName.postMessage(...)`
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+             print("DEBUG [Coordinator]: userContentController received message: \(message.name)")
+             // Forward to the main message handling logic
+             handleScriptMessage(name: message.name, body: message.body)
+        }
+        
+        // This handles messages sent via `window.R2NAVIGATOR_SEND_MESSAGE(...)`
+        @MainActor // Ensure UI updates happen on main thread
+        func navigator(_ navigator: Navigator, didReceiveMessage name: String, body: Any) {
+            print("DEBUG [Coordinator]: navigator received message: \(name)")
+            // Forward to the main message handling logic
+            handleScriptMessage(name: name, body: body)
+        }
+        
         @MainActor
-        func navigator(_ navigator: VisualNavigator, didTapAt point: CGPoint) {
-            // Handle taps within the navigator's view (e.g., for toggling UI, activating links)
-            print("DEBUG [Coordinator]: Navigator tapped at point: \(point)")
-            // Example: Toggle fullscreen on tap
-            // viewModel.toggleFullscreen()
+        private func handleScriptMessage(name: String, body: Any) {
+            switch name {
+            case "shioriLog":
+                if let logMessage = body as? String {
+                    print("JS LOG [Shiori]: \(logMessage)")
+                } else {
+                     print("JS LOG [Shiori]: Received non-string log message: \(body)")
+                }
 
-            // Use DirectionalNavigationAdapter for edge taps to turn pages:
-            // guard !DirectionalNavigationAdapter(navigator: navigator).didTap(at: point) else {
-            //     return // Tap handled for page turn
-            // }
-            // Handle center tap...
+            case "wordTapped":
+                print("DEBUG [Coordinator]: Received wordTapped message with body: \(body)")
+                guard let bodyString = body as? String, // Readium often sends payload as JSON string
+                      let data = bodyString.data(using: .utf8),
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let text = json["text"] as? String else {
+                    // Fallback: Check if body is already a dictionary (might happen with WKScriptMessageHandler)
+                     if let json = body as? [String: Any], let text = json["text"] as? String {
+                         print("DEBUG [Coordinator]: Parsed wordTapped message directly from dictionary.")
+                         viewModel.handleWordSelection(text: text, options: json)
+                     } else {
+                        print("ERROR [Coordinator]: Failed to parse wordTapped message body. Type: \(type(of: body)), Content: \(body)")
+                     }
+                    return
+                }
+                print("DEBUG [Coordinator]: Successfully parsed wordTapped message from JSON string, text: \(text)")
+                viewModel.handleWordSelection(text: text, options: json) // Forward to view model
+
+            case "dismissDictionary":
+                print("DEBUG [Coordinator]: Received dismissDictionary message")
+                viewModel.showDictionary = false
+
+            // Handle console messages if using the console logger script
+            case "consoleLog", "consoleWarn", "consoleError":
+                 if let message = body as? String {
+                     print("JS CONSOLE [\(name)]: \(message)")
+                 }
+
+            default:
+                print("DEBUG [Coordinator]: Received unknown message: \(name) with body: \(body)")
+            }
         }
 
-        @MainActor
-        func navigator(_ navigator: Navigator, presentExternalURL url: URL) {
-             // Handle external links opened from the EPUB content
-             print("DEBUG [Coordinator]: Navigator wants to open external URL: \(url)")
-             // Typically use UIApplication.shared.open(url)
-        }
 
-        // Add methods for selection changes, bookmark requests, etc.
-        // func navigator(_ navigator: SelectableNavigator, selectionDidChange selection: Selection?) { ... }
-        */
+
+        
+//        func navigator(_ navigator: VisualNavigator, didTapOn text: String, at point: CGPoint, in frame: CGRect, textInfo: [String: Any]?) {
+//            print("DEBUG [Coordinator]: Text tapped: \(text), info: \(textInfo ?? [:])")
+//            // Forward to view model
+//            viewModel.handleWordSelection(text: text, options: textInfo ?? [:])
+//        }
+//        
+//        func navigator(_ navigator: VisualNavigator, didTapAt point: CGPoint) {
+//            print("DEBUG [Coordinator]: Tap detected at \(point)")
+//            
+//            // Cast to get access to JavaScript evaluation
+//            guard let epubNavigator = navigator as? EPUBNavigatorViewController else { return }
+//            
+//            let correctedPoint = CGPoint(x: point.x, y: point.y - 110)
+//            print("DEBUG [Coordinator]: Corrected point: \(correctedPoint)")
+//            
+//            // Create JavaScript to find the word at this tap point
+//            let javascriptToFindWord = """
+//            (function() {
+//                const range = document.caretRangeFromPoint(\(point.x), \(point.y));
+//                if (!range) return null;
+//                
+//                const node = range.startContainer;
+//                if (node.nodeType !== Node.TEXT_NODE) return null;
+//                
+//                const text = node.textContent;
+//                const offset = range.startOffset;
+//                
+//                if (offset >= text.length) return null;
+//                
+//                // Get context text (the tapped character + following characters)
+//                const contextText = text.substring(offset, Math.min(text.length, offset + 30));
+//                
+//                // Check if it contains Japanese characters
+//                if (!/[\\u3000-\\u303F]|[\\u3040-\\u309F]|[\\u30A0-\\u30FF]|[\\uFF00-\\uFFEF]|[\\u4E00-\\u9FAF]|[\\u2605-\\u2606]|[\\u2190-\\u2195]|\\u203B/g.test(contextText)) {
+//                    return null;
+//                }
+//                
+//                // Get surrounding text for context (one sentence or paragraph)
+//                let surroundingText = '';
+//                let currentNode = node.parentNode;
+//                while (currentNode && currentNode.nodeName !== 'P' && currentNode.nodeName !== 'DIV') {
+//                    currentNode = currentNode.parentNode;
+//                }
+//                
+//                if (currentNode) {
+//                    surroundingText = currentNode.textContent.trim();
+//                    if (surroundingText.length > 250) {
+//                        surroundingText = surroundingText.substring(0, 250) + '...';
+//                    }
+//                }
+//                
+//                return {
+//                    text: contextText,
+//                    surroundingText: surroundingText
+//                };
+//            })();
+//            """
+//            
+//            // Execute the JavaScript
+//            Task {
+//                let result = await epubNavigator.evaluateJavaScript(javascriptToFindWord)
+//                
+//                // Properly handle the Result type
+//                switch result {
+//                case .success(let value):
+//                    // Now try to cast the value
+//                    if let jsResult = value as? [String: String],
+//                       let text = jsResult["text"] {
+//                        // We successfully found text at the tap point
+//                        var options: [String: Any] = [:]
+//                        if let surroundingText = jsResult["surroundingText"] {
+//                            options["surroundingText"] = surroundingText
+//                        }
+//                        
+//                        // Forward to view model
+//                        viewModel.handleWordSelection(text: text, options: options)
+//                    }
+//                case .failure(let error):
+//                    print("ERROR [Coordinator]: JavaScript evaluation failed: \(error)")
+//                }
+//            }
+//            
+//        }
+        
     }
 }
+
+
+

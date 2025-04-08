@@ -1,8 +1,5 @@
 Shiori Reader.xcodeproj/project.pbxproj
-Shiori Reader/Features/SavedWords/SavedWordDetailView.swift
 Shiori Reader/Resources/deinflect.json
-Shiori Reader/Features/Reader/Views/DictionaryPopupView.swift
-Shiori Reader/Features/Search/EntryDetailView.swift
 Shiori Reader/JavaScript/positionManagement.js
 Shiori Reader/Services/ScrollAxisLock.swift
 

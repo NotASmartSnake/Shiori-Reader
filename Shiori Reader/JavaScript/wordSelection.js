@@ -1,16 +1,52 @@
-//
-//  WordSelection.js
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/17/25.
-//
+// wordSelection.js - Enhanced version with proper ruby handling
 
-// Enhanced Ruby Character Selection script with improved implicit ruby handling
+// Function to safely send logs
+function shioriLog(message) {
+    // Use console log first (always works)
+    console.log("[Shiori] " + message);
+    
+    // Then try to use our handler if available
+    try {
+        const handlerName = window.shioriLogHandlerName || "shioriLog";
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers[handlerName]) {
+            window.webkit.messageHandlers[handlerName].postMessage(message);
+        }
+    } catch(e) {
+        console.log("[Shiori] Error sending log: " + e);
+    }
+}
+
+shioriLog("Script initialized");
+
+// Pattern to detect Japanese text
+const japanesePattern = /[\u3000-\u303F]|[\u3040-\u309F]|[\u30A0-\u30FF]|[\uFF00-\uFFEF]|[\u4E00-\u9FAF]|[\u2605-\u2606]|[\u2190-\u2195]|\u203B/g;
+
+// Helper function to dismiss dictionary
+function dismissDictionary() {
+    try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.dismissDictionary) {
+            window.webkit.messageHandlers.dismissDictionary.postMessage({});
+            return true;
+        }
+        return false;
+    } catch(e) {
+        shioriLog("Error dismissing dictionary: " + e);
+        return false;
+    }
+}
+
+// Set up click handler
 document.addEventListener('click', function(event) {
-    // Don't intercept clicks on elements that should be interactive
+    shioriLog("Click detected at " + event.clientX + "," + event.clientY);
+    
+    // Skip interactive elements
     if (event.target.tagName === 'A' ||
         event.target.tagName === 'BUTTON' ||
-        event.target.tagName === 'INPUT') {
+        event.target.tagName === 'INPUT' ||
+        event.target.closest('a') ||
+        event.target.closest('button')) {
+        shioriLog("Skipping interactive element");
+        dismissDictionary();
         return;
     }
     
@@ -20,6 +56,7 @@ document.addEventListener('click', function(event) {
                         event.target.closest('ruby');
                         
     if (rubyElement) {
+        shioriLog("Ruby element detected, handling specially");
         handleRubyClick(event, rubyElement);
         return;
     }
@@ -27,13 +64,16 @@ document.addEventListener('click', function(event) {
     // Standard text node handling for non-ruby elements
     let range = document.caretRangeFromPoint(event.clientX, event.clientY);
     if (!range) {
-        window.webkit.messageHandlers.dismissDictionary.postMessage({});
+        shioriLog("No text range found at click point");
+        dismissDictionary();
         return;
     }
     
+    shioriLog("Text node found, looking for Japanese text");
+    
     let node = range.startContainer;
     if (node.nodeType !== Node.TEXT_NODE) {
-        window.webkit.messageHandlers.dismissDictionary.postMessage({});
+        dismissDictionary();
         return;
     }
     
@@ -42,23 +82,29 @@ document.addEventListener('click', function(event) {
     
     if (offset < text.length) {
         let contextText = text.substring(offset, Math.min(text.length, offset + 30));
+        shioriLog("Text at click: " + contextText);
         
-        if (/[\u3000-\u303F]|[\u3040-\u309F]|[\u30A0-\u30FF]|[\uFF00-\uFFEF]|[\u4E00-\u9FAF]|[\u2605-\u2606]|[\u2190-\u2195]|\u203B/g.test(contextText)) {
+        // Check for Japanese text
+        if (japanesePattern.test(contextText)) {
+            shioriLog("Japanese text found");
+            
+            // Get surrounding sentence for better context
             const surroundingText = getExtendedSurroundingText(node.parentNode, contextText, 250);
             
-            window.webkit.messageHandlers.wordTapped.postMessage({
-                text: contextText,
+            // Send to Swift
+            sendWordToSwift(contextText, {
                 absoluteOffset: offset,
                 surroundingText: surroundingText
             });
         } else {
-            window.webkit.messageHandlers.dismissDictionary.postMessage({});
+            dismissDictionary();
         }
     } else {
-        window.webkit.messageHandlers.dismissDictionary.postMessage({});
+        dismissDictionary();
     }
 }, false);
 
+// Ruby handling functions with improved handling
 function handleRubyClick(event, rubyElement) {
     // Get all rb elements within this ruby element
     const rbElements = rubyElement.querySelectorAll('rb');
@@ -110,7 +156,7 @@ function handleRubyClick(event, rubyElement) {
         }
     }
     
-    // Get the text content of the ruby element
+    // Get the text content of the ruby element - PROPERLY WITHOUT FURIGANA
     const baseText = getFullRubyBaseText(rubyElement);
     
     // If we have explicit rb elements
@@ -154,8 +200,7 @@ function handleRubyClick(event, rubyElement) {
         // Get the surrounding sentence for better context
         const surroundingText = getExtendedSurroundingText(rubyElement, baseText, 250);
         
-        window.webkit.messageHandlers.wordTapped.postMessage({
-            text: completeContext,
+        sendWordToSwift(completeContext, {
             reading: reading,
             fullCompound: baseText,
             surroundingText: surroundingText,
@@ -173,6 +218,9 @@ function handleRubyClick(event, rubyElement) {
 
 // Function to process tapped ruby text
 function processTappedRubyText(baseText, reading, rubyElement) {
+    // Clean base text to ensure no furigana
+    baseText = cleanRubyText(baseText);
+    
     // Get text after this ruby element
     const textAfterRuby = getTextAfterElement(rubyElement, 30);
     
@@ -182,12 +230,74 @@ function processTappedRubyText(baseText, reading, rubyElement) {
     // Get extended surrounding text for better context
     const surroundingText = getExtendedSurroundingText(rubyElement, baseText, 250);
     
-    window.webkit.messageHandlers.wordTapped.postMessage({
-        text: extendedText,
+    sendWordToSwift(extendedText, {
         reading: reading,
         surroundingText: surroundingText,
         isRuby: true,
         isPartialCompound: false
+    });
+}
+
+// Process a tapped explicit ruby text (with rb elements)
+function processTappedExplicitRubyText(clickedRb, rubyElement) {
+    // Get the clicked kanji (clean it to ensure no furigana)
+    const kanji = cleanRubyText(clickedRb.textContent);
+    
+    // Find the corresponding rt element (reading)
+    let reading = '';
+    const rbElements = rubyElement.querySelectorAll('rb');
+    const rbIndex = [...rbElements].indexOf(clickedRb);
+    const rtElements = rubyElement.querySelectorAll('rt');
+    
+    if (rtElements.length > rbIndex) {
+        reading = rtElements[rbIndex].textContent.trim();
+    }
+    
+    // Get the full compound for context (clean all rb elements)
+    const fullText = [...rbElements].map(rb => cleanRubyText(rb.textContent)).join('');
+    const fullReading = [...rtElements].map(rt => rt.textContent).join('');
+    
+    // Find the selected index within the full compound
+    const selectedIndex = [...rbElements].indexOf(clickedRb);
+    
+    // Get text from this point onwards
+    const textFromClickedKanji = fullText.substring(selectedIndex) + getTextAfterElement(rubyElement, 30);
+    
+    sendWordToSwift(textFromClickedKanji, {
+        reading: reading,
+        fullCompound: fullText,
+        fullReading: fullReading,
+        textFromClickedKanji: textFromClickedKanji,
+        surroundingText: textFromClickedKanji,
+        isRuby: true,
+        isPartialCompound: true,
+        selectedIndex: selectedIndex
+    });
+}
+
+function handleFullRubySelection(rubyElement) {
+    // Get the full ruby content (properly cleaned)
+    const fullBaseText = getFullRubyBaseText(rubyElement);
+    const fullReading = getFullRubyReading(rubyElement);
+    
+    // Get text from nodes after this ruby element
+    let textAfterRuby = '';
+    if (rubyElement.nextSibling) {
+        textAfterRuby = getTextFromNodeAndFollowing(rubyElement.nextSibling, 30);
+    }
+    
+    // Combined text starting with the full ruby
+    const extendedText = fullBaseText + textAfterRuby;
+    
+    // Get extended surrounding text
+    const surroundingText = getExtendedSurroundingText(rubyElement, fullBaseText, 250);
+    
+    sendWordToSwift(extendedText, {
+        reading: fullReading,
+        textFromClickedKanji: extendedText,  // Include text after ruby
+        surroundingText: surroundingText,
+        textAfterRuby: textAfterRuby,
+        isRuby: true
     });
 }
 
@@ -238,71 +348,6 @@ function getTextAfterElement(element, maxLength) {
     }
     
     return result;
-}
-
-// Process a tapped explicit ruby text (with rb elements)
-function processTappedExplicitRubyText(clickedRb, rubyElement) {
-    // Get the clicked kanji
-    const kanji = clickedRb.textContent.trim();
-    
-    // Find the corresponding rt element (reading)
-    let reading = '';
-    const rbElements = rubyElement.querySelectorAll('rb');
-    const rbIndex = [...rbElements].indexOf(clickedRb);
-    const rtElements = rubyElement.querySelectorAll('rt');
-    
-    if (rtElements.length > rbIndex) {
-        reading = rtElements[rbIndex].textContent.trim();
-    }
-    
-    // Get the full compound for context
-    const fullText = [...rbElements].map(rb => rb.textContent).join('');
-    const fullReading = [...rtElements].map(rt => rt.textContent).join('');
-    
-    // Find the selected index within the full compound
-    const selectedIndex = [...rbElements].indexOf(clickedRb);
-    
-    // Get text from this point onwards
-    const textFromClickedKanji = fullText.substring(selectedIndex) + getTextAfterElement(rubyElement, 30);
-    
-    window.webkit.messageHandlers.wordTapped.postMessage({
-        text: textFromClickedKanji,
-        reading: reading,
-        fullCompound: fullText,
-        fullReading: fullReading,
-        textFromClickedKanji: textFromClickedKanji,
-        surroundingText: textFromClickedKanji,
-        isRuby: true,
-        isPartialCompound: true,
-        selectedIndex: selectedIndex
-    });
-}
-
-function handleFullRubySelection(rubyElement) {
-    // Get the full ruby content
-    const fullBaseText = getFullRubyBaseText(rubyElement);
-    const fullReading = getFullRubyReading(rubyElement);
-    
-    // Get text from nodes after this ruby element
-    let textAfterRuby = '';
-    if (rubyElement.nextSibling) {
-        textAfterRuby = getTextFromNodeAndFollowing(rubyElement.nextSibling, 30);
-    }
-    
-    // Combined text starting with the full ruby
-    const extendedText = fullBaseText + textAfterRuby;
-    
-    // Get extended surrounding text
-    const surroundingText = getExtendedSurroundingText(rubyElement, fullBaseText, 250);
-    
-    window.webkit.messageHandlers.wordTapped.postMessage({
-        text: extendedText,
-        reading: fullReading,
-        textFromClickedKanji: extendedText,  // Include text after ruby
-        surroundingText: surroundingText,
-        textAfterRuby: textAfterRuby,
-        isRuby: true
-    });
 }
 
 // Get text starting from a node and collecting from siblings
@@ -446,38 +491,7 @@ function getTextWithoutFurigana(element) {
     return clone.textContent;
 }
 
-// Helper to extract text content from a node, skipping rt/rp elements
-function getNodeTextContent(node) {
-    if (!node) return '';
-    
-    // Skip rt and rp elements
-    if (node.nodeType === Node.ELEMENT_NODE &&
-        (node.tagName === 'RT' || node.tagName === 'RP')) {
-        return '';
-    }
-    
-    // For ruby elements, get only the base text
-    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'RUBY') {
-        return getFullRubyBaseText(node);
-    }
-    
-    // For text nodes, return the text content
-    if (node.nodeType === Node.TEXT_NODE) {
-        return node.textContent;
-    }
-    
-    // For other element nodes, get text content but filter out rt/rp
-    if (node.nodeType === Node.ELEMENT_NODE) {
-        let text = '';
-        for (const child of node.childNodes) {
-            text += getNodeTextContent(child);
-        }
-        return text;
-    }
-    
-    return '';
-}
-
+// Helper to find which element was clicked based on position
 function determineClickedElement(event, elements) {
     if (elements.length === 0) return null;
     
@@ -515,29 +529,79 @@ function determineClickedElement(event, elements) {
     return closestElement;
 }
 
+// Function to get base text from ruby element WITHOUT furigana
 function getFullRubyBaseText(rubyElement) {
-    // Get text from explicit rb elements
+    // First try to get text from explicit rb elements
     const rbElements = rubyElement.querySelectorAll('rb');
     if (rbElements.length > 0) {
-        return Array.from(rbElements).map(rb => rb.textContent).join('');
+        // Clean each rb to remove any nested furigana
+        return Array.from(rbElements)
+            .map(rb => cleanRubyText(rb.textContent))
+            .join('');
     }
     
     // Handle implicit base text (direct text nodes or non-rt elements)
-    const textNodes = [];
-    for (const node of rubyElement.childNodes) {
-        if (node.nodeType === Node.TEXT_NODE) {
-            textNodes.push(node.textContent);
-        } else if (node.nodeType === Node.ELEMENT_NODE &&
-                  node.tagName !== 'RT' &&
-                  node.tagName !== 'RP') {
-            textNodes.push(node.textContent);
-        }
-    }
+    // Create a clone of the ruby element
+    const clonedRuby = rubyElement.cloneNode(true);
     
-    return textNodes.join('').trim();
+    // Remove all RT and RP elements
+    const rtElements = clonedRuby.querySelectorAll('rt');
+    rtElements.forEach(rt => rt.remove());
+    
+    const rpElements = clonedRuby.querySelectorAll('rp');
+    rpElements.forEach(rp => rp.remove());
+    
+    // Now get the text content of the cleaned element
+    return clonedRuby.textContent.trim();
 }
 
+// Get readings from ruby element
 function getFullRubyReading(rubyElement) {
     const rtElements = rubyElement.querySelectorAll('rt');
-    return Array.from(rtElements).map(rt => rt.textContent).join('');
+    return Array.from(rtElements).map(rt => rt.textContent.trim()).join('');
+}
+
+// Helper to clean text that might contain furigana
+function cleanRubyText(text) {
+    // This is a simple filter that tries to remove all hiragana/katakana
+    // characters that might be inline with kanji text in ruby notation
+    
+    // Japanese hiragana and katakana ranges
+    const kanaPattern = /[\u3040-\u309F]|[\u30A0-\u30FF]/g;
+    
+    // For simple cases, just remove all kana characters mixed with kanji
+    // This is a basic approach and may not work for all cases
+    if (/[\u4E00-\u9FAF]/.test(text) && kanaPattern.test(text)) {
+        // If text has both kanji and kana, and it's likely ruby text,
+        // try removing all kana
+        return text.replace(kanaPattern, '');
+    }
+    
+    // If it doesn't match the pattern, or it's all kana, return as is
+    return text.trim();
+}
+
+// Utility function to send word data to Swift
+function sendWordToSwift(text, options = {}) {
+    try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.wordTapped) {
+            // Combine text with options
+            const data = { text, ...options };
+            shioriLog("Sending word to Swift: " + text);
+            window.webkit.messageHandlers.wordTapped.postMessage(data);
+            return true;
+        }
+        return false;
+    } catch(e) {
+        shioriLog("Error sending word to Swift: " + e);
+        return false;
+    }
+}
+
+// Send a ready notification
+try {
+    sendWordToSwift("WordSelection script ready", { type: "initialization" });
+    shioriLog("Ready notification sent successfully");
+} catch(e) {
+    shioriLog("Error sending ready notification: " + e);
 }

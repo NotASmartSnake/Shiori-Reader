@@ -10,7 +10,8 @@ import SwiftUI
 import ReadiumShared // For Locator
 
 struct ReaderView: View {
-    @StateObject var viewModel: BookViewModel
+    @StateObject var viewModel: ReaderViewModel
+    @EnvironmentObject private var savedWordsManager: SavedWordsManager
     @State private var showOverlay = true
     @State private var showSearchSheet = false
     @State private var showSettingsSheet = false
@@ -18,20 +19,21 @@ struct ReaderView: View {
     @Environment(\.dismiss) var dismiss
 
     init(book: Book) {
-        _viewModel = StateObject(wrappedValue: BookViewModel(book: book))
+        _viewModel = StateObject(wrappedValue: ReaderViewModel(book: book))
     }
 
     var body: some View {
         ZStack {
-            // Layer 1: Main Content (Loading/Error/Navigator)
             contentLayer
 
-            // Layer 2: Transparent Tap Area for Toggling Overlay
             tapAreas
             
-            // Layer 3: Overlay UI (only shown if showOverlay is true)
             if showOverlay {
                 overlayControls
+            }
+            
+            if viewModel.showDictionary {
+                dictionaryPopup
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -156,8 +158,6 @@ struct ReaderView: View {
                                 }
                             }
                     }
-                    // Consider passing the viewModel or preferences editor here
-                    // Example: ReaderSettingsView(editor: viewModel.editor(of: viewModel.preferences))
                 }
 
 
@@ -201,6 +201,36 @@ struct ReaderView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+    
+    private var dictionaryPopup: some View {
+        ZStack {
+            Color.black.opacity(0.3)
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    // Dismiss the dictionary popup when tapped
+                    viewModel.showDictionary = false
+                }
+                .transition(.opacity)
+            
+            VStack {
+                Spacer()
+                
+                DictionaryPopupView(
+                    matches: viewModel.dictionaryMatches,
+                    onDismiss: {
+                        viewModel.showDictionary = false
+                    },
+                    sentenceContext: viewModel.currentSentenceContext,
+                    bookTitle: viewModel.book.title
+                )
+                .environmentObject(savedWordsManager)
+            }
+            .transition(.move(edge: .bottom))
+        }
+        .ignoresSafeArea(edges: .bottom)
+        .animation(.spring(duration: 0.3, bounce: 0.2), value: viewModel.showDictionary)
+        .zIndex(2)
     }
 
 
@@ -252,6 +282,7 @@ struct ReaderView: View {
         title: "実力至上主義者の教室",
         coverImage: "COTECover",
         readingProgress: 0.1,
-        filePath: "honzuki.epub"
+        filePath: "cote.epub"
     ))
+    .environmentObject(SavedWordsManager())
 }
