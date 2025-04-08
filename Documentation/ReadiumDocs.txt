@@ -1,0 +1,2671 @@
+Directory Structure:
+
+└── ./
+    └── docs
+        └── Guides
+            ├── Assets
+            │   └── settings-flow.svg
+            ├── Navigator
+            │   ├── Assets
+            │   │   └── settings-flow.svg
+            │   ├── EPUB Fonts.md
+            │   ├── Navigator.md
+            │   ├── Preferences.md
+            │   └── SwiftUI.md
+            ├── Content.md
+            ├── EPUB Fonts.md
+            ├── Getting Started.md
+            ├── Navigator Preferences.md
+            ├── Open Publication.md
+            ├── Readium LCP.md
+            ├── README.md
+            └── TTS.md
+
+
+
+---
+File: /docs/Guides/Assets/settings-flow.svg
+---
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="281px" height="281px" viewBox="-0.5 -0.5 281 281"><defs/><g><rect x="20" y="20" width="240" height="60" rx="9" ry="9" fill="#dae8fc" stroke="#6c8ebf" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 238px; height: 1px; padding-top: 50px; margin-left: 21px;"><div data-drawio-colors="color: #4B6385; " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(75, 99, 133); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;"><h2>App</h2></div></div></div></foreignObject><text x="140" y="54" fill="#4B6385" font-family="Helvetica" font-size="12px" text-anchor="middle">App</text></switch></g><rect x="20" y="200" width="240" height="60" rx="9" ry="9" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 238px; height: 1px; padding-top: 231px; margin-left: 21px;"><div data-drawio-colors="color: #455E36; " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(69, 94, 54); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;"><p style="line-height: 0.6"></p><h2 style="line-height: 0.1">Navigator</h2><h3 style="line-height: 0.3"><span style="font-weight: normal"><font style="font-size: 12px">(</font><i style="font-size: 12px">Configurable</i><span style="font-size: 12px ; line-height: 1">)</span></span></h3><p></p></div></div></div></foreignObject><text x="140" y="235" fill="#455E36" font-family="Helvetica" font-size="12px" text-anchor="middle">Navigator...</text></switch></g><path d="M 80 80 Q 80 80 80 179.76" fill="none" stroke="#6c8ebf" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 80 187.76 L 76 179.76 L 84 179.76 Z" fill="#6c8ebf" stroke="#6c8ebf" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/><path d="M 200 200 Q 200 200 200 100.24" fill="none" stroke="#82b366" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 200 92.24 L 204 100.24 L 196 100.24 Z" fill="#82b366" stroke="#82b366" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/><rect x="50" y="100" width="60" height="30" fill="none" stroke="none" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 58px; height: 1px; padding-top: 115px; margin-left: 51px;"><div data-drawio-colors="color: #4B6385; background-color: rgb(255, 255, 255); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 13px; font-family: Helvetica; color: rgb(75, 99, 133); line-height: 1.2; pointer-events: all; font-weight: bold; background-color: rgb(255, 255, 255); white-space: normal; overflow-wrap: normal;">Preferences</div></div></div></foreignObject><text x="80" y="119" fill="#4B6385" font-family="Helvetica" font-size="13px" text-anchor="middle" font-weight="bold">Preferenc...</text></switch></g><rect x="170" y="150" width="60" height="30" fill="none" stroke="none" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 58px; height: 1px; padding-top: 165px; margin-left: 171px;"><div data-drawio-colors="color: #455E36; background-color: rgb(255, 255, 255); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 13px; font-family: Helvetica; color: rgb(69, 94, 54); line-height: 1.2; pointer-events: all; font-weight: bold; background-color: rgb(255, 255, 255); white-space: normal; overflow-wrap: normal;">Settings</div></div></div></foreignObject><text x="200" y="169" fill="#455E36" font-family="Helvetica" font-size="13px" text-anchor="middle" font-weight="bold">Settings</text></switch></g></g><switch><g requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"/><a transform="translate(0,-5)" xlink:href="https://www.diagrams.net/doc/faq/svg-export-text-problems" target="_blank"><text text-anchor="middle" font-size="10px" x="50%" y="100%">Viewer does not support full SVG 1.1</text></a></switch></svg>
+
+
+---
+File: /docs/Guides/Navigator/Assets/settings-flow.svg
+---
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="281px" height="281px" viewBox="-0.5 -0.5 281 281"><defs/><g><rect x="20" y="20" width="240" height="60" rx="9" ry="9" fill="#dae8fc" stroke="#6c8ebf" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 238px; height: 1px; padding-top: 50px; margin-left: 21px;"><div data-drawio-colors="color: #4B6385; " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(75, 99, 133); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;"><h2>App</h2></div></div></div></foreignObject><text x="140" y="54" fill="#4B6385" font-family="Helvetica" font-size="12px" text-anchor="middle">App</text></switch></g><rect x="20" y="200" width="240" height="60" rx="9" ry="9" fill="#d5e8d4" stroke="#82b366" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 238px; height: 1px; padding-top: 231px; margin-left: 21px;"><div data-drawio-colors="color: #455E36; " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(69, 94, 54); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;"><p style="line-height: 0.6"></p><h2 style="line-height: 0.1">Navigator</h2><h3 style="line-height: 0.3"><span style="font-weight: normal"><font style="font-size: 12px">(</font><i style="font-size: 12px">Configurable</i><span style="font-size: 12px ; line-height: 1">)</span></span></h3><p></p></div></div></div></foreignObject><text x="140" y="235" fill="#455E36" font-family="Helvetica" font-size="12px" text-anchor="middle">Navigator...</text></switch></g><path d="M 80 80 Q 80 80 80 179.76" fill="none" stroke="#6c8ebf" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 80 187.76 L 76 179.76 L 84 179.76 Z" fill="#6c8ebf" stroke="#6c8ebf" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/><path d="M 200 200 Q 200 200 200 100.24" fill="none" stroke="#82b366" stroke-width="2" stroke-miterlimit="10" pointer-events="stroke"/><path d="M 200 92.24 L 204 100.24 L 196 100.24 Z" fill="#82b366" stroke="#82b366" stroke-width="2" stroke-miterlimit="10" pointer-events="all"/><rect x="50" y="100" width="60" height="30" fill="none" stroke="none" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 58px; height: 1px; padding-top: 115px; margin-left: 51px;"><div data-drawio-colors="color: #4B6385; background-color: rgb(255, 255, 255); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 13px; font-family: Helvetica; color: rgb(75, 99, 133); line-height: 1.2; pointer-events: all; font-weight: bold; background-color: rgb(255, 255, 255); white-space: normal; overflow-wrap: normal;">Preferences</div></div></div></foreignObject><text x="80" y="119" fill="#4B6385" font-family="Helvetica" font-size="13px" text-anchor="middle" font-weight="bold">Preferenc...</text></switch></g><rect x="170" y="150" width="60" height="30" fill="none" stroke="none" pointer-events="all"/><g transform="translate(-0.5 -0.5)"><switch><foreignObject pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility" style="overflow: visible; text-align: left;"><div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 58px; height: 1px; padding-top: 165px; margin-left: 171px;"><div data-drawio-colors="color: #455E36; background-color: rgb(255, 255, 255); " style="box-sizing: border-box; font-size: 0px; text-align: center;"><div style="display: inline-block; font-size: 13px; font-family: Helvetica; color: rgb(69, 94, 54); line-height: 1.2; pointer-events: all; font-weight: bold; background-color: rgb(255, 255, 255); white-space: normal; overflow-wrap: normal;">Settings</div></div></div></foreignObject><text x="200" y="169" fill="#455E36" font-family="Helvetica" font-size="13px" text-anchor="middle" font-weight="bold">Settings</text></switch></g></g><switch><g requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"/><a transform="translate(0,-5)" xlink:href="https://www.diagrams.net/doc/faq/svg-export-text-problems" target="_blank"><text text-anchor="middle" font-size="10px" x="50%" y="100%">Viewer does not support full SVG 1.1</text></a></switch></svg>
+
+
+---
+File: /docs/Guides/Navigator/EPUB Fonts.md
+---
+
+# Font families in the EPUB navigator
+
+Readium allows users to customize the font family used to render a reflowable EPUB, by changing the [EPUB navigator preferences](Navigator%20Preferences.md).
+
+> [!NOTE]
+> You cannot change the default font family of a fixed-layout EPUB (with zoomable pages), as it is similar to a PDF or a comic book.
+
+## Available font families
+
+iOS ships with a large collection of font families that you can use directly in the EPUB preferences. [Take a look at the Apple catalog of System Fonts](https://developer.apple.com/fonts/system-fonts/).
+
+To improve readability, Readium embeds three additional font families designed for accessibility:
+
+* [OpenDyslexic](https://opendyslexic.org/)
+* [AccessibleDfA](https://github.com/Orange-OpenSource/font-accessible-dfa), by Orange
+* [iA Writer Duospace](https://github.com/iaolo/iA-Fonts/tree/master/iA%20Writer%20Duospace), by iA
+
+You can use all the iOS System Fonts out of the box with the EPUB navigator:
+
+```swift
+epubNavigator.submitPreferences(EPUBPreferences(
+    fontFamily: "Palatino"
+))
+```
+
+Alternatively, extend `FontFamily` to benefit from the compiler type safety:
+
+```swift
+extension FontFamily {
+    public static let palatino: FontFamily = "Palatino"
+}
+
+epubNavigator.submitPreferences(EPUBPreferences(
+    fontFamily: .palatino
+))
+```
+
+For your convenience, a number of [recommended fonts](https://readium.org/readium-css/docs/CSS09-default_fonts) are pre-declared in the `FontFamily` type: Iowan Old Style, Palatino, Athelas, Georgia, Helvetica Neue, Seravek and Arial.
+
+## Setting the available font families in the user interface
+
+If you build your settings user interface with the EPUB Preferences Editor, you can customize the list of available font families using `with(supportedValues:)`.
+
+```swift
+epubPreferencesEditor.fontFamily.with(supportedValues: [
+    nil, // A `nil` value means that the original author font will be used.
+    .palatino,
+    .helveticaNeue,
+    .iaWriterDuospace,
+    .accessibleDfA,
+    .openDyslexic
+])
+```
+
+## How to add custom font families?
+
+To offer more choices to your users, you must embed and declare custom font families. Use the following steps:
+
+1. Get the font files in the desired format, such as .ttf and .otf. [Google Fonts](https://fonts.google.com/) is a good source of free fonts.
+2. Add the files to your app target from Xcode.
+3. Declare new extensions for your custom font families to make them first-class citizens. This is optional but convenient.
+    ```swift
+    extension FontFamily {
+        public static let literata: FontFamily = "Literata"
+        public static let atkinsonHyperlegible: FontFamily = "Atkinson Hyperlegible"
+    }
+    ```
+4. Configure the EPUB navigator with a declaration of the font faces for all the additional font families.
+    ```swift
+    let resources = Bundle.main.resourceURL!
+    let navigator = try EPUBNavigatorViewController(
+        publication: publication,
+        initialLocation: locator,
+        config: .init(
+            fontFamilyDeclarations: [
+                CSSFontFamilyDeclaration(
+                    fontFamily: .literata,
+                    fontFaces: [
+                        // Literata is a variable font family, so we can provide a font weight range.
+                        // https://fonts.google.com/knowledge/glossary/variable_fonts
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Literata-VariableFont_opsz,wght.ttf"),
+                            style: .normal, weight: .variable(200...900)
+                        ),
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Literata-Italic-VariableFont_opsz,wght.ttf"),
+                            style: .italic, weight: .variable(200...900)
+                        )
+                    ]
+                ).eraseToAnyHTMLFontFamilyDeclaration(),
+
+                CSSFontFamilyDeclaration(
+                    fontFamily: .atkinsonHyperlegible,
+                    fontFaces: [
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Atkinson-Hyperlegible-Regular.ttf"),
+                            style: .normal, weight: .standard(.normal)
+                        ),
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Atkinson-Hyperlegible-Italic.ttf"),
+                            style: .italic, weight: .standard(.normal)
+                        ),
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Atkinson-Hyperlegible-Bold.ttf"),
+                            style: .normal, weight: .standard(.bold)
+                        ),
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Atkinson-Hyperlegible-BoldItalic.ttf"),
+                            style: .italic, weight: .standard(.bold)
+                        ),
+                    ]
+                ).eraseToAnyHTMLFontFamilyDeclaration()
+            ]
+        ),
+        httpServer: GCDHTTPServer.shared
+    )
+    ```
+
+You are now ready to use your custom font families.
+
+
+
+
+---
+File: /docs/Guides/Navigator/Navigator.md
+---
+
+# Navigator
+
+You can use a Readium Navigator to present the publication to the user. The `Navigator` renders resources on the screen and offers APIs and user interactions for navigating the contents.
+
+> [!IMPORTANT]
+> Navigators do not have user interfaces besides the view that displays the publication. Applications are responsible for providing a user interface with bookmark buttons, a progress bar, etc.
+
+## Default implementations
+
+The Readium toolkit comes with several `Navigator` implementations for different publication profiles. Some are `UIViewController`s, designed to be added to your view hierarchy, while others are chromeless and can be used in the background.
+
+| Navigator                     | Profile     | Formats                                                               |
+|-------------------------------|-------------|-----------------------------------------------------------------------|
+| `EPUBNavigatorViewController` | `epub`      | EPUB (`.epub`), Readium Web Publication (`.webpub`)                   |
+| `PDFNavigatorViewController`  | `pdf`       | PDF (`.pdf`), LCP-protected PDF (`.lcpdf`)                            |
+| `CBZNavigatorViewController`  | `divina`    | Zipped Comic Book (`cbz`), Readium Divina (`.divina`)                 |
+| `AudioNavigator`              | `audiobook` | Zipped Audio Book (`.zab`), Readium Audiobook (`.audiobook`, `.lcpa`) |
+
+To find out which Navigator is compatible with a publication, refer to its [profile](https://readium.org/webpub-manifest/profiles/). Use `publication.conformsTo()` to identify the publication's profile.
+
+```swift
+if publication.conformsTo(.epub) {
+    let navigator = try EPUBNavigatorViewController(
+        publication: publication,
+        initialLocation: lastReadLocation,
+        httpServer: GCDHTTPServer.shared
+    )
+
+    hostViewController.present(navigator, animated: true)
+}
+```
+
+## Navigator APIs
+
+Navigators implement a set of shared interfaces to help reuse the reading logic across publication profiles. For example, instead of using specific implementations like `EPUBNavigatorViewController`, use the `Navigator` interface to create a location history manager compatible with all Navigator types.
+
+You can create custom Navigators and easily integrate them into your app with minimal modifications by implementing these interfaces.
+
+### `Navigator` interface
+
+All Navigators implement the `Navigator` interface, which provides the foundation for navigating resources in a `Publication`. You can use it to move through the publication's content or to find the current position.
+
+Note that this interface does not specify how the content is presented to the user.
+
+### `VisualNavigator` interface
+
+Navigators rendering the content visually on the screen implement the `VisualNavigator` interface. This interface offers details about the presentation style (e.g., scrolled, right-to-left, etc.) and allows monitoring input events like taps or keyboard strokes.
+
+### `SelectableNavigator` interface
+
+Navigators enabling users to select parts of the content implement `SelectableNavigator`. You can use it to extract the `Locator` and content of the selected portion.
+
+### `DecorableNavigator` interface
+
+A Decorable Navigator is able to render decorations over a publication, such as highlights or margin icons.
+
+[See the corresponding proposal for more information](https://readium.org/architecture/proposals/008-decorator-api.html).
+
+## Instantiating a Navigator
+
+### Visual Navigators
+
+The Visual Navigators are implemented as `UIViewController` and must be added to your iOS view hierarchy to render the publication contents. 
+
+```swift
+let navigator = try EPUBNavigatorViewController(
+    publication: publication,
+    initialLocation: lastReadLocation,
+    httpServer: GCDHTTPServer.shared
+)
+
+hostViewController.present(navigator, animated: true)
+```
+
+> [!NOTE]
+> The HTTP server is used to serve the publication resources to the Navigator. You may use your own implementation, or the recommended `GCDHTTPServer` which is part of the `ReadiumAdapterGCDWebServer` package.
+
+### Audio Navigator
+
+The `AudioNavigator` is chromeless and does not provide any user interface, allowing you to create your own custom UI.
+
+```swift
+let navigator = AudioNavigator(
+    publication: publication,
+    initialLocation: lastReadLocation
+)
+
+navigator.play()
+```
+
+## Navigating the contents of the publication
+
+The `Navigator` interface offers various `go` APIs for navigating the publication. For instance:
+
+* to the previous or next pages: `navigator.goForward()` or `navigator.goBackward()`
+* to a link from the `publication.tableOfContents` or `publication.readingOrder`: `navigator.go(to: link)`
+* to a locator from a search result: `navigator.go(to: locator)`
+
+## Reading progression
+
+### Saving and restoring the last read location
+
+Navigators don't store any data permanently. Therefore, it is your responsibility to save the last read location in your database and restore it when creating a new Navigator.
+
+You can observe the current position in the publication by implementing a `NavigatorDelegate`.
+
+```swift
+navigator.delegate = MyNavigatorDelegate()
+
+class MyNavigatorDelegate: NavigatorDelegate {
+
+    override func navigator(_ navigator: Navigator, locationDidChange locator: Locator) {
+        if let position = locator.locations.position {
+            print("At position \(position) on \(publication.positions.count)")
+        }
+        if let progression = locator.locations.progression {
+            return "Progression in the current resource: \(progression)%"
+        }
+        if let totalProgression = locator.locations.totalProgression {
+            return "Total progression in the publication: \(progression)%"
+        }
+
+        // Save the position in your bookshelf database
+        database.saveLastReadLocation(locator.jsonString)
+    }
+}
+```
+
+The `Locator` object may be serialized to JSON in your database, and deserialized to set the initial location when creating the navigator.
+
+```swift
+let lastReadLocation = Locator(jsonString: dabase.lastReadLocation())
+
+let navigator = try EPUBNavigatorViewController(
+    publication: publication,
+    initialLocation: lastReadLocation,
+    httpServer: GCDHTTPServer.shared
+)
+```
+
+### Bookmarking the current location
+
+Use a Navigator's `currentLocation` property to persists the current position, for instance as a bookmark.
+
+After the user selects a bookmark from your user interface, navigate to it using `navigator.go(bookmark.locator)`.
+
+### Displaying a progression slider
+
+To display a percentage-based progression slider, use the `locations.totalProgression` property of the `currentLocation`. This property holds the total progression across an entire publication.
+
+Given a progression from 0 to 1, you can obtain a `Locator` object from the `Publication`. This can be used to navigate to a specific percentage within the publication.
+
+```swift
+if let locator = publication.locate(progression: 0.5) {
+    navigator.go(to: locator)
+}
+```
+
+### Displaying the number of positions
+
+> [!NOTE]
+> Readium does not have the concept of pages, as they are not useful when dealing with reflowable publications across different screen sizes. Instead, we use [**positions**](https://readium.org/architecture/models/locators/positions/) which remain stable even when the user changes the font size or device.
+
+Not all Navigators provide positions, but most `VisualNavigator` implementations do. Verify if `publication.positions` is not empty to determine if it is supported.
+
+To find the total positions in the publication, use `publication.positions.count`. You can get the current position with `navigator.currentLocation?.locations.position`.
+
+## Navigating with edge taps and keyboard arrows
+
+Readium provides a `DirectionalNavigationAdapter` helper to turn pages using arrow and space keys or screen taps.
+
+You can use it from your `VisualNavigatorDelegate` implementation:
+
+```swift
+extension MyReader: VisualNavigatorDelegate {
+
+    func navigator(_ navigator: VisualNavigator, didTapAt point: CGPoint) {
+        // Turn pages when tapping the edge of the screen.
+        guard !DirectionalNavigationAdapter(navigator: navigator).didTap(at: point) else {
+            return
+        }
+
+        toggleNavigationBar()
+    }
+
+    func navigator(_ navigator: VisualNavigator, didPressKey event: KeyEvent) {
+        // Turn pages when pressing the arrow keys.
+        DirectionalNavigationAdapter(navigator: navigator).didPressKey(event: event)
+    }
+}
+```
+
+`DirectionalNavigationAdapter` offers a lot of customization options. Take a look at its API.
+
+## User preferences
+
+Readium Navigators support user preferences, such as font size or background color. Take a look at [the Preferences API guide](Preferences.md) for more information.
+
+
+
+---
+File: /docs/Guides/Navigator/Preferences.md
+---
+
+# Configuring the Navigator
+
+Take a look at the [migration guide](../Migration%20Guide.md) if you are already using the legacy EPUB settings.
+
+## Overview
+
+The Readium Navigator can be configured dynamically, as it implements the `Configurable` protocol.
+
+You cannot directly overwrite the Navigator settings. Instead, you submit a set of `Preferences` to the Navigator, which will then recalculate its settings and update the presentation.
+
+For instance: "font size" is a **setting**, and the application can submit the font size value `150%` as a **preference**.
+
+<img src="Assets/settings-flow.svg">
+
+```swift
+// 1. Create a set of preferences.
+let preferences = EPUBPreferences(
+    fontFamily: .serif,
+    fontSize: 2.0,
+    publisherStyles: false
+)
+
+// 2. Submit the preferences, the Navigator will update its settings and the presentation.
+epubNavigator.submitPreferences(preferences)
+
+// 3. Read the new settings.
+assert(epubNavigator.settings.fontFamily == .serif)
+```
+
+### Editing preferences
+
+To assist you in building a preferences user interface or modifying existing preferences, navigators can offer a `PreferencesEditor`. Each implementation includes rules for adjusting preferences, such as the supported values or ranges.
+
+```swift
+// 1. Create a preferences editor.
+let editor = epubNavigator.editor(of: preferences)
+    
+// 2. Modify the preferences through the editor.
+editor.fontFamily.set(.serif)
+editor.fontSize.increment()
+editor.publisherStyles.toggle()
+
+// 3. Submit the edited preferences.
+epubNavigator.submitPreferences(editor.preferences)
+```
+
+### Preferences are low-level
+
+Preferences are low-level technical properties. While some of them can be exposed directly to the user, such as the font size, others should not be displayed as-is.
+
+For instance, in EPUB, we can simulate two pages side by side using the `columnCount` (`auto`, `1`, `2`) property for reflowable resources, and the `spread` (`auto`, `never`, `always`) property for fixed-layout publications. Rather than displaying both of these settings with all of their possible values in the user interface, you might prefer to show a single switch button to enable a dual-page mode, which will set both settings appropriately.
+
+### Inactive settings
+
+A setting may be inactive if its activation conditions are not met in a set of preferences. The Navigator will ignore inactive settings when updating its presentation. For example, with the EPUB navigator, the word spacing setting requires the publisher styles to be disabled in order to take effect.
+
+You can check if a setting is effective for a set of preferences using the `PreferencesEditor`:
+
+```swift
+let editor = epubNavigator.editor(of: preferences)
+editor.wordSpacing.isEffective
+```
+
+## Setting the initial Navigator preferences and app defaults
+
+When opening a publication, you can immediately apply the user preferences by providing them to the Navigator constructor. The API for doing this varies depending on the Navigator implementation, but generally looks like this:
+
+```swift
+let navigator = try EPUBNavigatorViewController(
+    publication: publication,
+    config: .init(
+        preferences: EPUBPreferences(
+            language: Language(code: "fr")
+        ),
+        defaults: EPUBDefaults(
+            pageMargins: 1.5,
+            scroll: true
+        )
+    )
+)
+```
+
+The `defaults` are used as fallback values when the default Navigator settings are not suitable for your application.
+
+## Build a user settings interface
+
+:question: The following examples use SwiftUI, but could be implemented using UIKit as well.
+
+### `PreferencesEditor`
+
+Although you could create and modify `Preferences` objects directly before submitting them to the Navigator, a `PreferenceEditor` can assist you by providing helpers for dealing with each preference type when building the user interface.
+
+`PreferencesEditor` implementations are specific to each Navigator, but they all provide `Preference<Value>` properties for every setting (e.g. theme or font size). 
+
+### `UserPreferences` view
+
+You can use the `PreferencesEditor` type to determine which (media type agnostic) view to create.
+
+```swift
+struct UserPreferences<
+    P: ConfigurablePreferences,
+    E: PreferencesEditor
+>: View where E.Preferences == P {
+
+    let editor: E
+    let commit: () -> Void
+
+    @ViewBuilder var body: some View {
+        List {
+            Button("Reset") {
+                editor.clear()
+                commit()
+            }
+
+            switch editor {
+            case let editor as PDFPreferencesEditor:
+                fixedLayoutUserPreferences(
+                    commit: commit,
+                    backgroundColor: editor.backgroundColor,
+                    readingProgression: editor.readingProgression,
+                    scroll: editor.scroll,
+                    ...
+                )
+
+            case let editor as EPUBPreferencesEditor:
+                switch editor.layout {
+                case .reflowable:
+                    reflowableUserPreferences(
+                        commit: commit,
+                        backgroundColor: editor.backgroundColor,
+                        columnCount: editor.columnCount,
+                        fontFamily: editor.fontFamily,
+                        ...
+                    )
+                case .fixed:
+                    fixedLayoutUserPreferences(
+                        commit: commit,
+                        backgroundColor: editor.backgroundColor,
+                        readingProgression: editor.readingProgression,
+                        ...
+                    )
+                }
+
+            default:
+                fatalError("Unsupported preferences editor.")
+            }
+        }
+    }
+}
+```
+
+The `commit` parameter is a closure used to save the edited preferences to the data store, before submitting them to the Navigator.
+
+:question: The individual `PDFPreferencesEditor` properties are passed to `fixedLayoutUserPreferences()` so that it can be reused with other fixed-layout publication types, such as FXL EPUB or comic books. This is useful to reuse the user interface for similar publication types.
+
+### User settings view for fixed-layout publications
+
+This stateless view displays the actual preferences for a fixed-layout publication. The `Preference` parameters are nullable as they might not be available for all publication types. It delegates the rendering of individual preferences to more specific views.
+
+```swift
+@ViewBuilder func fixedLayoutUserPreferences(
+    commit: @escaping () -> Void,
+    scroll: AnyPreference<Bool>? = nil,
+    fit: AnyEnumPreference<ReadiumNavigator.Fit>? = nil,
+    pageSpacing: AnyRangePreference<Double>? = nil
+) -> some View {
+    if let scroll = scroll {
+        toggleRow(
+            title: "Scroll",
+            preference: scroll,
+            commit: commit
+        )
+    }
+
+    if let fit = fit {
+        pickerRow(
+            title: "Fit",
+            preference: fit,
+            commit: commit,
+            formatValue: { v in
+                switch v {
+                case .cover: return "Cover"
+                case .contain: return "Contain"
+                case .width: return "Width"
+                case .height: return "Height"
+                }
+            }
+        )
+    }
+
+    if let pageSpacing = pageSpacing {
+        stepperRow(
+            title: "Page spacing",
+            preference: pageSpacing,
+            commit: commit
+        )
+    }
+}
+```
+
+### View for a boolean `Preference`
+
+A `Preference<Bool>` can be represented as a simple toggle button.
+
+```swift
+@ViewBuilder func toggleRow(
+    title: String,
+    preference: AnyPreference<Bool>,
+    commit: @escaping () -> Void
+) -> some View {
+    Toggle(title,
+        isOn: Binding(
+            get: { preference.value ?? preference.effectiveValue },
+            set: { checked in
+                preference.set(checked)
+                commit()
+            }
+        )
+    )
+}
+```
+
+For convenience, you could add a custom extension to create a SwiftUI `Binding` from a `Preference`. 
+
+```swift
+
+Toggle(title,
+    isOn: preference.binding(onSet: commit)
+)
+
+extension Preference {
+
+    /// Creates a SwiftUI binding to modify the preference's value.
+    ///
+    /// This is convenient when paired with a `Toggle` or `Picker`.
+    func binding(onSet: @escaping () -> Void = {}) -> Binding<Value> {
+        Binding(
+            get: { value ?? effectiveValue },
+            set: { set($0); onSet() }
+        )
+    }
+}
+```
+
+### `value` vs `effectiveValue`, which one to use?
+
+In the previous example, you may have noticed the use of `preference.value ?? preference.effectiveValue` for the current value.
+
+* `value` holds the user-selected preference, which may be `nil`.
+* `effectiveValue` is the setting value that will actually be used by the Navigator once the preferences are submitted. It may be different from the user-selected value if it is incompatible or invalid.
+
+This is a common pattern with this API because it is less confusing to display the user-selected value, even if it will not actually be used by the Navigator.
+
+### View for a `RangePreference<Value>`
+
+A `RangePreference<Value>` can be represented as a stepper component with decrement and increment buttons.
+
+```swift
+@ViewBuilder func stepperRow<V: Comparable>(
+    title: String,
+    preference: AnyRangePreference<V>,
+    commit: @escaping () -> Void
+) -> some View {
+    Stepper(
+        onIncrement: {
+            preference.increment()
+            commit()
+        },
+        onDecrement: {
+            preference.decrement()
+            commit()
+        }
+    ) {
+        HStack {
+            Text(title)
+
+            Spacer()
+
+            Text(preference.format(value: preference.value ?? preference.effectiveValue))
+                .font(.caption)
+        }
+    }
+}
+```
+
+This view uses the `increment()` and `decrement()` range helpers of `RangePreference`, but it is also possible to set a value manually.
+
+The current value is displayed after formatting it with the `RangePreference.format(value:)` helper. This will automatically format the value to a human-readable string, such as a percentage or a value with units (e.g. 30px).
+
+### View for an `EnumPreference<Value>`
+
+An `EnumPreference<Value>` is a preference accepting a closed set of values. This is a great candidate to use a [`Picker`](https://developer.apple.com/documentation/swiftui/picker) view with different styles depending on the value set.
+
+* a `menu` for a large enum
+* a `radioGroup` or `segmented` buttons for a small one
+
+In the following example, the `Picker` is built with `preference.supportedValues`, which returns the allowed enum members.
+
+```swift
+@ViewBuilder func pickerRow<V: Hashable>(
+    title: String,
+    preference: AnyEnumPreference<V>,
+    commit: @escaping () -> Void,
+    formatValue: @escaping (V) -> String
+) -> some View {
+    Picker(title, selection: preference.binding(onSet: commit)) {
+        ForEach(preference.supportedValues, id: \.self) {
+            Text(formatValue($0)).tag($0)
+        }
+    }
+}
+```
+
+> [!NOTE]
+> Contrarily to a `RangePreference`, there's no intrinsic `format(value:)` helper for an `EnumPreference`. Instead, you must provide your own localized strings for the possible values.
+
+```swift
+pickerRow(
+    title: "Reading progression",
+    preference: readingProgression,
+    commit: commit,
+    formatValue: { v in
+        switch v {
+        case .ltr: return "LTR"
+        case .rtl: return "RTL"
+        }
+    }
+)
+```
+
+## Save and restore the user preferences
+
+Having a user settings screen is not useful if you cannot save and restore the selected preferences for future sessions. All `Preferences` types implement the `Codable` protocol and can be serialized to and from JSON.
+
+```swift
+let jsonData = try JSONEncoder().encode(preferences)
+```
+
+When you are ready to restore the user preferences, construct a new `Preferences` object from the JSON data.
+
+```swift
+let preferences = try JSONDecoder().decode(EPUBPreferences.self, from: jsonData)
+```
+
+In the Test App, `UserPreferencesViewModel` delegates the preferences persistence to a `UserPreferencesStore`. The preferences are observed from the store to automatically submit updated preferences to the navigator and refresh the user interface.
+
+### Splitting and merging preferences
+
+The way you store user preferences can affect the available features. You could have, for example:
+
+* A unique set of preferences for each publication.
+* Preferences shared between publications with the same profile or media type (EPUB, PDF, etc.).
+* Global preferences shared with all publications (e.g. theme).
+* Several user setting profiles/themes that the user can switch between and modify independently.
+* Some settings that are not stored as JSON and will need to be reconstructed (e.g. the publication language).
+
+To assist you, the toolkit provides suggested filters for each `Preferences` type, to extract the preferences intrinsic to a publication.
+
+```swift
+let publicationPrefs = preferences.filterPublicationPreferences()
+let sharedPrefs = preferences.filterSharedPreferences()
+
+// You can reconstruct the original preferences by combining the filtered ones.
+let combinedPrefs = publicationPrefs.merging(sharedPrefs)
+```
+
+> [!TIP]
+> Some preferences are closely tied to a specific publication and should never be shared between multiple publications, such as the language. It is recommended that you store these preferences separately per book, which is what the suggested filters will do if you use them.
+
+## Appendix: Preference constraints
+
+### EPUB
+
+#### Reflowable vs fixed-layout
+
+EPUB comes in two very different flavors: **reflowable** which allows a lot of customization, and **fixed-layout** which is similar to a PDF or a comic book. Depending on the EPUB being rendered, the Navigator will ignore some of the preferences.
+
+| Setting              | Reflowable         | Fixed Layout       |
+|----------------------|--------------------|--------------------|
+| `backgroundColor`    | :white_check_mark: | :white_check_mark: |
+| `columnCount`        | :white_check_mark: |                    |
+| `fontFamily`         | :white_check_mark: |                    |
+| `fontSize`           | :white_check_mark: |                    |
+| `fontWeight`         | :white_check_mark: |                    |
+| `hyphens`            | :white_check_mark: |                    |
+| `imageFilter`        | :white_check_mark: |                    |
+| `language`           | :white_check_mark: | :white_check_mark: |
+| `letterSpacing`      | :white_check_mark: |                    |
+| `ligatures`          | :white_check_mark: |                    |
+| `lineHeight`         | :white_check_mark: |                    |
+| `pageMargins`        | :white_check_mark: |                    |
+| `paragraphIndent`    | :white_check_mark: |                    |
+| `paragraphSpacing`   | :white_check_mark: |                    |
+| `publisherStyles`    | :white_check_mark: |                    |
+| `readingProgression` | :white_check_mark: | :white_check_mark: |
+| `scroll`             | :white_check_mark: |                    |
+| `spread`             |                    | :white_check_mark: |
+| `textAlign`          | :white_check_mark: |                    |
+| `textColor`          | :white_check_mark: |                    |
+| `textNormalization`  | :white_check_mark: |                    |
+| `theme`              | :white_check_mark: |                    |
+| `typeScale`          | :white_check_mark: |                    |
+| `verticalText`       | :white_check_mark: |                    |
+| `wordSpacing`        | :white_check_mark: |                    |
+
+#### Publisher styles
+
+The following advanced preferences require `publisherStyles` to be explicitly set to `false`. Make sure you convey this in your user interface.
+
+* `hyphens`
+* `letterSpacing`
+* `ligatures`
+* `lineHeight`
+* `paragraphIndent`
+* `paragraphSpacing`
+* `textAlign`
+* `typeScale`
+* `wordSpacing`
+
+#### Scroll vs paginated
+
+The `columnCount` preference is available only when in paginated mode (`scroll = false`).
+
+#### Dark theme specific preferences
+
+The `imageFilter` preference is available only in dark mode (`theme = .dark`).
+
+#### Language specific preferences
+
+Some preferences are not available for all languages and layout.
+
+| Preference        | LTR                | RTL                | CJK |
+|-------------------|--------------------|--------------------|-----|
+| `paragraphIndent` | :white_check_mark: | :white_check_mark: |     |
+| `textAlign`       | :white_check_mark: | :white_check_mark: |     |
+| `letterSpacing`   | :white_check_mark: |                    |     |
+| `wordSpacing`     | :white_check_mark: |                    |     |
+| `hyphens`         | :white_check_mark: |                    |     |
+| `ligatures`       |                    | :white_check_mark: |     |
+
+### PDF
+
+#### Scroll vs paginated
+
+Some preferences are available only in scroll or paginated mode (`scroll = false`).
+
+| Preference         | Vertical Scroll    | Horizontal Scroll  | Paginated          |
+|--------------------|--------------------|--------------------|--------------------|
+| `offsetFirstPage`  | :white_check_mark: |                    | :white_check_mark: |
+| `spread`           | :white_check_mark: |                    | :white_check_mark: |
+| `scrollAxis`       | :white_check_mark: | :white_check_mark: |                    |
+| `visibleScrollbar` | :white_check_mark: | :white_check_mark: |                    |
+
+
+
+
+---
+File: /docs/Guides/Navigator/SwiftUI.md
+---
+
+# Integrating the Navigator with SwiftUI
+
+The Navigator is built with UIKit and provides `UIViewController` implementations. Nevertheless, you can integrate them into a SwiftUI view hierarchy using Apple's [`UIViewRepresentable`](https://developer.apple.com/documentation/swiftui/uiviewrepresentable).
+
+## SwiftUI wrapper for a Navigator's `UIViewController`
+
+Here is a basic example of a `UIViewControllerRepresentable` implementation that hosts a Navigator.
+
+```swift
+/// SwiftUI wrapper for the `ReaderViewController`.
+struct ReaderViewControllerWrapper: UIViewControllerRepresentable {
+    let viewController: ReaderViewController
+
+    func makeUIViewController(context: Context) -> ReaderViewController {
+        viewController
+    }
+
+    func updateUIViewController(_ uiViewController: ReaderViewController, context: Context) {}
+}
+
+/// Host view controller for a Readium Navigator.
+class ReaderViewController: UIViewController {
+
+    /// View model provided by your application.
+    private let viewModel: ReaderViewModel
+    
+    /// Readium Navigator instance.
+    private let navigator: Navigator & UIViewController
+
+    init(viewModel: ReaderViewModel, navigator: Navigator & UIViewController) {
+        self.viewModel = viewModel
+        self.navigator = navigator
+
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init?(coder: NSCoder) not implemented")
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        addChild(navigator)
+        navigator.view.frame = view.bounds
+        navigator.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(navigator.view)
+        navigator.didMove(toParent: self)
+    }
+
+    /// Handler for a custom editing action.
+    @objc func makeHighlight(_ sender: Any) {
+        viewModel.makeHighlight()
+    }
+}
+```
+
+Note that we could use a `Navigator` instance directly, without a parent `ReaderViewController`. However, a host view controller is necessary if you want to use custom text selection menu items and capture events in the UIKit responder chain. For instance, when configuring your EPUB Navigator with:
+
+```swift
+var config = EPUBNavigatorViewController.Configuration()
+config.editingActions.append(
+    EditingAction(
+        title: "Highlight",
+        action: #selector(makeHighlight)
+    )
+)
+
+let navigator = try EPUBNavigatorViewController(
+    publication: publication,
+    initialLocation: locator,
+    config: config,
+    ...
+)
+```
+
+## Embedding the `ReaderViewControllerWrapper` in a SwiftUI view
+
+```swift
+struct ReaderView: View {
+    
+    /// View model provided by your application.
+    @ObservedObject var viewModel: ReaderViewModel
+
+    let viewControllerWrapper: ReaderViewControllerWrapper
+
+    var body: some View {
+        viewControllerWrapper
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea(.all)
+            .navigationTitle(viewModel.book.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(viewModel.isFullscreen)
+            .statusBarHidden(viewModel.isFullscreen)
+    }
+}
+```
+
+## Assembling the Navigator and SwiftUI objects
+
+Now, let's construct an EPUB navigator and assemble the SwiftUI view hierarchy to bring all the pieces together.
+
+```swift
+var config = EPUBNavigatorViewController.Configuration()
+config.editingActions.append(
+    EditingAction(
+        title: "Highlight",
+        action: #selector(highlightSelection)
+    )
+)
+
+let navigator = try EPUBNavigatorViewController(
+    publication: publication,
+    initialLocation: locator,
+    config: config,
+    ...
+)
+
+// View model provided by your application.
+let viewModel = ReaderViewModel()
+
+let view = ReaderView(
+    viewModel: viewModel,
+    viewControllerWrapper: ReaderViewControllerWrapper(
+        viewController: ReaderViewController(
+            viewModel: viewModel,
+            navigator: navigator
+        )
+    )
+)
+```
+
+## Handling touch and keyboard events
+
+You still need to implement the `VisualNavigatorDelegate` protocol to handle gestures in the navigator. Avoid using SwiftUI touch modifiers, as they will prevent the user from interacting with the book.
+
+
+
+---
+File: /docs/Guides/Content.md
+---
+
+# Extracting the content of a publication
+
+> [!NOTE]
+> The described feature is still experimental and the implementation incomplete.
+
+Many high-level features require access to the raw content (text, media, etc.) of a publication, such as:
+
+* Text-to-speech
+* Accessibility reader
+* Basic search
+* Full-text search indexing
+* Image or audio indexes
+
+The `ContentService` provides a way to iterate through a publication's content, extracted as semantic elements.
+
+First, request the publication's `Content`, starting from a given `Locator`. If the locator is missing, the `Content` will be extracted from the beginning of the publication.
+
+```swift
+guard let content = publication.content(from: startLocator) else {
+    // Abort as the content cannot be extracted
+    return
+}
+```
+
+## Extracting the raw text content
+
+Getting the whole raw text of a publication is such a common use case that a helper is available on `Content`:
+
+```swift
+let wholeText = content.text()
+```
+
+This is an expensive operation, proceed with caution and cache the result if you need to reuse it.
+
+## Iterating through the content
+
+The individual `Content` elements can be iterated through with a regular `for` loop by converting it to a sequence:
+
+```swift
+for (element in content.sequence()) {
+    // Process element
+}
+```
+
+Alternatively, you can get the whole list of elements with `content.elements()`, or use the lower level APIs to iterate the content manually:
+
+```swift
+let iterator = content.iterator()
+while let element = try iterator.next() {
+    print(element)
+}
+```
+
+Some `Content` implementations support bidirectional iterations. To iterate backwards, use:
+
+```swift
+let iterator = content.iterator()
+while let element = try iterator.previous() {
+    print(element)
+}
+```
+
+## Processing the elements
+
+The `Content` iterator yields `ContentElement` objects representing a single semantic portion of the publication, such as a heading, a paragraph or an embedded image.
+
+Every element has a `locator` property targeting it in the publication. You can use the locator, for example, to navigate to the element or to draw a `Decoration` on top of it.
+
+```swift
+navigator.go(to: element.locator)
+```
+
+### Types of elements
+
+Depending on the actual implementation of `ContentElement`, more properties are available to access the actual data. The toolkit ships with a number of default implementations for common types of elements.
+
+#### Embedded media
+
+The `EmbeddedContentElement` protocol is implemented by any element referencing an external resource. It contains an `embeddedLink` property you can use to get the actual content of the resource.
+
+```swift
+if let element = element as? EmbeddedContentElement {
+    let bytes = try publication
+        .get(element.embeddedLink)
+        .read().get()
+}
+```
+
+Here are the default available implementations:
+
+* `AudioContentElement` - audio clips
+* `VideoContentElement` - video clips
+* `ImageContentElement` - bitmap images, with the additional property:
+    * `caption: String?` - figure caption, when available
+
+#### Text
+
+##### Textual elements
+
+The `TextualContentElement` protocol is implemented by any element which can be represented as human-readable text. This is useful when you want to extract the text content of a publication without caring for each individual type of elements.
+
+```swift
+let wholeText = publication.content()
+    .elements()
+    .compactMap { ($0 as? TextualContentElement)?.text.takeIf { !$0.isEmpty } }
+    .joined(separator: "\n")
+```
+
+##### Text elements
+
+Actual text elements are instances of `TextContentElement`, which represent a single block of text such as a heading, a paragraph or a list item. It is comprised of a `role` and a list of `segments`.
+
+The `role` is the nature of the text element in the document. For example a heading, body, footnote or a quote. It can be used to reconstruct part of the structure of the original document.
+
+A text element is composed of individual segments with their own `locator` and `attributes`. They are useful to associate attributes with a portion of a text element. For example, given the HTML paragraph:
+
+```html
+<p>It is pronounced <span lang="fr">croissant</span>.</p>
+```
+
+The following `TextContentElement` will be produced:
+
+```swift
+TextContentElement(
+    role: .body,
+    segments: [
+        TextContentElement.Segment(text: "It is pronounced "),
+        TextContentElement.Segment(text: "croissant", attributes: [ContentAttribute(key: .language, value: "fr")]),
+        TextContentElement.Segment(text: ".")
+    ]
+)
+```
+
+If you are not interested in the segment attributes, you can also use `element.text` to get the concatenated raw text.
+
+### Element attributes
+
+All types of `ContentElement` can have associated attributes. Custom `ContentService` implementations can use this as an extensibility point.
+
+## Use cases
+
+### An index of all images embedded in the publication
+
+This example extracts all the embedded images in the publication and displays them in a SwiftUI list. Clicking on an image jumps to its location in the publication.
+
+```swift
+struct ImageIndex: View {
+    struct Item: Hashable {
+        let locator: Locator
+        let text: String?
+        let image: UIImage
+    }
+
+    let publication: Publication
+    let navigator: Navigator
+    @State private var items: [Item] = []
+
+    init(publication: Publication, navigator: Navigator) {
+        self.publication = publication
+        self.navigator = navigator
+    }
+
+    var body: some View {
+        ScrollView {
+            LazyVStack {
+                ForEach(items, id: \.self) { item in
+                    VStack() {
+                        Image(uiImage: item.image)
+                        Text(item.text ?? "No caption")
+                    }
+                    .onTapGesture {
+                        navigator.go(to: item.locator)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            items = publication.content()?
+                .elements()
+                .compactMap { element in
+                    guard
+                        let element = element as? ImageContentElement,
+                        let image = try? publication.get(element.embeddedLink)
+                            .read().map(UIImage.init).get()
+                    else {
+                        return nil
+                    }
+
+                    return Item(
+                        locator: element.locator,
+                        text: element.caption ?? element.accessibilityLabel,
+                        image: image
+                    )
+                }
+                ?? []
+        }
+    }
+}
+```
+
+## References
+
+* [Content Iterator proposal](https://github.com/readium/architecture/pull/177)
+
+
+
+---
+File: /docs/Guides/EPUB Fonts.md
+---
+
+# Font families in the EPUB navigator
+
+Readium allows users to customize the font family used to render a reflowable EPUB, by changing the [EPUB navigator preferences](Navigator%20Preferences.md).
+
+> [!NOTE]
+> You cannot change the default font family of a fixed-layout EPUB (with zoomable pages), as it is similar to a PDF or a comic book.
+
+## Available font families
+
+iOS ships with a large collection of font families that you can use directly in the EPUB preferences. [Take a look at the Apple catalog of System Fonts](https://developer.apple.com/fonts/system-fonts/).
+
+To improve readability, Readium embeds three additional font families designed for accessibility:
+
+* [OpenDyslexic](https://opendyslexic.org/)
+* [AccessibleDfA](https://github.com/Orange-OpenSource/font-accessible-dfa), by Orange
+* [iA Writer Duospace](https://github.com/iaolo/iA-Fonts/tree/master/iA%20Writer%20Duospace), by iA
+
+You can use all the iOS System Fonts out of the box with the EPUB navigator:
+
+```swift
+epubNavigator.submitPreferences(EPUBPreferences(
+    fontFamily: "Palatino"
+))
+```
+
+Alternatively, extend `FontFamily` to benefit from the compiler type safety:
+
+```swift
+extension FontFamily {
+    public static let palatino: FontFamily = "Palatino"
+}
+
+epubNavigator.submitPreferences(EPUBPreferences(
+    fontFamily: .palatino
+))
+```
+
+For your convenience, a number of [recommended fonts](https://readium.org/readium-css/docs/CSS09-default_fonts) are pre-declared in the `FontFamily` type: Iowan Old Style, Palatino, Athelas, Georgia, Helvetica Neue, Seravek and Arial.
+
+## Setting the available font families in the user interface
+
+If you build your settings user interface with the EPUB Preferences Editor, you can customize the list of available font families using `with(supportedValues:)`.
+
+```swift
+epubPreferencesEditor.fontFamily.with(supportedValues: [
+    nil, // A `nil` value means that the original author font will be used.
+    .palatino,
+    .helveticaNeue,
+    .iaWriterDuospace,
+    .accessibleDfA,
+    .openDyslexic
+])
+```
+
+## How to add custom font families?
+
+To offer more choices to your users, you must embed and declare custom font families. Use the following steps:
+
+1. Get the font files in the desired format, such as .ttf and .otf. [Google Fonts](https://fonts.google.com/) is a good source of free fonts.
+2. Add the files to your app target from Xcode.
+3. Declare new extensions for your custom font families to make them first-class citizens. This is optional but convenient.
+    ```swift
+    extension FontFamily {
+        public static let literata: FontFamily = "Literata"
+        public static let atkinsonHyperlegible: FontFamily = "Atkinson Hyperlegible"
+    }
+    ```
+4. Configure the EPUB navigator with a declaration of the font faces for all the additional font families.
+    ```swift
+    let resources = Bundle.main.resourceURL!
+    let navigator = try EPUBNavigatorViewController(
+        publication: publication,
+        initialLocation: locator,
+        config: .init(
+            fontFamilyDeclarations: [
+                CSSFontFamilyDeclaration(
+                    fontFamily: .literata,
+                    fontFaces: [
+                        // Literata is a variable font family, so we can provide a font weight range.
+                        // https://fonts.google.com/knowledge/glossary/variable_fonts
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Literata-VariableFont_opsz,wght.ttf"),
+                            style: .normal, weight: .variable(200...900)
+                        ),
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Literata-Italic-VariableFont_opsz,wght.ttf"),
+                            style: .italic, weight: .variable(200...900)
+                        )
+                    ]
+                ).eraseToAnyHTMLFontFamilyDeclaration(),
+
+                CSSFontFamilyDeclaration(
+                    fontFamily: .atkinsonHyperlegible,
+                    fontFaces: [
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Atkinson-Hyperlegible-Regular.ttf"),
+                            style: .normal, weight: .standard(.normal)
+                        ),
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Atkinson-Hyperlegible-Italic.ttf"),
+                            style: .italic, weight: .standard(.normal)
+                        ),
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Atkinson-Hyperlegible-Bold.ttf"),
+                            style: .normal, weight: .standard(.bold)
+                        ),
+                        CSSFontFace(
+                            file: resources.appendingPathComponent("Atkinson-Hyperlegible-BoldItalic.ttf"),
+                            style: .italic, weight: .standard(.bold)
+                        ),
+                    ]
+                ).eraseToAnyHTMLFontFamilyDeclaration()
+            ]
+        ),
+        httpServer: GCDHTTPServer.shared
+    )
+    ```
+
+You are now ready to use your custom font families.
+
+
+
+
+---
+File: /docs/Guides/Getting Started.md
+---
+
+# Getting started
+
+The Readium Swift toolkit enables you to develop reading apps for iOS and iPadOS. It provides built-in support for multiple publication formats such as EPUB, PDF, audiobooks, and comics.
+
+> [!NOTE]
+> Readium offers only low-level tools. You are responsible for creating a user interface for reading and managing books, as well as a data layer to store the user's publications. The Test App is an example of such integration.
+
+## Design principles
+
+The toolkit has been designed following these core tenets:
+
+* **Modular**: It is divided into separate modules that can be used independently.
+* **Extensible**: Integrators should be able to support a custom DRM, publication format or inject their own stylesheets without modifying the toolkit itself.
+* **Opiniated**: We adhere to open standards but sometimes interpret them for practicality.
+
+## Packages
+
+### Main packages
+
+* `ReadiumShared` contains shared `Publication` models and utilities.
+* `ReadiumStreamer` parses publication files (e.g. an EPUB) into a `Publication` object.
+* [`ReadiumNavigator` renders the content of a publication](Navigator/Navigator.md).
+
+### Specialized packages
+
+* `ReadiumOPDS` parses [OPDS catalog feeds](https://opds.io) (both OPDS 1 and 2).
+* [`ReadiumLCP` downloads and decrypts LCP-protected publications](Readium%20LCP.md).
+
+### Adapters to third-party dependencies
+
+* `ReadiumAdapterGCDWebServer` provides an HTTP server built with [GCDWebServer](https://github.com/swisspol/GCDWebServer).
+* `ReadiumAdapterLCPSQLite` provides implementations of the `ReadiumLCP` license and passphrase repositories using [SQLite.swift](https://github.com/stephencelis/SQLite.swift).
+
+## Overview of the shared models (`ReadiumShared`)
+
+The Readium toolkit provides models used as exchange types between packages.
+
+### Publication models
+
+#### Publication
+
+`Publication` and its sub-components represent a single publication – ebook, audiobook or comic. It is loosely based on the [Readium Web Publication Manifest](https://readium.org/webpub-manifest/).
+
+A `Publication` instance:
+
+* holds the metadata of a publication, such as its author or table of contents,
+* allows to read the contents of a publication, e.g. XHTML or audio resources,
+* provides additional services, for example content extraction or text search.
+
+#### Link
+
+A [`Link` object](https://readium.org/webpub-manifest/#24-the-link-object) holds a pointer (URL) to a resource or service along with additional metadata, such as its media type or title.
+
+The `Publication` contains several `Link` collections, for example:
+
+* `readingOrder` lists the publication resources arranged in the order they should be read.
+* `resources` contains secondary resources necessary for rendering the `readingOrder`, such as an image or a font file.
+* `tableOfContents` represents the table of contents as a tree of `Link` objects.
+* `links` exposes additional resources, such as a canonical link to the manifest or a search web service.
+
+#### Locator
+
+A [`Locator` object](https://readium.org/architecture/models/locators/) represents a precise location in a publication resource in a format that can be stored and shared across reading systems. It is more accurate than a `Link` and contains additional information about the location, e.g. progression percentage, position or textual context.
+
+`Locator` objects are used for various features, including:
+
+* reporting the current progression in the publication
+* saving bookmarks, highlights and annotations
+* navigating search results
+
+### Data models
+
+#### Asset
+
+An `Asset` represents a single file or package and provides access to its content. There are two types of `Asset`:
+
+* `ContainerAsset` for packages which contains several resources, such as a ZIP archive.
+* `ResourceAsset` for accessing a single resource, such as a JSON or PDF file.
+
+`Asset` instances are obtained through an `AssetRetriever`.
+
+You can use the `asset.format` to identify the media type and capabilities of the asset.
+
+```swift
+if asset.format.conformsTo(.lcp) {
+    // The asset is protected with LCP.
+}
+if asset.format.conformsTo(.epub) {
+    // The asset represents an EPUB publication.
+}
+```
+
+#### Resource
+
+A `Resource` provides read access to a single resource, such as a file or an entry in an archive.
+
+`Resource` instances are usually created by a `ResourceFactory`. The toolkit ships with various implementations supporting different data access protocols such as local files or HTTP.
+
+#### Container
+
+A `Container` provides read access to a collection of resources. `Container` instances representing an archive are usually created by an `ArchiveOpener`. The toolkit ships with a `ZIPArchiveOpener` supporting both local and remote (HTTP) ZIP files.
+
+`Publication` objects internally use a `Container` to expose its content.
+
+## Opening a publication (`ReadiumStreamer`)
+
+To retrieve a `Publication` object from a publication file like an EPUB or audiobook, you can use an `AssetRetriever` and `PublicationOpener`.
+
+```swift
+// Instantiate the required components.
+let httpClient = DefaultHTTPClient()
+let assetRetriever = AssetRetriever(
+    httpClient: httpClient
+)
+let publicationOpener = PublicationOpener(
+    publicationParser: DefaultPublicationParser(
+        httpClient: httpClient,
+        assetRetriever: assetRetriever,
+        pdfFactory: DefaultPDFDocumentFactory()
+    )
+)
+
+let url: URL = URL(...)
+
+// Retrieve an `Asset` to access the file content.
+switch await assetRetriever.retrieve(url: url.anyURL.absoluteURL!) {
+case .success(let asset):
+    // Open a `Publication` from the `Asset`.
+    switch await publicationOpener.open(asset: asset, allowUserInteraction: true, sender: view) {
+    case .success(let publication):
+        print("Opened \(publication.metadata.title)")
+
+    case .failure(let error):
+        // Failed to access or parse the publication
+    }
+
+case .failure(let error):
+    // Failed to retrieve the asset
+}
+```
+
+The `allowUserInteraction` parameter is useful when supporting a DRM like Readium LCP. It indicates if the toolkit can prompt the user for credentials when the publication is protected.
+
+[See the dedicated user guide for more information](Open%20Publication.md).
+
+## Accessing the metadata of a publication
+
+After opening a publication, you may want to read its metadata to insert a new entity into your bookshelf database, for instance. The `publication.metadata` object contains everything you need, including `title`, `authors` and the `published` date.
+
+You can retrieve the publication cover using `await publication.cover()`.
+
+## Rendering the publication on the screen (`ReadiumNavigator`)
+
+You can use a Readium navigator to present the publication to the user. The `Navigator` renders resources on the screen and offers APIs and user interactions for navigating the contents.
+
+Please refer to the [Navigator guide](Navigator/Navigator.md) for more information.
+
+
+
+---
+File: /docs/Guides/Navigator Preferences.md
+---
+
+# Configuring the Navigator
+
+Take a look at the [migration guide](../Migration%20Guide.md) if you are already using the legacy EPUB settings.
+
+## Overview
+
+The Readium Navigator can be configured dynamically, as it implements the `Configurable` protocol.
+
+You cannot directly overwrite the Navigator settings. Instead, you submit a set of `Preferences` to the Navigator, which will then recalculate its settings and update the presentation.
+
+For instance: "font size" is a **setting**, and the application can submit the font size value `150%` as a **preference**.
+
+<img src="Assets/settings-flow.svg">
+
+```swift
+// 1. Create a set of preferences.
+let preferences = EPUBPreferences(
+    fontFamily: .serif,
+    fontSize: 2.0,
+    publisherStyles: false
+)
+
+// 2. Submit the preferences, the Navigator will update its settings and the presentation.
+epubNavigator.submitPreferences(preferences)
+
+// 3. Read the new settings.
+assert(epubNavigator.settings.fontFamily == .serif)
+```
+
+### Editing preferences
+
+To assist you in building a preferences user interface or modifying existing preferences, navigators can offer a `PreferencesEditor`. Each implementation includes rules for adjusting preferences, such as the supported values or ranges.
+
+```swift
+// 1. Create a preferences editor.
+let editor = epubNavigator.editor(of: preferences)
+    
+// 2. Modify the preferences through the editor.
+editor.fontFamily.set(.serif)
+editor.fontSize.increment()
+editor.publisherStyles.toggle()
+
+// 3. Submit the edited preferences.
+epubNavigator.submitPreferences(editor.preferences)
+```
+
+### Preferences are low-level
+
+Preferences are low-level technical properties. While some of them can be exposed directly to the user, such as the font size, others should not be displayed as-is.
+
+For instance, in EPUB, we can simulate two pages side by side using the `columnCount` (`auto`, `1`, `2`) property for reflowable resources, and the `spread` (`auto`, `never`, `always`) property for fixed-layout publications. Rather than displaying both of these settings with all of their possible values in the user interface, you might prefer to show a single switch button to enable a dual-page mode, which will set both settings appropriately.
+
+### Inactive settings
+
+A setting may be inactive if its activation conditions are not met in a set of preferences. The Navigator will ignore inactive settings when updating its presentation. For example, with the EPUB navigator, the word spacing setting requires the publisher styles to be disabled in order to take effect.
+
+You can check if a setting is effective for a set of preferences using the `PreferencesEditor`:
+
+```swift
+let editor = epubNavigator.editor(of: preferences)
+editor.wordSpacing.isEffective
+```
+
+## Setting the initial Navigator preferences and app defaults
+
+When opening a publication, you can immediately apply the user preferences by providing them to the Navigator constructor. The API for doing this varies depending on the Navigator implementation, but generally looks like this:
+
+```swift
+let navigator = try EPUBNavigatorViewController(
+    publication: publication,
+    config: .init(
+        preferences: EPUBPreferences(
+            language: Language(code: "fr")
+        ),
+        defaults: EPUBDefaults(
+            pageMargins: 1.5,
+            scroll: true
+        )
+    )
+)
+```
+
+The `defaults` are used as fallback values when the default Navigator settings are not suitable for your application.
+
+## Build a user settings interface
+
+:question: The following examples use SwiftUI, but could be implemented using UIKit as well.
+
+### `PreferencesEditor`
+
+Although you could create and modify `Preferences` objects directly before submitting them to the Navigator, a `PreferenceEditor` can assist you by providing helpers for dealing with each preference type when building the user interface.
+
+`PreferencesEditor` implementations are specific to each Navigator, but they all provide `Preference<Value>` properties for every setting (e.g. theme or font size). 
+
+### `UserPreferences` view
+
+You can use the `PreferencesEditor` type to determine which (media type agnostic) view to create.
+
+```swift
+struct UserPreferences<
+    P: ConfigurablePreferences,
+    E: PreferencesEditor
+>: View where E.Preferences == P {
+
+    let editor: E
+    let commit: () -> Void
+
+    @ViewBuilder var body: some View {
+        List {
+            Button("Reset") {
+                editor.clear()
+                commit()
+            }
+
+            switch editor {
+            case let editor as PDFPreferencesEditor:
+                fixedLayoutUserPreferences(
+                    commit: commit,
+                    backgroundColor: editor.backgroundColor,
+                    readingProgression: editor.readingProgression,
+                    scroll: editor.scroll,
+                    ...
+                )
+
+            case let editor as EPUBPreferencesEditor:
+                switch editor.layout {
+                case .reflowable:
+                    reflowableUserPreferences(
+                        commit: commit,
+                        backgroundColor: editor.backgroundColor,
+                        columnCount: editor.columnCount,
+                        fontFamily: editor.fontFamily,
+                        ...
+                    )
+                case .fixed:
+                    fixedLayoutUserPreferences(
+                        commit: commit,
+                        backgroundColor: editor.backgroundColor,
+                        readingProgression: editor.readingProgression,
+                        ...
+                    )
+                }
+
+            default:
+                fatalError("Unsupported preferences editor.")
+            }
+        }
+    }
+}
+```
+
+The `commit` parameter is a closure used to save the edited preferences to the data store, before submitting them to the Navigator.
+
+:question: The individual `PDFPreferencesEditor` properties are passed to `fixedLayoutUserPreferences()` so that it can be reused with other fixed-layout publication types, such as FXL EPUB or comic books. This is useful to reuse the user interface for similar publication types.
+
+### User settings view for fixed-layout publications
+
+This stateless view displays the actual preferences for a fixed-layout publication. The `Preference` parameters are nullable as they might not be available for all publication types. It delegates the rendering of individual preferences to more specific views.
+
+```swift
+@ViewBuilder func fixedLayoutUserPreferences(
+    commit: @escaping () -> Void,
+    scroll: AnyPreference<Bool>? = nil,
+    fit: AnyEnumPreference<ReadiumNavigator.Fit>? = nil,
+    pageSpacing: AnyRangePreference<Double>? = nil
+) -> some View {
+    if let scroll = scroll {
+        toggleRow(
+            title: "Scroll",
+            preference: scroll,
+            commit: commit
+        )
+    }
+
+    if let fit = fit {
+        pickerRow(
+            title: "Fit",
+            preference: fit,
+            commit: commit,
+            formatValue: { v in
+                switch v {
+                case .cover: return "Cover"
+                case .contain: return "Contain"
+                case .width: return "Width"
+                case .height: return "Height"
+                }
+            }
+        )
+    }
+
+    if let pageSpacing = pageSpacing {
+        stepperRow(
+            title: "Page spacing",
+            preference: pageSpacing,
+            commit: commit
+        )
+    }
+}
+```
+
+### View for a boolean `Preference`
+
+A `Preference<Bool>` can be represented as a simple toggle button.
+
+```swift
+@ViewBuilder func toggleRow(
+    title: String,
+    preference: AnyPreference<Bool>,
+    commit: @escaping () -> Void
+) -> some View {
+    Toggle(title,
+        isOn: Binding(
+            get: { preference.value ?? preference.effectiveValue },
+            set: { checked in
+                preference.set(checked)
+                commit()
+            }
+        )
+    )
+}
+```
+
+For convenience, you could add a custom extension to create a SwiftUI `Binding` from a `Preference`. 
+
+```swift
+
+Toggle(title,
+    isOn: preference.binding(onSet: commit)
+)
+
+extension Preference {
+
+    /// Creates a SwiftUI binding to modify the preference's value.
+    ///
+    /// This is convenient when paired with a `Toggle` or `Picker`.
+    func binding(onSet: @escaping () -> Void = {}) -> Binding<Value> {
+        Binding(
+            get: { value ?? effectiveValue },
+            set: { set($0); onSet() }
+        )
+    }
+}
+```
+
+### `value` vs `effectiveValue`, which one to use?
+
+In the previous example, you may have noticed the use of `preference.value ?? preference.effectiveValue` for the current value.
+
+* `value` holds the user-selected preference, which may be `nil`.
+* `effectiveValue` is the setting value that will actually be used by the Navigator once the preferences are submitted. It may be different from the user-selected value if it is incompatible or invalid.
+
+This is a common pattern with this API because it is less confusing to display the user-selected value, even if it will not actually be used by the Navigator.
+
+### View for a `RangePreference<Value>`
+
+A `RangePreference<Value>` can be represented as a stepper component with decrement and increment buttons.
+
+```swift
+@ViewBuilder func stepperRow<V: Comparable>(
+    title: String,
+    preference: AnyRangePreference<V>,
+    commit: @escaping () -> Void
+) -> some View {
+    Stepper(
+        onIncrement: {
+            preference.increment()
+            commit()
+        },
+        onDecrement: {
+            preference.decrement()
+            commit()
+        }
+    ) {
+        HStack {
+            Text(title)
+
+            Spacer()
+
+            Text(preference.format(value: preference.value ?? preference.effectiveValue))
+                .font(.caption)
+        }
+    }
+}
+```
+
+This view uses the `increment()` and `decrement()` range helpers of `RangePreference`, but it is also possible to set a value manually.
+
+The current value is displayed after formatting it with the `RangePreference.format(value:)` helper. This will automatically format the value to a human-readable string, such as a percentage or a value with units (e.g. 30px).
+
+### View for an `EnumPreference<Value>`
+
+An `EnumPreference<Value>` is a preference accepting a closed set of values. This is a great candidate to use a [`Picker`](https://developer.apple.com/documentation/swiftui/picker) view with different styles depending on the value set.
+
+* a `menu` for a large enum
+* a `radioGroup` or `segmented` buttons for a small one
+
+In the following example, the `Picker` is built with `preference.supportedValues`, which returns the allowed enum members.
+
+```swift
+@ViewBuilder func pickerRow<V: Hashable>(
+    title: String,
+    preference: AnyEnumPreference<V>,
+    commit: @escaping () -> Void,
+    formatValue: @escaping (V) -> String
+) -> some View {
+    Picker(title, selection: preference.binding(onSet: commit)) {
+        ForEach(preference.supportedValues, id: \.self) {
+            Text(formatValue($0)).tag($0)
+        }
+    }
+}
+```
+
+> [!NOTE]
+> Contrarily to a `RangePreference`, there's no intrinsic `format(value:)` helper for an `EnumPreference`. Instead, you must provide your own localized strings for the possible values.
+
+```swift
+pickerRow(
+    title: "Reading progression",
+    preference: readingProgression,
+    commit: commit,
+    formatValue: { v in
+        switch v {
+        case .ltr: return "LTR"
+        case .rtl: return "RTL"
+        }
+    }
+)
+```
+
+## Save and restore the user preferences
+
+Having a user settings screen is not useful if you cannot save and restore the selected preferences for future sessions. All `Preferences` types implement the `Codable` protocol and can be serialized to and from JSON.
+
+```swift
+let jsonData = try JSONEncoder().encode(preferences)
+```
+
+When you are ready to restore the user preferences, construct a new `Preferences` object from the JSON data.
+
+```swift
+let preferences = try JSONDecoder().decode(EPUBPreferences.self, from: jsonData)
+```
+
+In the Test App, `UserPreferencesViewModel` delegates the preferences persistence to a `UserPreferencesStore`. The preferences are observed from the store to automatically submit updated preferences to the navigator and refresh the user interface.
+
+### Splitting and merging preferences
+
+The way you store user preferences can affect the available features. You could have, for example:
+
+* A unique set of preferences for each publication.
+* Preferences shared between publications with the same profile or media type (EPUB, PDF, etc.).
+* Global preferences shared with all publications (e.g. theme).
+* Several user setting profiles/themes that the user can switch between and modify independently.
+* Some settings that are not stored as JSON and will need to be reconstructed (e.g. the publication language).
+
+To assist you, the toolkit provides suggested filters for each `Preferences` type, to extract the preferences intrinsic to a publication.
+
+```swift
+let publicationPrefs = preferences.filterPublicationPreferences()
+let sharedPrefs = preferences.filterSharedPreferences()
+
+// You can reconstruct the original preferences by combining the filtered ones.
+let combinedPrefs = publicationPrefs.merging(sharedPrefs)
+```
+
+> [!TIP]
+> Some preferences are closely tied to a specific publication and should never be shared between multiple publications, such as the language. It is recommended that you store these preferences separately per book, which is what the suggested filters will do if you use them.
+
+## Appendix: Preference constraints
+
+### EPUB
+
+#### Reflowable vs fixed-layout
+
+EPUB comes in two very different flavors: **reflowable** which allows a lot of customization, and **fixed-layout** which is similar to a PDF or a comic book. Depending on the EPUB being rendered, the Navigator will ignore some of the preferences.
+
+| Setting              | Reflowable         | Fixed Layout       |
+|----------------------|--------------------|--------------------|
+| `backgroundColor`    | :white_check_mark: | :white_check_mark: |
+| `columnCount`        | :white_check_mark: |                    |
+| `fontFamily`         | :white_check_mark: |                    |
+| `fontSize`           | :white_check_mark: |                    |
+| `fontWeight`         | :white_check_mark: |                    |
+| `hyphens`            | :white_check_mark: |                    |
+| `imageFilter`        | :white_check_mark: |                    |
+| `language`           | :white_check_mark: | :white_check_mark: |
+| `letterSpacing`      | :white_check_mark: |                    |
+| `ligatures`          | :white_check_mark: |                    |
+| `lineHeight`         | :white_check_mark: |                    |
+| `pageMargins`        | :white_check_mark: |                    |
+| `paragraphIndent`    | :white_check_mark: |                    |
+| `paragraphSpacing`   | :white_check_mark: |                    |
+| `publisherStyles`    | :white_check_mark: |                    |
+| `readingProgression` | :white_check_mark: | :white_check_mark: |
+| `scroll`             | :white_check_mark: |                    |
+| `spread`             |                    | :white_check_mark: |
+| `textAlign`          | :white_check_mark: |                    |
+| `textColor`          | :white_check_mark: |                    |
+| `textNormalization`  | :white_check_mark: |                    |
+| `theme`              | :white_check_mark: |                    |
+| `typeScale`          | :white_check_mark: |                    |
+| `verticalText`       | :white_check_mark: |                    |
+| `wordSpacing`        | :white_check_mark: |                    |
+
+#### Publisher styles
+
+The following advanced preferences require `publisherStyles` to be explicitly set to `false`. Make sure you convey this in your user interface.
+
+* `hyphens`
+* `letterSpacing`
+* `ligatures`
+* `lineHeight`
+* `paragraphIndent`
+* `paragraphSpacing`
+* `textAlign`
+* `typeScale`
+* `wordSpacing`
+
+#### Scroll vs paginated
+
+The `columnCount` preference is available only when in paginated mode (`scroll = false`).
+
+#### Dark theme specific preferences
+
+The `imageFilter` preference is available only in dark mode (`theme = .dark`).
+
+#### Language specific preferences
+
+Some preferences are not available for all languages and layout.
+
+| Preference        | LTR                | RTL                | CJK |
+|-------------------|--------------------|--------------------|-----|
+| `paragraphIndent` | :white_check_mark: | :white_check_mark: |     |
+| `textAlign`       | :white_check_mark: | :white_check_mark: |     |
+| `letterSpacing`   | :white_check_mark: |                    |     |
+| `wordSpacing`     | :white_check_mark: |                    |     |
+| `hyphens`         | :white_check_mark: |                    |     |
+| `ligatures`       |                    | :white_check_mark: |     |
+
+### PDF
+
+#### Scroll vs paginated
+
+Some preferences are available only in scroll or paginated mode (`scroll = false`).
+
+| Preference         | Vertical Scroll    | Horizontal Scroll  | Paginated          |
+|--------------------|--------------------|--------------------|--------------------|
+| `offsetFirstPage`  | :white_check_mark: |                    | :white_check_mark: |
+| `spread`           | :white_check_mark: |                    | :white_check_mark: |
+| `scrollAxis`       | :white_check_mark: | :white_check_mark: |                    |
+| `visibleScrollbar` | :white_check_mark: | :white_check_mark: |                    |
+
+
+
+
+---
+File: /docs/Guides/Open Publication.md
+---
+
+# Opening a publication
+
+To open a publication with Readium, you need to instantiate a couple of components: an `AssetRetriever` and a `PublicationOpener`.
+
+## `AssetRetriever`
+
+The `AssetRetriever` grants access to the content of an asset located at a given URL, such as a publication package, manifest, or LCP license.
+
+### Constructing an `AssetRetriever`
+
+You can create an instance of `AssetRetriever` with:
+
+* An `HTTPClient` to enable the toolkit to perform HTTP requests and support the `http` and `https` URL schemes. You can use `DefaultHTTPClient` which provides callbacks for handling authentication when needed.
+
+```swift
+let assetRetriever = AssetRetriever(httpClient: DefaultHTTPClient())
+```
+
+### Retrieving an `Asset`
+
+With your fresh instance of `AssetRetriever`, you can open an `Asset` from any `AbsoluteURL`.
+
+```swift
+// From a local file.
+let url = FileURL(string: "file:///path/to/book.epub")
+// or from an HTTP URL.
+let url = HTTPURL(string: "https://domain/book.epub")
+
+switch await assetRetriever.retrieve(url: url) {
+    case .success(let asset):
+        ...
+    case .failure(let error):
+        // Failed to retrieve the asset.
+}
+```
+
+> [!IMPORTANT]
+> Assets created with an HTTP URL are not downloaded; they will be streamed. If that is not your intention, you need to download the file first, for example using `HTTPClient.download()`.
+
+The `AssetRetriever` will sniff the media type of the asset, which you can store in your bookshelf database to speed up the process next time you retrieve the `Asset`. This will improve performance, especially with HTTP URL schemes.
+
+```swift
+let mediaType = asset.format.mediaType
+
+// Speed up the retrieval with a known media type.
+let result = await assetRetriever.retrieve(url: url, mediaType: mediaType)
+```
+
+## `PublicationOpener`
+
+`PublicationOpener` builds a `Publication` object from an `Asset` using:
+
+* A `PublicationParser` to parse the asset structure and publication metadata.
+    * The `DefaultPublicationParser` handles all the formats supported by Readium out of the box.
+* An optional list of `ContentProtection` to decrypt DRM-protected publications.
+    * If you support Readium LCP, you can get one from the `LCPService`.
+
+```swift
+let publicationOpener = PublicationOpener(
+    parser: DefaultPublicationParser(
+        httpClient: httpClient,
+        assetRetriever: assetRetriever,
+        pdfFactory: DefaultPDFDocumentFactory()
+    ),
+    contentProtections: [
+        lcpService.contentProtection(with: LCPDialogAuthentication())
+    ]
+)
+```
+
+### Opening a `Publication`
+
+Now that you have a `PublicationOpener` ready, you can use it to create a `Publication` from an `Asset` that was previously obtained using the `AssetRetriever`.
+
+The `allowUserInteraction` parameter is useful when supporting Readium LCP. When enabled and using a `LCPDialogAuthentication`, the toolkit will prompt the user if the passphrase is missing.
+
+```swift
+let result = await publicationOpener.open(
+    asset: asset,
+    allowUserInteraction: true,
+    sender: sender
+)
+```
+
+## Supporting additional formats or URL schemes
+
+`DefaultPublicationParser` accepts additional parsers. You also have the option to use your own parser list by using `CompositePublicationParser` or create your own `PublicationParser` for a fully customized parsing resolution strategy.
+
+The `AssetRetriever` offers an additional constructor that provides greater extensibility options, using:
+
+* `ResourceFactory` which handles the URL schemes through which you can access content.
+* `ArchiveOpener` which determines the types of archives (ZIP, RAR, etc.) that can be opened by the `AssetRetriever`.
+* `FormatSniffer` which identifies the file formats that `AssetRetriever` can recognize.
+
+You can use either the default implementations or implement your own for each of these components using the composite pattern. The toolkit's `CompositeResourceFactory`, `CompositeArchiveOpener`, and `CompositeFormatSniffer` provide a simple resolution strategy.
+
+
+
+
+---
+File: /docs/Guides/Readium LCP.md
+---
+
+# Supporting Readium LCP
+
+You can use the Readium Swift toolkit to download and read publications that are protected with the [Readium LCP](https://www.edrlab.org/readium-lcp/) DRM.
+
+> [!IMPORTANT]
+> To use LCP with the Readium toolkit, you must first obtain the `R2LCPClient` private library by contacting [EDRLab](https://www.edrlab.org/contact/).
+
+## Overview
+
+An LCP publication is protected with a *user passphrase* and distributed using an LCP License Document (`.lcpl`) .
+
+The user flow typically goes as follows:
+
+1. The user imports a `.lcpl` file into your application.
+2. The application uses the Readium toolkit to download the protected publication from the `.lcpl` file to the user's bookshelf. The downloaded file can be a `.epub`, `.lcpdf` (PDF), or `.lcpa` (audiobook) package.
+3. The user opens the protected publication from the bookshelf.
+4. If the passphrase isn't already recorded in the `ReadiumLCP` internal database, the user will be asked to enter it to unlock the contents.
+5. The publication is decrypted and rendered on the screen.
+
+## Setup
+
+To support LCP in your application, you require two components:
+
+* The `ReadiumLCP` package from the toolkit provides APIs for downloading and decrypting protected publications. Import it as you would any other Readium package, such as `R2Navigator`.
+* The private `R2LCPClient` library customized for your application [is available from EDRLab](https://www.edrlab.org/contact/). They will provide instructions for integrating the `R2LCPClient` framework into your application.
+
+### File formats
+
+Readium LCP specifies new file formats.
+
+| Name | File extension | Media type |
+|------|----------------|------------|
+| [License Document](https://readium.org/lcp-specs/releases/lcp/latest.html#32-content-conformance) | `.lcpl` | `application/vnd.readium.lcp.license.v1.0+json` |
+| [LCP for PDF package](https://readium.org/lcp-specs/notes/lcp-for-pdf.html) | `.lcpdf` | `application/pdf+lcp` |
+| [LCP for Audiobooks package](https://readium.org/lcp-specs/notes/lcp-for-audiobooks.html) | `.lcpa` | `application/audiobook+lcp` |
+
+> [!NOTE]
+> EPUB files protected by LCP are supported without a special file extension or media type because EPUB accommodates any DRM scheme in its specification.
+
+To support these formats in your application, you need to [register them in your `Info.plist`](https://developer.apple.com/documentation/uniformtypeidentifiers/defining_file_and_data_types_for_your_app) as imported types.
+
+```xml
+<dict>
+    <key>UTImportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>org.readium.lcpl</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.content</string>
+                <string>public.data</string>
+                <string>public.json</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>LCP License Document</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>lcpl</string>
+                </array>
+                <key>public.mime-type</key>
+                <string>application/vnd.readium.lcp.license.v1.0+json</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>org.readium.lcpdf</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.content</string>
+                <string>public.data</string>
+                <string>public.archive</string>
+                <string>public.zip-archive</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>LCP for PDF package</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>lcpdf</string>
+                </array>
+                <key>public.mime-type</key>
+                <string>application/pdf+lcp</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>org.readium.lcpa</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.content</string>
+                <string>public.data</string>
+                <string>public.archive</string>
+                <string>public.zip-archive</string>
+            </array>
+            <key>UTTypeDescription</key>
+            <string>LCP for Audiobooks package</string>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>lcpa</string>
+                </array>
+                <key>public.mime-type</key>
+                <string>application/audiobook+lcp</string>
+            </dict>
+        </dict>
+    </array>
+</dict>
+```
+
+Next, declare the imported types as [Document Types](https://help.apple.com/xcode/mac/current/#/devddd273fdd) in the `Info.plist` to have your application listed in the "Open with..." dialogs.
+
+```xml
+<dict>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>LCP License Document</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.readium.lcpl</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>LCP for PDF package</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.readium.lcpdf</string>
+            </array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>LCP for Audiobooks package</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.readium.lcpa</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+```
+
+> [!TIP]
+> If EPUB is not included in your document types, now is a good time to add it.
+
+## Initializing the `LCPService`
+
+`ReadiumLCP` offers an `LCPService` object that exposes its API. Since the `ReadiumLCP` package is not linked with `R2LCPClient`, you need to create your own adapter when setting up the `LCPService`.
+
+```swift
+import R2LCPClient
+import ReadiumLCP
+
+let lcpService = LCPService(client: LCPClientAdapter())
+
+/// Facade to the private R2LCPClient.framework.
+class LCPClientAdapter: ReadiumLCP.LCPClient {
+    func createContext(jsonLicense: String, hashedPassphrase: LCPPassphraseHash, pemCrl: String) throws -> LCPClientContext {
+        try R2LCPClient.createContext(jsonLicense: jsonLicense, hashedPassphrase: hashedPassphrase, pemCrl: pemCrl)
+    }
+
+    func decrypt(data: Data, using context: LCPClientContext) -> Data? {
+        R2LCPClient.decrypt(data: data, using: context as! DRMContext)
+    }
+
+    func findOneValidPassphrase(jsonLicense: String, hashedPassphrases: [LCPPassphraseHash]) -> LCPPassphraseHash? {
+        R2LCPClient.findOneValidPassphrase(jsonLicense: jsonLicense, hashedPassphrases: hashedPassphrases)
+    }
+}
+```
+
+## Acquiring a publication from a License Document (LCPL)
+
+Users need to import a License Document into your application to download the protected publication (`.epub`, `.lcpdf`, or `.lcpa`).
+
+The `LCPService` offers an API to retrieve the full publication from an LCPL on the filesystem.
+
+```swift
+let acquisition = lcpService.acquirePublication(
+    from: lcplURL,
+    onProgress: { progress in
+        switch progress {
+            case .indefinite:
+                // Display an activity indicator.
+            case .percent(let percent):
+                // Display a progress bar with percent from 0 to 1.
+        }
+    },
+    completion: { result in
+        switch result {
+        case let .success(publication):
+            // Import the `publication.localURL` file as any publication.
+        case let .failure(error):
+            // Display the error message
+        case .cancelled:
+            // The acquisition was cancelled before completion.
+        }
+    }
+)
+```
+
+If the user wants to cancel the download, call `cancel()` on the object returned by `LCPService.acquirePublication()`.
+
+After the download is completed, import the `publication.localURL` file into the bookshelf like any other publication file.
+
+## Opening a publication protected with LCP
+
+### Initializing the `PublicationOpener`
+
+A publication protected with LCP can be opened using the `PublicationOpener` component, just like a non-protected publication. However, you must provide a [`ContentProtection`](https://readium.org/architecture/proposals/006-content-protection.html) implementation when initializing the `PublicationOpener` to enable LCP. Luckily, `LCPService` has you covered.
+
+```swift
+let httpClient = DefaultHTTPClient()
+
+let authentication = LCPDialogAuthentication()
+
+let publicationOpener = PublicationOpener(
+    parser: DefaultPublicationParser(
+        httpClient: httpClient,
+        assetRetriever: AssetRetriever(httpClient: httpClient),
+        pdfFactory: DefaultPDFDocumentFactory()
+    ),
+    contentProtections: [
+        lcpService.contentProtection(with: authentication)
+    ]
+)
+```
+
+An LCP package is secured with a *user passphrase* for decrypting the content. The `LCPAuthenticating` protocol used by `LCPService.contentProtection(with:)` provides the passphrase when needed. You can use the default `LCPDialogAuthentication` which displays a pop-up to enter the passphrase, or implement your own method for passphrase retrieval.
+
+> [!NOTE]
+> The user will be prompted once per passphrase since `ReadiumLCP` stores known passphrases on the device. 
+
+### Opening the publication
+
+You are now ready to open the publication file with your `PublicationOpener` instance.
+
+```swift
+// Retrieve an `Asset` to access the file content.
+let url = FileURL(path: "/path/to/lcp-protected-book.epub", isDirectory: false)
+let asset = try await assetRetriever.retrieve(url: url).get()
+ 
+// Open a `Publication` from the `Asset`.
+let result = await publicationOpener.open(
+    asset: asset,
+    allowUserInteraction: true,
+    sender: hostViewController
+)
+
+switch result {
+case .success(let publication):
+    // Import or present the publication.
+case .failure(let error):
+    // Present the error.
+}
+```
+
+The `allowUserInteraction` and `sender` arguments are forwarded to the `LCPAuthenticating` implementation when the passphrase is unknown. `LCPDialogAuthentication` shows a pop-up only if `allowUserInteraction` is `true`, using the `sender` as the pop-up's host `UIViewController`.
+
+When importing the publication to the bookshelf, set `allowUserInteraction` to `false` as you don't need the passphrase for accessing the publication metadata and cover. If you intend to present the publication using a Navigator, set `allowUserInteraction` to `true` as decryption will be required.
+
+> [!TIP]
+> To check if a publication is protected with LCP before opening it, you can use `LCPService.isLCPProtected()`.
+
+### Using the opened `Publication`
+
+After obtaining a `Publication` instance, you can access the publication's metadata to import it into the user's bookshelf. The user passphrase is not needed for reading the metadata or cover.
+
+However, if you want to display the publication with a Navigator, verify it is not restricted. It could be restricted if the user passphrase is unknown or if the license is no longer valid (e.g., expired loan, revoked purchase, etc.).
+
+```swift
+if publication.isRestricted {
+    if let error = publication.protectionError as? LCPError {
+        // The user is not allowed to open the publication. You should display the error.
+    } else {
+        // We don't have the user passphrase.
+        // You may use `publication` to access its metadata, but not to render its content.
+    }
+} else {
+    // The publication is not restricted, you may render it with a Navigator component.
+}
+```
+
+## Streaming an LCP protected package
+
+If the server hosting the LCP protected package supports the [HTTP `HEAD` method](https://httpwg.org/specs/rfc9110.html#HEAD) and [HTTP Range requests](https://httpwg.org/specs/rfc7233.html), it is possible to stream directly an LCP protected publication from a License Document (`.lcpl`) file, without downloading the whole publication first.
+
+Simply open the License Document directly using the `PublicationOpener`. Make sure you provide an `HTTPClient` (or an `HTTPResourceFactory` for additional customization) to the `AssetRetriever`.
+
+```swift
+// Instantiate the required components.
+let httpClient = DefaultHTTPClient()
+let assetRetriever = AssetRetriever(httpClient: httpClient)
+let publicationOpener = PublicationOpener(
+    parser: DefaultPublicationParser(
+        httpClient: httpClient,
+        assetRetriever: assetRetriever
+    ),
+    contentProtections: [
+        lcpService.contentProtection(with: LCPDialogAuthentication()),
+    ]
+)
+
+// Retrieve an `Asset` to access the LCPL content.
+let url = FileURL(path: "/path/to/license.lcpl", isDirectory: false)
+let asset = try await assetRetriever.retrieve(url: url).get()
+ 
+// Open a `Publication` from the LCPL `Asset`.
+let publication = try await publicationOpener.open(
+    asset: asset,
+    allowUserInteraction: true,
+    sender: hostViewController
+).get()
+    
+print("Opened \(publication.metadata.title)")
+```
+
+## Obtaining information on an LCP license
+
+An LCP License Document contains metadata such as its expiration date, the remaining number of characters to copy and the user name. You can access this information using an `LCPLicense` object.
+
+Use the `LCPService` to retrieve the `LCPLicense` instance for a publication.
+
+```swift
+lcpService.retrieveLicense(
+    from: publicationURL,
+    authentication: LCPDialogAuthentication(),
+    allowUserInteraction: true,
+    sender: hostViewController
+) { result in
+    switch result {
+    case .success(let lcpLicense):
+        if let lcpLicense = lcpLicense {
+            if let user = lcpLicense.license.user.name {
+                print("The publication was acquired by \(user)")
+            }
+            if let endDate = lcpLicense.license.rights.end {
+                print("The loan expires on \(endDate)")
+            }
+            if let copyLeft = lcpLicense.charactersToCopyLeft {
+                print("You can copy up to \(copyLeft) characters remaining.")
+            }
+        } else {
+            // The file was not protected by LCP.
+        }
+    case .failure(let error):
+        // Display the error.
+    case .cancelled:
+        // The operation was cancelled.
+    }
+}
+```
+
+If you have already opened a `Publication` with the `Streamer`, you can directly obtain the `LCPLicense` using `publication.lcpLicense`.
+
+## Managing a loan
+
+Readium LCP allows borrowing publications for a specific period. Use the `LCPLicense` object to manage a loan and retrieve its end date using `lcpLicense.license.rights.end`.
+
+### Returning a loan
+
+Some loans can be returned before the end date. You can confirm this by using `lcpLicense.canReturnPublication`. To return the publication, execute:
+
+```swift
+lcpLicense.returnPublication { error in
+    if let error = error {
+        // Present the error.
+    } else {
+        // The publication was returned.
+    }
+}
+```
+
+### Renewing a loan
+
+The loan end date may also be extended. You can confirm this by using `lcpLicense.canRenewLoan`.
+
+Readium LCP supports [two types of renewal interactions](https://readium.org/lcp-specs/releases/lsd/latest#35-renewing-a-license):
+
+* Programmatic: You show your own user interface.
+* Interactive: You display a web view, and the Readium LSD server manages the renewal for you.
+
+You need to support both interactions by implementing the `LCPRenewDelegate` protocol. A default implementation is available with `LCPDefaultRenewDelegate`.
+
+```swift
+lcpLicense.renewLoan(
+    with: LCPDefaultRenewDelegate(
+        presentingViewController: hostViewController
+    )
+) { result in
+    switch result {
+    case .success, .cancelled:
+        // The publication was renewed.
+    case let .failure(error):
+        // Display the error.
+    }
+}
+```
+
+## Handling `LCPError`
+
+The APIs may fail with an `LCPError`. These errors **must** be displayed to the user with a suitable message.
+
+For an example, [take a look at the Test App](https://github.com/readium/swift-toolkit/blob/3.0.0/TestApp/Sources/App/Readium.swift#L221).
+
+
+---
+File: /docs/Guides/README.md
+---
+
+# User guides
+
+* [Getting Started](Getting%20Started.md)
+* [Opening a publication](Open%20Publication.md)
+* [Extracting the content of a publication](Content.md)
+* [Text-to-speech](TTS.md)
+* [Supporting Readium LCP](Readium%20LCP.md)
+* [Navigator](Navigator/Navigator.md)
+    * [Configuring the Navigator](Navigator/Preferences.md)
+    * [Font families in the EPUB navigator](Navigator/EPUB%20Fonts.md)
+    * [Integrating the Navigator with SwiftUI](Navigator/SwiftUI.md)
+
+
+---
+File: /docs/Guides/TTS.md
+---
+
+# Text-to-speech
+
+> [!NOTE]
+> TTS is not yet implemented for all formats.
+
+Text-to-speech can be used to read aloud a publication using a synthetic voice. The Readium toolkit ships with a TTS implementation based on the native [Apple Speech Synthesis](https://developer.apple.com/documentation/avfoundation/speech_synthesis), but it is opened for extension if you want to use a different TTS engine.
+
+## Glossary
+
+* **engine** – a TTS engine takes an utterance and transforms it into audio using a synthetic voice
+* **tokenizer** - algorithm splitting the publication text content into individual utterances, usually by sentences
+* **utterance** - a single piece of text played by a TTS engine, such as a sentence
+* **voice** – a synthetic voice is used by a TTS engine to speak a text using rules pertaining to the voice's language and region
+
+## Reading a publication aloud
+
+To read a publication, you need to create an instance of `PublicationSpeechSynthesizer`. It orchestrates the rendition of a publication by iterating through its content, splitting it into individual utterances using a `ContentTokenizer`, then using a `TTSEngine` to read them aloud. Not all publications can be read using TTS, therefore the constructor returns an optional object. You can also check whether a publication can be played beforehand using `PublicationSpeechSynthesizer.canSpeak(publication:)`.
+
+```swift
+let synthesizer = PublicationSpeechSynthesizer(
+    publication: publication,
+    config: PublicationSpeechSynthesizer.Configuration(
+        defaultLanguage: Language("fr")
+    )
+)
+```
+
+Then, begin the playback from a given starting `Locator`. When missing, the playback will start from the beginning of the publication.
+
+```swift
+synthesizer.start()
+```
+
+You should now hear the TTS engine speak the utterances from the beginning. `PublicationSpeechSynthesizer` provides the APIs necessary to control the playback from the app:
+
+* `stop()` - stops the playback ; requires start to be called again
+* `pause()` - interrupts the playback temporarily
+* `resume()` - resumes the playback where it was paused
+* `pauseOrResume()` - toggles the pause
+* `previous()` - skips to the previous utterance
+* `next()` - skips to the next utterance
+
+Look at `TTSView.swift` in the Test App for an example of a view calling these APIs.
+
+## Observing the playback state
+
+The `PublicationSpeechSynthesizer` should be the single source of truth to represent the playback state in your user interface. You can observe the state with `PublicationSpeechSynthesizerDelegate.publicationSpeechSynthesizer(_:stateDidChange:)` to keep your user interface synchronized with the playback. The possible states are:
+
+* `.stopped` when idle and waiting for a call to `start()`.
+* `.paused(Utterance)` when interrupted while playing the associated utterance.
+* `.playing(Utterance, range: Locator?)` when speaking the associated utterance. This state is updated repeatedly while the utterance is spoken, updating the `range` value with the portion of utterance being played (usually the current word).
+
+When pairing the `PublicationSpeechSynthesizer` with a `Navigator`, you can use the `utterance.locator` and `range` properties to highlight spoken utterances and turn pages automatically.
+
+## Configuring the TTS
+
+> [!WARNING]
+> The way the synthesizer is configured is expected to change with the introduction of the new Settings API. Expect some breaking changes when updating.
+
+The `PublicationSpeechSynthesizer` offers some options to configure the TTS engine. Note that the support of each configuration option depends on the TTS engine used.
+
+Update the configuration by setting it directly. The configuration is not applied right away but for the next utterance.
+
+```swift
+synthesizer.config.defaultLanguage = Language("fr")
+```
+
+### Default language
+
+The language used by the synthesizer is important, as it determines which TTS voices are used and the rules to tokenize the publication text content.
+
+By default, `PublicationSpeechSynthesizer` will use any language explicitly set on a text element (e.g. with `lang="fr"` in HTML) and fall back on the global language declared in the publication manifest. You can override the fallback language with `Configuration.defaultLanguage` which is useful when the publication language is incorrect or missing.
+
+### Voice
+
+The `voice` setting can be used to change the synthetic voice used by the engine. To get the available list, use `synthesizer.availableVoices`.
+
+To restore a user-selected voice, persist the unique voice identifier returned by `voice.identifier`.
+
+Users do not expect to see all available voices at all time, as they depend on the selected language. You can group the voices by their language and filter them by the selected language using the following snippet.
+
+```swift
+let voicesByLanguage: [Language: [TTSVoice]] =
+    Dictionary(grouping: synthesizer.availableVoices, by: \.language)
+```
+
+## Synchronizing the TTS with a Navigator
+
+While `PublicationSpeechSynthesizer` is completely independent from `Navigator` and can be used to play a publication in the background, most apps prefer to render the publication while it is being read aloud. The `Locator` core model is used as a means to synchronize the synthesizer with the navigator.
+
+### Starting the TTS from the visible page
+
+`PublicationSpeechSynthesizer.start()` takes a starting `Locator` for parameter. You can use it to begin the playback from the currently visible page in a `VisualNavigator` using `firstVisibleElementLocator()`.
+
+```swift
+navigator.firstVisibleElementLocator { start in
+    synthesizer.start(from: start)
+}
+```
+
+### Highlighting the currently spoken utterance
+
+If you want to highlight or underline the current utterance on the page, you can apply a `Decoration` on the utterance locator with a `DecorableNavigator`.
+
+```swift
+extension TTSViewModel: PublicationSpeechSynthesizerDelegate {
+
+    public func publicationSpeechSynthesizer(_ synthesizer: PublicationSpeechSynthesizer, stateDidChange synthesizerState: PublicationSpeechSynthesizer.State) {
+        let playingUtterance: Locator?
+
+        switch synthesizerState {
+        case .stopped:
+            playingUtterance = nil
+        case let .playing(utterance, range: _):
+            playingUtterance = utterance
+        case let .paused(utterance):
+            playingUtterance = utterance
+        }
+
+        var decorations: [Decoration] = []
+        if let locator = playingUtterance.locator {
+            decorations.append(Decoration(
+                id: "tts-utterance",
+                locator: locator,
+                style: .highlight(tint: .red)
+            ))
+        }
+        navigator.apply(decorations: decorations, in: "tts")
+    }
+}
+```
+
+### Turning pages automatically
+
+You can use the same technique as described above to automatically synchronize the `Navigator` with the played utterance, using `navigator.go(to: utterance.locator)`.
+
+However, this will not turn pages mid-utterance, which can be annoying when speaking a long sentence spanning two pages. To address this, you can use the `range` associated value of the `.playing` state instead. It is updated regularly while speaking each word of an utterance. Note that jumping to the `range` locator for every word can severely impact performances. To alleviate this, you can throttle the observer.
+
+```swift
+extension TTSViewModel: PublicationSpeechSynthesizerDelegate {
+
+    public func publicationSpeechSynthesizer(_ synthesizer: PublicationSpeechSynthesizer, stateDidChange synthesizerState: PublicationSpeechSynthesizer.State) {
+        switch synthesizerState {
+        case .stopped, .paused:
+            break
+        case let .playing(_, range: range):
+            // TODO: You should use throttling here, for example with Combine:
+            // https://developer.apple.com/documentation/combine/fail/throttle(for:scheduler:latest:)
+            navigator.go(to: range)
+        }
+    }
+}
+```
+
+## Using a custom utterance tokenizer
+
+By default, the `PublicationSpeechSynthesizer` will split the publication text into sentences to create the utterances. You can customize this for finer or coarser utterances using a different tokenizer.
+
+For example, this will speak the content word-by-word:
+
+```swift
+let synthesizer = PublicationSpeechSynthesizer(
+    publication: publication,
+    tokenizerFactory: { language in
+        makeTextContentTokenizer(
+            defaultLanguage: language,
+            textTokenizerFactory: { language in
+                makeDefaultTextTokenizer(unit: .word, language: language)
+            }
+        )
+    }
+)
+```
+
+For completely custom tokenizing or to improve the existing tokenizers, you can implement your own `ContentTokenizer`.
+
+## Using a custom TTS engine
+
+`PublicationSpeechSynthesizer` can be used with any TTS engine, provided they implement the `TTSEngine` interface. Take a look at `AVTTSEngine` for an example implementation.
+
+```swift
+let synthesizer = PublicationSpeechSynthesizer(
+    publication: publication,
+    engineFactory: { MyCustomEngine() }
+)
+```
+
+

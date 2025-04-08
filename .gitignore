@@ -1,6 +1,45 @@
-Books/*.epub
-Documentation/
-Reference Files/
+# Ignore Claude files
 .claudesync/
-Shiori Reader/Resources/jmdict.db
-AnkiMobile Manual
+.claudeignore
+
+# Ignore macOS system files
+.DS_Store
+
+# Ignore fonts
+*.otf
+*.ttf
+
+# Ignore image files
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+
+# Ignore EPUBs and other books/media
+Books/
+*.epub
+*.pdf
+
+# Ignore binary or local databases
+*.db
+
+# Ignore project-specific local config
+config.local.json
+
+# Ignore Xcode personal settings & build artifacts
+*.xcuserstate
+*.xccheckout
+*.xcworkspace
+*.xcuserdatad/
+*.xcscheme
+*.xcscmblueprint
+*.xcdebugger
+DerivedData/
+build/
+
+# Ignore test logs or artifacts
+*.xctest
+
+# Ignore structure file you generated
+structure.txt
