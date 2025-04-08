@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		510F67DB2DA5B8E600FCF43E /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 510F67DA2DA5B8DF00FCF43E /* LICENSE */; };
 		516EAA672D83777C00F57059 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 516EAA662D83777C00F57059 /* GRDB */; };
 		51811C942D5EDE5F00E2D973 /* Heuristica-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */; };
 		519BA2482D9F694B0039501B /* ReadiumAdapterGCDWebServer in Frameworks */ = {isa = PBXBuildFile; productRef = 519BA2472D9F694B0039501B /* ReadiumAdapterGCDWebServer */; };
@@ -38,6 +39,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		510F67DA2DA5B8DF00FCF43E /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		51811C3F2D5E4D2C00E2D973 /* Shiori Reader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Shiori Reader.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		51811C4F2D5E4D2D00E2D973 /* Shiori ReaderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Shiori ReaderTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		51811C592D5E4D2D00E2D973 /* Shiori ReaderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Shiori ReaderUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -119,6 +121,7 @@
 		51811C362D5E4D2C00E2D973 = {
 			isa = PBXGroup;
 			children = (
+				510F67DA2DA5B8DF00FCF43E /* LICENSE */,
 				518DCEFC2D9DE1F200B45824 /* Shiori-Reader.entitlements */,
 				51811C412D5E4D2C00E2D973 /* Shiori Reader */,
 				51811C522D5E4D2D00E2D973 /* Shiori ReaderTests */,
@@ -284,6 +287,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				510F67DB2DA5B8E600FCF43E /* LICENSE in Resources */,
 				51811C942D5EDE5F00E2D973 /* Heuristica-Bold.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
