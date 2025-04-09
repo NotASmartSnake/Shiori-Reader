@@ -46,3 +46,27 @@ build/
 
 # Ignore structure file you generated
 structure.txt
+
+# Core Data
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.momd
+
+# User data directories
+Shiori Reader/Books/
+Shiori Reader/BookCovers/
+
+# Xcode
+DerivedData/
+.build/
+build/
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
