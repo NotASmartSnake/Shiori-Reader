@@ -16,7 +16,7 @@ struct ReaderView: View {
     @State private var showOverlay = true
     @State private var showSearchSheet = false
     @State private var showSettingsSheet = false
-    @State private var showTocSheet = false
+    @State private var showContentsSheet = false
     @Environment(\.dismiss) var dismiss
 
     init(book: Book) {
@@ -26,6 +26,11 @@ struct ReaderView: View {
 
     var body: some View {
         ZStack {
+            // Contents sheet (TOC + Bookmarks)
+            Color.clear.opacity(0)
+                .sheet(isPresented: $showContentsSheet) {
+                    TableOfContentsView(viewModel: viewModel)
+                }
             contentLayer
 
             tapAreas
@@ -137,14 +142,22 @@ struct ReaderView: View {
 
                 // Bookmark Button
                 Button {
-                    print("DEBUG: Bookmark button tapped")
-                    // TODO: Implement bookmark logic -> viewModel.addBookmark(at: viewModel.currentLocation)
+                    Task {
+                        await viewModel.toggleBookmark()
+                    }
                 } label: {
-                    Image(systemName: "bookmark") // Use "bookmark.fill" if bookmarked?
+                    Image(systemName: viewModel.isCurrentLocationBookmarked ? "bookmark.fill" : "bookmark")
                         .imageScale(.large)
                         .padding(8)
                 }
                 .foregroundStyle(.blue)
+                .contextMenu {
+                    Button {
+                        showContentsSheet = true
+                    } label: {
+                        Label("View Bookmarks", systemImage: "bookmark.circle")
+                    }
+                }
 
                 // Settings Button
                 Button {
@@ -163,36 +176,15 @@ struct ReaderView: View {
                 }
 
 
-                // TOC Button
+                // Contents Button (TOC + Bookmarks)
                 Button {
-                    showTocSheet = true
+                    showContentsSheet = true
                 } label: {
                     Image(systemName: "list.bullet")
                         .imageScale(.large)
                         .padding(8)
                 }
                 .foregroundStyle(.blue)
-                .sheet(isPresented: $showTocSheet) {
-                    // Placeholder TOC View
-                     NavigationView {
-                         List {
-                             ForEach(viewModel.tableOfContents, id: \.href) { link in
-                                 Button(link.title ?? "Unknown Chapter") {
-                                     print("Navigate to: \(link.title ?? link.href)")
-                                     viewModel.navigateToLink(link)
-                                     showTocSheet = false
-                                 }
-                             }
-                         }
-                         .navigationTitle("Table of Contents")
-                         .navigationBarTitleDisplayMode(.inline)
-                         .toolbar {
-                             ToolbarItem(placement: .confirmationAction) {
-                                 Button("Done") { showTocSheet = false }
-                             }
-                         }
-                     }
-                }
 
             } // End of HStack
             .padding(.horizontal)

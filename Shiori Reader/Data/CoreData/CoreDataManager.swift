@@ -7,6 +7,7 @@
 
 import CoreData
 import Foundation
+import ReadiumShared
 
 class CoreDataManager {
     static let shared = CoreDataManager()
@@ -289,5 +290,143 @@ class CoreDataManager {
     func removeAdditionalField(_ field: AdditionalFieldEntity) {
         viewContext.delete(field)
         saveContext()
+    }
+    
+    // MARK: - Bookmark Operations
+    
+    func createBookmark(bookId: UUID, locator: Locator, progression: Double?, created: Date = Date()) -> BookmarkEntity {
+        let bookmark = BookmarkEntity(context: viewContext)
+        bookmark.id = UUID()
+        bookmark.bookId = bookId
+        bookmark.progression = progression ?? locator.locations.totalProgression ?? 0.0
+        bookmark.created = created
+        
+        // Serialize locator to JSON data
+        do {
+            let locatorJSON = locator.json
+            let locatorData = try JSONSerialization.data(withJSONObject: locatorJSON)
+            bookmark.locatorData = locatorData
+        } catch {
+            print("Error serializing locator: \(error)")
+        }
+        
+        // Link to book if available
+        if let book = getBook(by: bookId) {
+            bookmark.book = book
+        }
+        
+        saveContext()
+        return bookmark
+    }
+    
+    func getBookmarks(for bookId: UUID) -> [BookmarkEntity] {
+        let request: NSFetchRequest<BookmarkEntity> = BookmarkEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "bookId == %@", bookId as CVarArg)
+        request.sortDescriptors = [NSSortDescriptor(key: "progression", ascending: true)]
+        
+        do {
+            return try viewContext.fetch(request)
+        } catch {
+            print("Error fetching bookmarks: \(error)")
+            return []
+        }
+    }
+    
+    func getBookmark(by id: UUID) -> BookmarkEntity? {
+        let request: NSFetchRequest<BookmarkEntity> = BookmarkEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        
+        do {
+            let results = try viewContext.fetch(request)
+            return results.first
+        } catch {
+            print("Error fetching bookmark: \(error)")
+            return nil
+        }
+    }
+    
+    func deleteBookmark(_ bookmark: BookmarkEntity) {
+        viewContext.delete(bookmark)
+        saveContext()
+    }
+    
+    func isLocationBookmarked(bookId: UUID, locator: Locator) -> Bool {
+        let href = locator.href
+        let progression = locator.locations.totalProgression ?? 0.0
+        let tolerance = 0.01 // Consider locations within 1% to be the same
+        
+        let request: NSFetchRequest<BookmarkEntity> = BookmarkEntity.fetchRequest()
+        
+        // Create a complex predicate to check both the href and progression
+        let bookIdPredicate = NSPredicate(format: "bookId == %@", bookId as CVarArg)
+        
+        // We need to extract href from the JSON data
+        // This is a simplification - in a real implementation, you'd need to parse the JSON
+        // For now, let's fetch all bookmarks for the book and then filter in memory
+        
+        request.predicate = bookIdPredicate
+        
+        do {
+            let bookmarks = try viewContext.fetch(request)
+            
+            // Filter bookmarks in memory to check href and progression
+            return bookmarks.contains { entity in
+                guard let locatorData = entity.locatorData,
+                      let json = try? JSONSerialization.jsonObject(with: locatorData) as? [String: Any],
+                      let entityHref = json["href"] as? String else {
+                    return false
+                }
+                
+                // Need to get href string representation
+                let hrefString = href.string
+                let hrefMatch = entityHref == hrefString
+                let progressionMatch = abs((entity.progression) - progression) < tolerance
+                
+                return hrefMatch && progressionMatch
+            }
+        } catch {
+            print("Error checking if location is bookmarked: \(error)")
+            return false
+        }
+    }
+    
+    func findBookmarkId(bookId: UUID, locator: Locator) -> UUID? {
+        let href = locator.href
+        let progression = locator.locations.totalProgression ?? 0.0
+        let tolerance = 0.01 // Consider locations within 1% to be the same
+        
+        let request: NSFetchRequest<BookmarkEntity> = BookmarkEntity.fetchRequest()
+        
+        // Create a predicate for the book ID
+        let bookIdPredicate = NSPredicate(format: "bookId == %@", bookId as CVarArg)
+        request.predicate = bookIdPredicate
+        
+        do {
+            let bookmarks = try viewContext.fetch(request)
+            
+            // Find the bookmark with matching href and progression
+            if let matchingBookmark = bookmarks.first(where: { entity in
+                guard let locatorData = entity.locatorData,
+                      let json = try? JSONSerialization.jsonObject(with: locatorData) as? [String: Any],
+                      let entityHref = json["href"] as? String else {
+                    return false
+                }
+                
+                // Need to get href string representation
+                let hrefString = href.string
+                let hrefMatch = entityHref == hrefString
+                let progressionMatch = abs((entity.progression) - progression) < tolerance
+                
+                return hrefMatch && progressionMatch
+            }) {
+                return matchingBookmark.id
+            }
+            
+            return nil
+        } catch {
+            print("Error finding bookmark ID: \(error)")
+            return nil
+        }
     }
 }

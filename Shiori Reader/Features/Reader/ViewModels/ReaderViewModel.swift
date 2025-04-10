@@ -36,6 +36,10 @@ class ReaderViewModel: ObservableObject {
     @Published var pendingNavigationLink: ReadiumShared.Link? = nil
     @Published var navigationRequest: Locator? = nil
     
+    // Bookmark related properties
+    @Published private(set) var bookmarks: [Bookmark] = []
+    @Published private(set) var isCurrentLocationBookmarked: Bool = false
+    
     // Dictionary related properties
     @Published var showDictionary = false
     @Published var selectedWord = ""
@@ -45,6 +49,7 @@ class ReaderViewModel: ObservableObject {
     // Core Data repositories
     private let bookRepository = BookRepository()
     private let settingsRepository = SettingsRepository()
+    private let bookmarkRepository = BookmarkRepository()
 
     private var cancellables = Set<AnyCancellable>()
     weak var navigatorController: EPUBNavigatorViewController?
@@ -68,6 +73,22 @@ class ReaderViewModel: ObservableObject {
         print("DEBUG [ReadiumBookViewModel]: Initialized for book '\(book.title)'")
         loadPreferences()
         loadInitialLocation()
+        
+        // Load existing bookmarks
+        Task {
+            await refreshBookmarks()
+        }
+        
+        // Subscribe to bookmark updates
+        bookmarkRepository.all(for: book.id)
+            .receive(on: DispatchQueue.main)
+            .sink(
+                receiveCompletion: { _ in },
+                receiveValue: { [weak self] bookmarks in
+                    self?.bookmarks = bookmarks
+                }
+            )
+            .store(in: &cancellables)
     }
 
     // MARK: - Loading Publication
@@ -319,6 +340,63 @@ class ReaderViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Bookmark Management
+    
+    /// Refreshes the bookmarks list from the repository
+    @MainActor
+    func refreshBookmarks() async {
+        // We don't need async/await with the new implementation
+        bookmarkRepository.refreshBookmarks(for: book.id)
+    }
+    
+    /// Toggles a bookmark at the current location
+    @MainActor
+    func toggleBookmark() async {
+        guard let navigator = navigatorController, let locator = navigator.currentLocation else {
+            print("ERROR [ReadiumBookViewModel]: Cannot toggle bookmark - no current location")
+            return
+        }
+        
+        if isCurrentLocationBookmarked {
+            // Find the bookmark ID to remove
+            if let bookmarkId = bookmarkRepository.findBookmarkId(bookId: book.id, locator: locator) {
+                _ = await bookmarkRepository.remove(bookmarkId)
+                print("DEBUG [ReadiumBookViewModel]: Removed bookmark at \(locator.href)")
+                isCurrentLocationBookmarked = false
+            }
+        } else {
+            // Create new bookmark
+            let bookmark = Bookmark(
+                bookId: book.id,
+                locator: locator,
+                created: Date()
+            )
+            
+            _ = await bookmarkRepository.add(bookmark)
+            print("DEBUG [ReadiumBookViewModel]: Added bookmark at \(locator.href)")
+            isCurrentLocationBookmarked = true
+        }
+        
+        // Refresh bookmarks list
+        await refreshBookmarks()
+    }
+    
+    /// Removes a specific bookmark
+    @MainActor
+    func removeBookmark(_ bookmark: Bookmark) async {
+        _ = await bookmarkRepository.remove(bookmark.id)
+        print("DEBUG [ReadiumBookViewModel]: Removed bookmark \(bookmark.id)")
+        
+        // Refresh bookmarks list
+        await refreshBookmarks()
+    }
+    
+    /// Navigate to a bookmarked location
+    func navigateToBookmark(_ bookmark: Bookmark) {
+        print("DEBUG [ReadiumBookViewModel]: Navigating to bookmark at \(bookmark.locator.href)")
+        requestNavigation(to: bookmark.locator)
+    }
+    
     // MARK: - Helper Functions
     
     private func getFileURL(for storedPath: String) -> URL? {
@@ -514,6 +592,9 @@ class ReaderViewModel: ObservableObject {
             
             print("DEBUG [ReadiumBookViewModel]: After assignment, book.readingProgress is now: \(self.book.readingProgress)")
             print("DEBUG [ReadiumBookViewModel]: Updated book progress to \(progression)")
+            
+            // Check if current location is bookmarked
+            isCurrentLocationBookmarked = bookmarkRepository.isBookmarked(bookId: book.id, locator: locator)
         } else {
             print("DEBUG [ReadiumBookViewModel]: Locator progression was nil, not updating.")
         }
