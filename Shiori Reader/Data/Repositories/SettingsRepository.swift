@@ -79,10 +79,13 @@ class SettingsRepository {
             for: bookEntity,
             fontSize: preferences.fontSize,
             fontFamily: preferences.fontFamily,
+            fontWeight: preferences.fontWeight,
             backgroundColor: preferences.backgroundColor,
             textColor: preferences.textColor,
             readingDirection: preferences.readingDirection,
-            isScrollMode: preferences.isScrollMode
+            isVerticalText: preferences.isVerticalText,
+            isScrollMode: preferences.isScrollMode,
+            theme: preferences.theme
         )
     }
 }

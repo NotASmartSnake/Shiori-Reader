@@ -13,10 +13,13 @@ struct BookPreference: Identifiable, Equatable, Hashable {
     let id: UUID
     var fontSize: Float
     var fontFamily: String
+    var fontWeight: Float
     var backgroundColor: String
     var textColor: String
-    var readingDirection: String
+    var readingDirection: String // "ltr", "rtl"
+    var isVerticalText: Bool
     var isScrollMode: Bool
+    var theme: String // "light", "dark", "sepia"
     let bookId: UUID
     
     // MARK: - Initialization
@@ -24,18 +27,24 @@ struct BookPreference: Identifiable, Equatable, Hashable {
     init(id: UUID = UUID(),
          fontSize: Float = 1.0,
          fontFamily: String = "Default",
+         fontWeight: Float = 400.0,
          backgroundColor: String = "#FFFFFF",
          textColor: String = "#000000",
          readingDirection: String = "ltr",
+         isVerticalText: Bool = false,
          isScrollMode: Bool = false,
+         theme: String = "light",
          bookId: UUID) {
         self.id = id
         self.fontSize = fontSize
         self.fontFamily = fontFamily
+        self.fontWeight = fontWeight
         self.backgroundColor = backgroundColor
         self.textColor = textColor
         self.readingDirection = readingDirection
+        self.isVerticalText = isVerticalText
         self.isScrollMode = isScrollMode
+        self.theme = theme
         self.bookId = bookId
     }
     
@@ -44,10 +53,13 @@ struct BookPreference: Identifiable, Equatable, Hashable {
         self.id = entity.id ?? UUID()
         self.fontSize = entity.fontSize
         self.fontFamily = entity.fontFamily ?? "Default"
+        self.fontWeight = entity.fontWeight
         self.backgroundColor = entity.backgroundColor ?? "#FFFFFF"
         self.textColor = entity.textColor ?? "#000000"
         self.readingDirection = entity.readingDirection ?? "ltr"
+        self.isVerticalText = entity.isVerticalText
         self.isScrollMode = entity.isScrollMode
+        self.theme = entity.theme ?? "light"
         self.bookId = entity.book?.id ?? UUID()
     }
     
@@ -55,12 +67,26 @@ struct BookPreference: Identifiable, Equatable, Hashable {
     
     // Convert color string to SwiftUI Color
     func getBackgroundColor() -> Color {
-        return Color(hex: backgroundColor) ?? .white
+        switch theme {
+        case "dark":
+            return Color(hex: "#222222") ?? .black
+        case "sepia":
+            return Color(hex: "#F8F1E3") ?? Color(red: 0.98, green: 0.94, blue: 0.89)
+        default:
+            return Color(hex: backgroundColor) ?? .white
+        }
     }
     
     // Convert color string to SwiftUI Color
     func getTextColor() -> Color {
-        return Color(hex: textColor) ?? .black
+        switch theme {
+        case "dark":
+            return Color(hex: "#EEEEEE") ?? .white
+        case "sepia":
+            return Color(hex: "#5F4B32") ?? Color(red: 0.37, green: 0.29, blue: 0.2)
+        default:
+            return Color(hex: textColor) ?? .black
+        }
     }
     
     // Check if reading direction is right-to-left
@@ -113,13 +139,16 @@ struct BookPreference: Identifiable, Equatable, Hashable {
     
     static func == (lhs: BookPreference, rhs: BookPreference) -> Bool {
         return lhs.id == rhs.id &&
-               lhs.bookId == rhs.bookId &&
-               lhs.fontSize == rhs.fontSize &&
-               lhs.fontFamily == rhs.fontFamily &&
-               lhs.backgroundColor == rhs.backgroundColor &&
-               lhs.textColor == rhs.textColor &&
-               lhs.readingDirection == rhs.readingDirection &&
-               lhs.isScrollMode == rhs.isScrollMode
+            lhs.bookId == rhs.bookId &&
+            lhs.fontSize == rhs.fontSize &&
+            lhs.fontFamily == rhs.fontFamily &&
+            lhs.fontWeight == rhs.fontWeight &&
+            lhs.backgroundColor == rhs.backgroundColor &&
+            lhs.textColor == rhs.textColor &&
+            lhs.readingDirection == rhs.readingDirection &&
+            lhs.isScrollMode == rhs.isScrollMode &&
+            lhs.isVertical == rhs.isVertical &&
+            lhs.theme == rhs.theme
     }
     
     // MARK: - Core Data Helpers
@@ -128,11 +157,14 @@ struct BookPreference: Identifiable, Equatable, Hashable {
     func updateEntity(_ entity: BookPreferenceEntity, bookEntity: BookEntity? = nil) {
         entity.id = id
         entity.fontSize = fontSize
+        entity.fontWeight = fontWeight
         entity.fontFamily = fontFamily
         entity.backgroundColor = backgroundColor
         entity.textColor = textColor
         entity.readingDirection = readingDirection
         entity.isScrollMode = isScrollMode
+        entity.isVerticalText = isVertical
+        entity.theme = theme
         
         // Only update the book relationship if provided
         if let bookEntity = bookEntity {

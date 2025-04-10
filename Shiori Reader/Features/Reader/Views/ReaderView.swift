@@ -7,10 +7,11 @@
 
 
 import SwiftUI
-import ReadiumShared // For Locator
+import ReadiumShared
 
 struct ReaderView: View {
     @StateObject var viewModel: ReaderViewModel
+    @StateObject private var settingsViewModel: ReaderSettingsViewModel
     @EnvironmentObject private var savedWordsManager: SavedWordsManager
     @State private var showOverlay = true
     @State private var showSearchSheet = false
@@ -20,6 +21,7 @@ struct ReaderView: View {
 
     init(book: Book) {
         _viewModel = StateObject(wrappedValue: ReaderViewModel(book: book))
+        _settingsViewModel = StateObject(wrappedValue: ReaderSettingsViewModel(bookId: book.id))
     }
 
     var body: some View {
@@ -48,11 +50,18 @@ struct ReaderView: View {
                     await viewModel.loadPublication()
                 }
             }
+            updateReaderPreferences()
+        }
+        .onChange(of: settingsViewModel.preferences) { _, _ in
+            updateReaderPreferences()
+            if let navigator = viewModel.navigatorController {
+                navigator.submitPreferences(viewModel.preferences)
+            }
         }
         .ignoresSafeArea(edges: .bottom)
     }
 
-    // --- View Components ---
+    // View components
 
     /// The main content area handling loading, errors, and the navigator.
     private var contentLayer: some View {
@@ -147,17 +156,10 @@ struct ReaderView: View {
                 }
                 .foregroundStyle(.blue)
                 .sheet(isPresented: $showSettingsSheet) {
-                    // Placeholder Settings View
-                    NavigationView {
-                         Text("Settings View Placeholder")
-                            .navigationTitle("Reader Settings")
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") { showSettingsSheet = false }
-                                }
-                            }
-                    }
+                    ReaderSettingsView(
+                        viewModel: settingsViewModel,
+                        isPresented: $showSettingsSheet
+                    )
                 }
 
 
@@ -272,6 +274,18 @@ struct ReaderView: View {
                     ),
                     isShowing: $showSearchSheet
                 )
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    // Helper method to update reader preferences
+    private func updateReaderPreferences() {
+        viewModel.preferences = settingsViewModel.toReadiumPreferences()
+        if let navigator = viewModel.navigatorController {
+            Task { @MainActor in
+                navigator.submitPreferences(viewModel.preferences)
             }
         }
     }

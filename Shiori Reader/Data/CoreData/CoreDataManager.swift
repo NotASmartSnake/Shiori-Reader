@@ -181,19 +181,28 @@ class CoreDataManager {
     
     // MARK: - BookPreference Operations
     
-    func createOrUpdateBookPreference(for book: BookEntity, fontSize: Float, fontFamily: String,
-                                     backgroundColor: String, textColor: String,
-                                     readingDirection: String, isScrollMode: Bool) -> BookPreferenceEntity {
-        
+    func createOrUpdateBookPreference(for book: BookEntity,
+                                     fontSize: Float,
+                                     fontFamily: String,
+                                     fontWeight: Float,
+                                     backgroundColor: String,
+                                     textColor: String,
+                                     readingDirection: String,
+                                     isVerticalText: Bool,
+                                     isScrollMode: Bool,
+                                     theme: String) -> BookPreferenceEntity {
         // Check if a preference already exists
         if let existingPreference = book.preferences {
             // Update existing preference
             existingPreference.fontSize = fontSize
             existingPreference.fontFamily = fontFamily
+            existingPreference.fontWeight = fontWeight
             existingPreference.backgroundColor = backgroundColor
             existingPreference.textColor = textColor
             existingPreference.readingDirection = readingDirection
+            existingPreference.isVerticalText = isVerticalText
             existingPreference.isScrollMode = isScrollMode
+            existingPreference.theme = theme
             saveContext()
             return existingPreference
         } else {
@@ -202,10 +211,13 @@ class CoreDataManager {
             preference.id = UUID()
             preference.fontSize = fontSize
             preference.fontFamily = fontFamily
+            preference.fontWeight = fontWeight
             preference.backgroundColor = backgroundColor
             preference.textColor = textColor
             preference.readingDirection = readingDirection
+            preference.isVerticalText = isVerticalText
             preference.isScrollMode = isScrollMode
+            preference.theme = theme
             preference.book = book
             saveContext()
             return preference
