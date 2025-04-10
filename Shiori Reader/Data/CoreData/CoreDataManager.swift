@@ -229,7 +229,7 @@ class CoreDataManager {
     
     func createOrUpdateAnkiSettings(deckName: String, noteType: String, wordField: String,
                                    readingField: String, definitionField: String,
-                                   sentenceField: String, tags: String) -> AnkiSettingsEntity {
+                                   sentenceField: String, wordWithReadingField: String, tags: String) -> AnkiSettingsEntity {
         
         // Check if settings already exist
         if let existingSettings = getAnkiSettings() {
@@ -240,6 +240,7 @@ class CoreDataManager {
             existingSettings.readingField = readingField
             existingSettings.definitionField = definitionField
             existingSettings.sentenceField = sentenceField
+            existingSettings.wordWithReadingField = wordWithReadingField
             existingSettings.tags = tags
             saveContext()
             return existingSettings
@@ -253,6 +254,7 @@ class CoreDataManager {
             settings.readingField = readingField
             settings.definitionField = definitionField
             settings.sentenceField = sentenceField
+            settings.wordWithReadingField = wordWithReadingField
             settings.tags = tags
             saveContext()
             return settings

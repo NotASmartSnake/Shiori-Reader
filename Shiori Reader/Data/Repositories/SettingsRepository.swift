@@ -23,6 +23,7 @@ class SettingsRepository {
                 readingField: "Reading",
                 definitionField: "Definition",
                 sentenceField: "Sentence",
+                wordWithReadingField: "Word with Reading",
                 tags: "shiori-reader"
             )
             return AnkiSettings(entity: entity)
@@ -43,6 +44,7 @@ class SettingsRepository {
                 readingField: settings.readingField,
                 definitionField: settings.definitionField,
                 sentenceField: settings.sentenceField,
+                wordWithReadingField: settings.wordWithReadingField, // Added this field
                 tags: settings.tags
             )
             

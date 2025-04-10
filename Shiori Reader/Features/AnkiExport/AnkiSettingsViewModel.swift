@@ -160,6 +160,8 @@ class AnkiSettingsViewModel: ObservableObject {
             updatedSettings.definitionField = fieldName
         case "sentence":
             updatedSettings.sentenceField = fieldName
+        case "wordWithReading":
+            updatedSettings.wordWithReadingField = fieldName
         default:
             break
         }

@@ -191,6 +191,16 @@ struct AnkiSettingsView: View {
                 ),
                 fields: viewModel.selectedNoteTypeFields
             )
+            
+            // Word with Reading Field
+            fieldPickerRow(
+                title: "Word with Reading Field",
+                binding: Binding(
+                    get: { viewModel.settings.wordWithReadingField },
+                    set: { viewModel.updateFieldMapping(fieldType: "wordWithReading", fieldName: $0) }
+                ),
+                fields: viewModel.selectedNoteTypeFields
+            )
         }
     }
     

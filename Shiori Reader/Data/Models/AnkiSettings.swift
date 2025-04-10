@@ -17,6 +17,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
     var readingField: String
     var definitionField: String
     var sentenceField: String
+    var wordWithReadingField: String
     var tags: String
     var additionalFields: [AdditionalField]
     
@@ -29,6 +30,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
          readingField: String = "Reading",
          definitionField: String = "Definition",
          sentenceField: String = "Sentence",
+         wordWithReadingField: String = "Word with Reading",
          tags: String = "shiori-reader",
          additionalFields: [AdditionalField] = []) {
         self.id = id
@@ -38,6 +40,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         self.readingField = readingField
         self.definitionField = definitionField
         self.sentenceField = sentenceField
+        self.wordWithReadingField = wordWithReadingField
         self.tags = tags
         self.additionalFields = additionalFields
     }
@@ -51,6 +54,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         self.readingField = entity.readingField ?? "Reading"
         self.definitionField = entity.definitionField ?? "Definition"
         self.sentenceField = entity.sentenceField ?? "Sentence"
+        self.wordWithReadingField = entity.wordWithReadingField ?? "Word with Reading"
         self.tags = entity.tags ?? "shiori-reader"
         
         // Convert related AdditionalFieldEntity objects to AdditionalField structs
@@ -76,7 +80,8 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
             "word": wordField,
             "reading": readingField,
             "definition": definitionField,
-            "sentence": sentenceField
+            "sentence": sentenceField,
+            "wordWithReading": wordWithReadingField
         ]
     }
     
@@ -109,14 +114,15 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
     
     static func == (lhs: AnkiSettings, rhs: AnkiSettings) -> Bool {
         return lhs.id == rhs.id &&
-               lhs.deckName == rhs.deckName &&
-               lhs.noteType == rhs.noteType &&
-               lhs.wordField == rhs.wordField &&
-               lhs.readingField == rhs.readingField &&
-               lhs.definitionField == rhs.definitionField &&
-               lhs.sentenceField == rhs.sentenceField &&
-               lhs.tags == rhs.tags &&
-               lhs.additionalFields == rhs.additionalFields
+            lhs.deckName == rhs.deckName &&
+            lhs.noteType == rhs.noteType &&
+            lhs.wordField == rhs.wordField &&
+            lhs.readingField == rhs.readingField &&
+            lhs.definitionField == rhs.definitionField &&
+            lhs.sentenceField == rhs.sentenceField &&
+            lhs.wordWithReadingField == rhs.wordWithReadingField &&
+            lhs.tags == rhs.tags &&
+            lhs.additionalFields == rhs.additionalFields
     }
     
     // MARK: - Core Data Helpers
@@ -129,6 +135,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         entity.readingField = readingField
         entity.definitionField = definitionField
         entity.sentenceField = sentenceField
+        entity.wordWithReadingField = wordWithReadingField
         entity.tags = tags
         
         // Handle additional fields
