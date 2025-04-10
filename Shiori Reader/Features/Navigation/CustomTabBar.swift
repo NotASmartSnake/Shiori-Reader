@@ -28,10 +28,9 @@ struct CustomTabBar: View {
                 ForEach(0..<tabBarItems.count, id: \.self) { index in
                     Spacer()
                     
-                    VStack(spacing: 4) { // Adjust spacing here
+                    VStack(spacing: 2) {
                         Image(systemName: tabBarItems[index].0)
-                            .imageScale(.medium)
-                            .font(.system(size: 21))
+                            .font(.system(size: 24))
                         Text(tabBarItems[index].1)
                             .font(.system(size: 10))
                     }
@@ -52,5 +51,8 @@ struct CustomTabBar: View {
 
 #Preview {
     MainView()
+        .environmentObject(IsReadingBook())
+        .environmentObject(LibraryManager())
+        .environmentObject(SavedWordsManager())
 }
 
