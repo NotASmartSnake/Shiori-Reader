@@ -43,9 +43,19 @@ struct DocumentImporter: UIViewControllerRepresentable {
                 
                 DispatchQueue.main.async {
                     self.onBookImported(book)
+                    // Set success status AFTER successful processing
+                    self.status = .success(url)
+                }
+            } catch let error as EPUBImportProcessor.ImportError {
+                // Handle specific import errors
+                DispatchQueue.main.async {
+                    print("ERROR [DocumentImporter]: EPUB Processing Failed - \(error.localizedDescription)")
+                    self.status = .failure(error.localizedDescription)
                 }
             } catch {
+                // Handle generic errors
                 DispatchQueue.main.async {
+                     print("ERROR [DocumentImporter]: Unexpected error processing book - \(error.localizedDescription)")
                     self.status = .failure("Failed to process book: \(error.localizedDescription)")
                 }
             }

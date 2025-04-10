@@ -62,6 +62,7 @@ struct BookCell: View {
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
+            .frame(width: 150)
         }
         .alert("Rename Book", isPresented: $showingRenameDialog) {
             TextField("Title", text: $newTitle)

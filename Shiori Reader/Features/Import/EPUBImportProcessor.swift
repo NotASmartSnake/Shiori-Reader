@@ -8,8 +8,30 @@
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import ReadiumShared
+import ReadiumStreamer
+import ReadiumNavigator
+import ReadiumAdapterGCDWebServer
 
 class EPUBImportProcessor {
+    private let coverMaxSize = CGSize(width: 200, height: 300)
+    
+    private let publicationOpener: PublicationOpener = {
+            let httpClient = DefaultHTTPClient()
+            // Use the shared server instance
+            let assetRetriever = AssetRetriever(httpClient: httpClient)
+            let parser = DefaultPublicationParser(
+                httpClient: httpClient,
+                assetRetriever: assetRetriever,
+                pdfFactory: DefaultPDFDocumentFactory()
+            )
+            return PublicationOpener(
+                parser: parser,
+                contentProtections: [] // Assuming no DRM
+            )
+        }()
+    
+    private let assetRetriever = AssetRetriever(httpClient: DefaultHTTPClient())
     
     private let defaultCovers = [
         "COTECover", "OregairuCover", "3DaysCover", "86Cover", "SlimeCover",
@@ -21,136 +43,150 @@ class EPUBImportProcessor {
         guard url.pathExtension.lowercased() == "epub" else {
             throw ImportError.invalidFileType
         }
-        
-        // Extract metadata and cover image if possible
-        let coverImageFilename = try await extractCoverImage(from: url)
-        let metadata = try await extractMetadata(from: url)
-        
-        // Create a Book object
-        if let coverImageFilename = coverImageFilename {
-            // We successfully extracted a cover image
-            return Book(
-                title: metadata.title,
-                filePath: fullPath, isLocalCover: true,  // This is a local file, not an asset
-                readingProgress: 0.0
-            )
-        } else {
-            // Use a default cover from assets
-            let defaultCover = defaultCovers.randomElement() ?? "COTECover"
-            return Book(
-                title: metadata.title,
-                filePath: fullPath, isLocalCover: false,  // This is an asset
-                readingProgress: 0.0
-            )
+
+        print("DEBUG [EPUBImportProcessor]: Processing EPUB at \(url.path)")
+
+        // Open the Publication using Readium
+        guard let anyURL = url.anyURL else {
+            print("ERROR [EPUBImportProcessor]: Could not create AnyURL from \(url)")
+            throw ImportError.metadataExtractionFailed("Invalid URL format")
         }
-    }
-    
-    private func extractCoverImage(from url: URL) async throws -> String? {
-//        do {
-//            let epubParser = EPUBParser()
-//            let (content, extractionDir) = try epubParser.parseEPUB(at: url.path)
-//            
-//            let fileManager = FileManager.default
-//            
-//            // Create a directory for covers if it doesn't exist
-//            let documentsDirectory = try fileManager.url(
-//                for: .documentDirectory,
-//                in: .userDomainMask,
-//                appropriateFor: nil,
-//                create: true
-//            )
-//            let coversDirectory = documentsDirectory.appendingPathComponent("BookCovers", isDirectory: true)
-//            try fileManager.createDirectory(at: coversDirectory, withIntermediateDirectories: true, attributes: nil)
-//            
-//            // Generate a unique filename for this book's cover
-//            let bookId = UUID().uuidString
-//            let coverFilename = "cover_\(bookId)"
-//            let coverURL = coversDirectory.appendingPathComponent("\(coverFilename).jpg")
-//            
-//            // 1. First try to find covers by name pattern
-//            let enumerator = fileManager.enumerator(at: extractionDir, includingPropertiesForKeys: nil)
-//            while let fileURL = enumerator?.nextObject() as? URL {
-//                // Check if this might be a cover image
-//                let filename = fileURL.lastPathComponent.lowercased()
-//                if (filename.contains("cover")) &&
-//                   (filename.hasSuffix(".jpg") || filename.hasSuffix(".jpeg") || filename.hasSuffix(".png")) {
-//                    if let imageData = try? Data(contentsOf: fileURL) {
-//                        try imageData.write(to: coverURL)
-//                        print("DEBUG: Found and saved cover from filename pattern: \(filename)")
-//                        return coverFilename
-//                    }
-//                }
-//            }
-//            
-//            // 2. Look through the content's images for likely cover candidates
-//            var largestImageData: Data?
-//            var largestSize = 0
-//            
-//            for (_, imageData) in content.images {
-//                let size = imageData.count
-//                if size > largestSize {
-//                    largestSize = size
-//                    largestImageData = imageData
-//                }
-//            }
-//            
-//            if let imageData = largestImageData {
-//                try imageData.write(to: coverURL)
-//                print("DEBUG: Saved largest image as cover")
-//                return coverFilename
-//            }
-//            
-//            print("DEBUG: No suitable cover image found in EPUB")
-//            return nil
-//            
-//        } catch {
-//            print("DEBUG: Error extracting cover: \(error)")
-//            return nil
-//        }
-        return nil
-    }
-    
-    private func extractMetadata(from url: URL) async throws -> EPUBMetadata {
-//        // Parse the .epub file to try to extract actual metadata
-//        do {
-//            let epubParser = EPUBParser()
-//            let (content, _) = try epubParser.parseEPUB(at: url.path)
-//            
-//            // Create a more informative title by adding author name if available
-//            var displayTitle = content.metadata.title
-//            
-//            // If author is not empty or "Unknown", append it to the title
-//            if !content.metadata.author.isEmpty && content.metadata.author != "Unknown Author" {
-//                displayTitle += " by \(content.metadata.author)"
-//            }
-//            
-//            return content.metadata
-//        } catch {
-//            print("DEBUG: Error extracting metadata: \(error)")
-//            
-//            // Fallback to using filename as title if metadata extraction fails
-//            return EPUBMetadata(
-//                title: url.deletingPathExtension().lastPathComponent,
-//                author: "Unknown Author",
-//                language: "en"
-//            )
-//        }
-        return EPUBMetadata(
-            title: url.deletingPathExtension().lastPathComponent,
-            author: "Unknown Author",
-            language: "en"
+
+        let assetResult = await assetRetriever.retrieve(url: anyURL)
+        let asset: Asset
+        switch assetResult {
+        case .success(let retrievedAsset):
+            asset = retrievedAsset
+            print("DEBUG [EPUBImportProcessor]: Asset retrieved successfully. Format: \(asset.format)")
+
+        case .failure(let assetError):
+            let errorDescription = assetError.localizedDescription
+            print("ERROR [EPUBImportProcessor]: Failed to retrieve asset: \(errorDescription)")
+            throw ImportError.metadataExtractionFailed("Failed to retrieve EPUB asset: \(errorDescription)")
+        }
+
+        let pubResult = await publicationOpener.open(asset: asset, allowUserInteraction: false)
+        let publication: Publication
+        switch pubResult {
+        case .success(let openedPublication):
+            publication = openedPublication
+            print("DEBUG [EPUBImportProcessor]: Publication opened successfully.")
+
+        case .failure(let openError):
+            let errorDescription = openError.localizedDescription
+            print("ERROR [EPUBImportProcessor]: Failed to open publication: \(errorDescription)")
+            throw ImportError.metadataExtractionFailed("Failed to open EPUB: \(errorDescription)")
+        }
+
+        print("DEBUG [EPUBImportProcessor]: Publication opened successfully.")
+
+        // Extract Metadata using Readium
+        let metadata = publication.metadata
+        let title = metadata.title ?? url.deletingPathExtension().lastPathComponent // Fallback title
+        let author = metadata.authors.first?.name // Get first author's name
+
+        print("DEBUG [EPUBImportProcessor]: Extracted Metadata - Title: \(title), Author: \(author ?? "N/A")")
+
+        // Extract Cover Image using Readium
+        var coverImageFilename: String? = nil
+        var isLocalCover = false
+
+        let coverResult: ReadResult<UIImage?> = await publication.coverFitting(maxSize: coverMaxSize)
+
+        switch coverResult {
+        case .success(let optionalCoverImage):
+            // Result was success, now check if the optional UIImage has a value
+            if let coverUIImage = optionalCoverImage {
+                print("DEBUG [EPUBImportProcessor]: Successfully extracted cover image using Readium.")
+                do {
+                    // Pass the non-optional UIImage to saveCoverImage
+                    coverImageFilename = try saveCoverImage(coverUIImage)
+                    isLocalCover = true
+                    print("DEBUG [EPUBImportProcessor]: Saved cover image as \(coverImageFilename ?? "N/A")")
+                } catch {
+                    print("ERROR [EPUBImportProcessor]: Failed to save extracted cover image: \(error). Falling back to default.")
+                    // Fallback will be handled after this switch block
+                }
+            } else {
+                // coverResult was .success, but the UIImage? was nil
+                print("WARN [EPUBImportProcessor]: coverFitting succeeded but returned nil image. Falling back.")
+            }
+
+        case .failure(let coverError): // Capture the ReadError
+            print("ERROR [EPUBImportProcessor]: Failed to extract cover using publication.coverFitting: \(coverError.localizedDescription). Falling back.")
+            // Fallback will be handled after this switch block
+        }
+
+        // Handle fallback to default cover if needed
+        if coverImageFilename == nil {
+            coverImageFilename = defaultCovers.randomElement() ?? "COTECover" // Use asset name
+            isLocalCover = false // Indicate it's an asset
+            print("DEBUG [EPUBImportProcessor]: Using default asset cover: \(coverImageFilename ?? "N/A")")
+        }
+
+        // Create the Book object
+        return Book(
+            title: title,
+            author: author,
+            filePath: fullPath,
+            coverImagePath: coverImageFilename,
+            isLocalCover: isLocalCover,
+            addedDate: Date(),
+            readingProgress: 0.0
         )
     }
     
-    private func createTempDirectory() throws -> URL {
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        return tempDir
+    // Helper function to save the cover image and return its filename stem
+    private func saveCoverImage(_ image: UIImage) throws -> String {
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            throw ImportError.coverExtractionFailed("Failed to convert UIImage to JPEG data")
+        }
+
+        let fileManager = FileManager.default
+
+        // Get the Covers directory URL
+        let documentsDirectory = try fileManager.url(
+            for: .documentDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true // Ensure Documents directory exists
+        )
+        let coversDirectory = documentsDirectory.appendingPathComponent("BookCovers", isDirectory: true)
+
+        // Create the Covers directory if it doesn't exist
+        if !fileManager.fileExists(atPath: coversDirectory.path) {
+            try fileManager.createDirectory(at: coversDirectory, withIntermediateDirectories: true, attributes: nil)
+            print("DEBUG [EPUBImportProcessor]: Created BookCovers directory at \(coversDirectory.path)")
+        }
+
+        // Generate a unique filename (stem only)
+        let filenameStem = "cover_\(UUID().uuidString)"
+        let coverURL = coversDirectory.appendingPathComponent("\(filenameStem).jpg") // Append extension
+
+        // Write the image data
+        try imageData.write(to: coverURL)
+
+        // Return just the unique filename stem
+        return filenameStem
     }
     
     enum ImportError: Error {
         case invalidFileType
-        case metadataExtractionFailed
-        case coverExtractionFailed
+        case metadataExtractionFailed(String)
+        case coverExtractionFailed(String)
+        case fileSaveFailed(String)
+        
+        var errorDescription: String? {
+            switch self {
+            case .invalidFileType:
+                return "Invalid file type. Only EPUB files are supported."
+            case .metadataExtractionFailed(let reason):
+                return "Failed to extract metadata: \(reason)"
+            case .coverExtractionFailed(let reason):
+                return "Failed to extract cover image: \(reason)"
+            case .fileSaveFailed(let reason):
+                return "Failed to save file: \(reason)"
+            }
+        }
     }
 }
