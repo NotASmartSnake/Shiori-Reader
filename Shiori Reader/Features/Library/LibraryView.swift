@@ -13,7 +13,7 @@ struct LibraryView: View {
     @State private var lastViewedBookPath: String? = nil
     @State private var showDocumentPicker = false
     @State private var importStatus: ImportStatus = .idle
-    @State private var showImportAlert = false
+    @State private var showImportStatusOverlay = false
     
     let columns = [
         GridItem(.flexible()),
@@ -25,25 +25,71 @@ struct LibraryView: View {
             ZStack {
                 Color("BackgroundColor").ignoresSafeArea(edges: .all)
                 
-                ScrollView {
-                    VStack {
-                        // Extract grid to separate view
-                        BookGrid(books: libraryManager.books, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
-                        
-                        Rectangle()
-                            .frame(width: 0, height: 60)
-                            .foregroundStyle(.clear)
+                if libraryManager.books.isEmpty {
+                    ScrollView {
+                        // Show empty state when no books are available
+                        EmptyLibraryView(showDocumentPicker: $showDocumentPicker)
                     }
+                } else {
+                    ScrollView {
+                        VStack {
+                            // Extract grid to separate view
+                            BookGrid(books: libraryManager.books, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
+                            
+                            Rectangle()
+                                .frame(width: 0, height: 60)
+                                .foregroundStyle(.clear)
+                        }
+                    }
+                }
+                
+                // Import status overlay
+                if showImportStatusOverlay {
+                    ImportStatusOverlay(status: importStatus, isPresented: $showImportStatusOverlay)
+                        .transition(.opacity)
+                        .animation(.easeInOut, value: showImportStatusOverlay)
                 }
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    addImportButton()
+                    Button(action: {
+                        showDocumentPicker = true
+                    }) {
+                        Image(systemName: "plus")
+                            .imageScale(.large)
+                    }
                 }
             }
             .toolbarBackground(Color.black, for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)
             .navigationTitle("Library")
+            .sheet(isPresented: $showDocumentPicker, onDismiss: {
+                if case .importing = importStatus {
+                    importStatus = .cancelled
+                }
+            }) {
+                DocumentImporter(status: $importStatus) { newBook in
+                    libraryManager.addBook(newBook)
+                    
+                    if importStatus.isSuccess {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            showImportStatusOverlay = false
+                            importStatus = .idle
+                        }
+                    }
+                }
+            }
+            .onChange(of: importStatus) { _, newValue in
+                if newValue != .idle {
+                    // Delay showing the overlay slightly for smoother UX
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        // Only show if we're still not idle (user didn't cancel super fast)
+                        if importStatus != .idle {
+                            showImportStatusOverlay = true
+                        }
+                    }
+                }
+            }
         }
         .onAppear {
             libraryManager.loadLibrary()
@@ -55,35 +101,6 @@ struct LibraryView: View {
             }
         }
     }
-    
-    func addImportButton() -> some View {
-            Button(action: {
-                showDocumentPicker = true
-            }) {
-                Image(systemName: "plus")
-                    .imageScale(.large)
-            }
-            .sheet(isPresented: $showDocumentPicker) {
-                DocumentImporter(status: $importStatus) { newBook in
-                    // Add the book to the library manager
-                    libraryManager.addBook(newBook)
-                    
-                    // Reset status
-                    importStatus = .idle
-                }
-            }
-            .alert(isPresented: $showImportAlert) {
-                Alert(
-                    title: Text("Import Book"),
-                    message: Text(importStatus.message),
-                    dismissButton: .default(Text("OK")) {
-                        if !importStatus.isSuccess {
-                            importStatus = .idle
-                        }
-                    }
-                )
-            }
-        }
 }
 
 

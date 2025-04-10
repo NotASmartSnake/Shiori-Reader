@@ -92,12 +92,34 @@ class DocumentPickerCoordinator: NSObject, UIDocumentPickerDelegate {
 }
 
 // MARK: - Document Import Status
-enum ImportStatus {
+enum ImportStatus: Equatable {
     case idle
     case importing
     case success(URL)
     case failure(String)
     case cancelled
+    
+    static func == (lhs: ImportStatus, rhs: ImportStatus) -> Bool {
+        switch (lhs, rhs) {
+        case (.idle, .idle),
+             (.importing, .importing),
+             (.cancelled, .cancelled):
+            return true
+        case (.success(let lhsURL), .success(let rhsURL)):
+            return lhsURL == rhsURL
+        case (.failure(let lhsMsg), .failure(let rhsMsg)):
+            return lhsMsg == rhsMsg
+        default:
+            return false
+        }
+    }
+    
+    var isIdle: Bool {
+        if case .idle = self {
+            return true
+        }
+        return false
+    }
     
     var isSuccess: Bool {
         if case .success = self { return true }
