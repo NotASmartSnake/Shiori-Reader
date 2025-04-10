@@ -13,26 +13,36 @@ struct Shiori_ReaderApp: App {
     @StateObject private var isReadingBookState = IsReadingBook()
     @StateObject private var libraryManager = LibraryManager()
     @StateObject private var savedWordsManager = SavedWordsManager()
+    @StateObject private var userPreferences = UserPreferences()
+    
     let coreDataManager = CoreDataManager.shared
     
     var body: some Scene {
         WindowGroup {
-            MainView()
-                .environmentObject(isReadingBookState)
-                .environmentObject(libraryManager)
-                .environmentObject(savedWordsManager)
-                .environment(\.managedObjectContext, coreDataManager.viewContext)
-                .preferredColorScheme(
-                    isDarkMode == nil ? nil : (isDarkMode! ? .dark : .light)
-                )
-                .onOpenURL { url in
-                    // Handle URL callback from AnkiMobile
-                    if url.scheme == "shiori" {
-                        // The app was opened via the URL scheme
-                        // Post a notification that a card was successfully added
-                        NotificationCenter.default.post(name: Notification.Name("AnkiCardAdded"), object: nil)
-                    }
+            ZStack {
+                // Main app content
+                MainView()
+                    .environmentObject(isReadingBookState)
+                    .environmentObject(libraryManager)
+                    .environmentObject(savedWordsManager)
+                    .environment(\.managedObjectContext, coreDataManager.viewContext)
+                    .preferredColorScheme(
+                        isDarkMode == nil ? nil : (isDarkMode! ? .dark : .light)
+                    )
+                
+                // Welcome view overlay on first launch
+                if userPreferences.isFirstLaunch {
+                    WelcomeView(isFirstLaunch: $userPreferences.isFirstLaunch)
+                        .transition(.opacity)
+                        .zIndex(100) // Ensure it's on top
                 }
+            }
+            .animation(.easeInOut, value: userPreferences.isFirstLaunch)
+            .onOpenURL { url in
+                if url.scheme == "shiori" {
+                    NotificationCenter.default.post(name: Notification.Name("AnkiCardAdded"), object: nil)
+                }
+            }
         }
     }
 }
