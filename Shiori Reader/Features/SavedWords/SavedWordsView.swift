@@ -107,6 +107,10 @@ struct SavedWordsView: View {
                     }
                 }
                 .navigationTitle("Saved Words")
+                .onAppear {
+                    // Refresh from repository when view appears
+                    wordsManager.refreshWords()
+                }
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {

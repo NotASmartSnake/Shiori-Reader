@@ -16,14 +16,14 @@ import WebKit
 
 @MainActor
 class ReaderViewModel: ObservableObject {
-    // --- Input ---
+    // Input
     @Published var book: Book
 
-    // --- Readium Core Components ---
+    // Readium core components
     private let publicationOpener: PublicationOpener
     private let assetRetriever: AssetRetriever
 
-    // --- Published State for UI ---
+    // Published state for UI
     @Published private(set) var publication: Publication?
     @Published private(set) var isLoading: Bool = false
     @Published private(set) var initialLocation: Locator?
@@ -31,7 +31,7 @@ class ReaderViewModel: ObservableObject {
     @Published var preferences = EPUBPreferences() // Using new Preferences API
     @Published private(set) var tableOfContents: [ReadiumShared.Link] = []
 
-    // --- Other State ---
+    // Other state
     @Published var state = BookState() // Temporary bridge to your existing state model
     @Published var pendingNavigationLink: ReadiumShared.Link? = nil
     @Published var navigationRequest: Locator? = nil
@@ -41,6 +41,10 @@ class ReaderViewModel: ObservableObject {
     @Published var selectedWord = ""
     @Published var dictionaryMatches: [DictionaryMatch] = []
     @Published var currentSentenceContext: String = ""
+    
+    // Core Data repositories
+    private let bookRepository = BookRepository()
+    private let settingsRepository = SettingsRepository()
 
     private var cancellables = Set<AnyCancellable>()
     weak var navigatorController: EPUBNavigatorViewController?
@@ -166,32 +170,93 @@ class ReaderViewModel: ObservableObject {
     private func loadPreferences() {
         print("DEBUG [ReadiumBookViewModel]: Loading user preferences...")
         
-        // Load from UserDefaults if available
-        if let data = UserDefaults.standard.data(forKey: "epub_preferences"),
-           let savedPreferences = try? JSONDecoder().decode(EPUBPreferences.self, from: data) {
-            preferences = savedPreferences
-            print("DEBUG [ReadiumBookViewModel]: Loaded saved preferences")
+        // First try to load book-specific preferences from Core Data
+        if let bookPrefs = settingsRepository.getBookPreferences(bookId: book.id) {
+            print("DEBUG [ReadiumBookViewModel]: Found book-specific preferences in Core Data")
+            
+            // FIXED: Properly map BookPreference to EPUBPreferences
+            let fontSize = Double(bookPrefs.fontSize)
+            
+            // Create a new preferences object with safely unwrapped values
+            preferences = EPUBPreferences()
+            
+            // Set font family - convert String to FontFamily enum
+            if bookPrefs.fontFamily != "Default" {
+                // Create a FontFamily from the string value
+                preferences.fontFamily = FontFamily(rawValue: bookPrefs.fontFamily)
+            }
+            
+            // Set font size
+            preferences.fontSize = fontSize
+            
+            // Set publisher styles flag
+            preferences.publisherStyles = true
+            
+            // Set scroll mode
+            preferences.scroll = bookPrefs.isScrollMode
+            
+            // Set vertical text flag
+            preferences.verticalText = bookPrefs.isVertical
+            
+            // Set reading direction/progression
+            if bookPrefs.isRTL {
+                // Use the correct enum value for right-to-left
+                preferences.readingProgression = .rtl
+            } else {
+                // Left-to-right is the default
+                preferences.readingProgression = .ltr
+            }
         } else {
+            // If no book-specific preferences, use global defaults
+            print("DEBUG [ReadiumBookViewModel]: No book preferences found, using defaults")
+            
             // Set default preferences if none saved
-            preferences = EPUBPreferences(
-                fontFamily: nil,  // use publisher font
-                fontSize: 1.0,  // default scale
-                publisherStyles: true,  // allow publisher styles
-                scroll: false,    // paginated by default
-                verticalText: false
-            )
-            print("DEBUG [ReadiumBookViewModel]: Using default preferences")
+            preferences = EPUBPreferences()
+            preferences.fontFamily = nil  // use publisher font
+            preferences.fontSize = 1.0    // default scale
+            preferences.publisherStyles = true
+            preferences.scroll = false    // paginated by default
+            preferences.verticalText = false
+            
+            // Check for default reading direction
+            let savedDirection = UserDefaults.standard.string(forKey: "preferred_reading_direction")
+            if savedDirection == "rtl" {
+                preferences.readingProgression = .rtl
+                print("DEBUG [ReadiumBookViewModel]: Using RTL reading direction from defaults")
+            } else {
+                preferences.readingProgression = .ltr
+                print("DEBUG [ReadiumBookViewModel]: Using LTR reading direction from defaults")
+            }
+        }
+    }
+    
+    // Save preferences to Core Data
+    func savePreferences() {
+        print("DEBUG [ReadiumBookViewModel]: Saving preferences to Core Data")
+        
+        // Determine reading direction string representation
+        let readingDirection: String
+        if preferences.readingProgression == .rtl {
+            readingDirection = "rtl"
+        } else if preferences.verticalText == true {
+            readingDirection = "vertical"
+        } else {
+            readingDirection = "ltr"
         }
         
-        // Load reading direction
-        let savedDirection = UserDefaults.standard.string(forKey: "preferred_reading_direction")
-        if savedDirection == "vertical" {
-            preferences.readingProgression = .rtl
-            print("DEBUG [ReadiumBookViewModel]: Loaded reading direction: Vertical (RTL)")
-        } else {
-            preferences.readingProgression = .ltr
-            print("DEBUG [ReadiumBookViewModel]: Loaded reading direction: Horizontal (LTR)")
-        }
+        // Create or update BookPreference
+        let bookPrefs = BookPreference(
+            fontSize: Float(preferences.fontSize ?? 1.0),
+            fontFamily: preferences.fontFamily?.rawValue ?? "Default",
+            backgroundColor: "#FFFFFF", // Default white background
+            textColor: "#000000",       // Default black text
+            readingDirection: readingDirection,
+            isScrollMode: preferences.scroll ?? false,
+            bookId: book.id
+        )
+        
+        // Save to repository
+        settingsRepository.saveBookPreferences(bookPrefs)
     }
     
     // Submit preferences to navigator (to be called from SwiftUI view when navigator is available)
@@ -202,6 +267,16 @@ class ReaderViewModel: ObservableObject {
 
     // MARK: - Location Handling
     private func loadInitialLocation() {
+        // Try to load location from Core Data first
+        if let locatorData = book.currentLocatorData,
+           let jsonString = String(data: locatorData, encoding: .utf8),
+           let locator = try? Locator(jsonString: jsonString) {
+            self.initialLocation = locator
+            print("DEBUG [ReadiumBookViewModel]: Loaded initial locator from Core Data: \(locator.locations.progression ?? -1.0)%")
+            return
+        }
+        
+        // Fall back to legacy UserDefaults approach if needed
         let key = "readium_locator_\(book.id.uuidString)"
         guard let data = UserDefaults.standard.data(forKey: key),
               let jsonString = String(data: data, encoding: .utf8),
@@ -212,60 +287,71 @@ class ReaderViewModel: ObservableObject {
         }
 
         self.initialLocation = locator
-        print("DEBUG [ReadiumBookViewModel]: Loaded initial locator: \(locator.locations.progression ?? -1.0)%")
+        print("DEBUG [ReadiumBookViewModel]: Loaded initial locator from UserDefaults: \(locator.locations.progression ?? -1.0)%")
     }
     
     func saveLocation(_ locator: Locator) {
         do {
             // Get the JSON dictionary representation from the Locator
-            let jsonDictionary = locator.json // This is a [String: Any], not a String
-
+            let jsonDictionary = locator.json
+            
             // Serialize the dictionary into Data using JSONSerialization
             let jsonData = try JSONSerialization.data(withJSONObject: jsonDictionary, options: [])
-
-            // Save the Data to UserDefaults
+            
+            // Save to Core Data via repository
+            bookRepository.updateBookProgress(
+                id: book.id,
+                progress: locator.locations.progression ?? book.readingProgress,
+                locatorData: jsonData
+            )
+            
+            // Also update our local book object
+            book.readingProgress = locator.locations.progression ?? book.readingProgress
+            book.currentLocatorData = jsonData
+            
+            print("DEBUG [ReadiumBookViewModel]: Saved locator to Core Data successfully.")
+            
+            // Legacy: Also save to UserDefaults for backward compatibility
             let key = "readium_locator_\(book.id.uuidString)"
             UserDefaults.standard.set(jsonData, forKey: key)
-            print("DEBUG [ReadiumBookViewModel]: Saved locator successfully.")
-
         } catch {
-            // Handle potential errors during JSON serialization or other issues
             print("ERROR [ReadiumBookViewModel]: Failed to serialize or save locator: \(error)")
         }
     }
     
     // MARK: - Helper Functions
+    
     private func getFileURL(for storedPath: String) -> URL? {
         let fileManager = FileManager.default
-        print("DEBUG [getFileURL] Checking path: \(storedPath)") // Add log
+        print("DEBUG [getFileURL] Checking path: \(storedPath)")
 
         if storedPath.starts(with: "/") && fileManager.fileExists(atPath: storedPath) {
-            print("DEBUG [getFileURL] Found as absolute path.") // Add log
+            print("DEBUG [getFileURL] Found as absolute path.")
             return URL(fileURLWithPath: storedPath)
         }
         do {
             let documentsDirectory = try fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
             let booksDirectory = documentsDirectory.appendingPathComponent("Books")
             let fileURLInBooks = booksDirectory.appendingPathComponent(storedPath)
-            print("DEBUG [getFileURL] Checking Documents/Books path: \(fileURLInBooks.path)") // Add log
+            print("DEBUG [getFileURL] Checking Documents/Books path: \(fileURLInBooks.path)")
             if fileManager.fileExists(atPath: fileURLInBooks.path) {
-                print("DEBUG [getFileURL] Found in Documents/Books.") // Add log
+                print("DEBUG [getFileURL] Found in Documents/Books.")
                 return fileURLInBooks
             }
         } catch { print("ERROR [getFileURL]: Couldn't access Documents directory: \(error)") }
 
         let filename = URL(fileURLWithPath: storedPath).lastPathComponent
-        print("DEBUG [getFileURL] Checking Bundle for filename: \(filename)") // Add log
+        print("DEBUG [getFileURL] Checking Bundle for filename: \(filename)")
         if let bundleURL = Bundle.main.url(forResource: filename, withExtension: nil, subdirectory: "Books") ?? Bundle.main.url(forResource: filename, withExtension: nil) {
-             print("DEBUG [getFileURL] Found potential bundle URL: \(bundleURL.path)") // Add log
+             print("DEBUG [getFileURL] Found potential bundle URL: \(bundleURL.path)")
              if fileManager.fileExists(atPath: bundleURL.path) {
-                 print("DEBUG [getFileURL] Found in Bundle.") // Add log
+                 print("DEBUG [getFileURL] Found in Bundle.")
                  return bundleURL
              } else {
-                  print("DEBUG [getFileURL] Bundle URL exists but file not present at path.") // Add log
+                  print("DEBUG [getFileURL] Bundle URL exists but file not present at path.")
              }
         }
-        print("WARN [getFileURL]: File not found for path: \(storedPath)") // Your existing log
+        print("WARN [getFileURL]: File not found for path: \(storedPath)")
         return nil
     }
 
@@ -408,18 +494,28 @@ class ReaderViewModel: ObservableObject {
      }
     
     func handleLocationUpdate(_ locator: Locator) {
-        print("DEBUG [ReadiumBookViewModel]: handleLocationUpdate called with locator progression: \(locator.locations.progression ?? -1.0)") // Added
+        print("DEBUG [ReadiumBookViewModel]: handleLocationUpdate called with locator progression: \(locator.locations.progression ?? -1.0)")
+        
+        // Save location to Core Data
         saveLocation(locator)
 
         if let progression = locator.locations.progression {
-            print("DEBUG [ReadiumBookViewModel]: Attempting to update progress to: \(progression)") // Added
+            print("DEBUG [ReadiumBookViewModel]: Attempting to update progress to: \(progression)")
+            
+            // Update the book's progress in the repository
+            bookRepository.updateBookProgress(
+                id: book.id,
+                progress: progression,
+                locatorData: book.currentLocatorData
+            )
+            
+            // Update our local book object as well
             book.readingProgress = progression
-            // ADD THIS LINE:
+            
             print("DEBUG [ReadiumBookViewModel]: After assignment, book.readingProgress is now: \(self.book.readingProgress)")
-            print("DEBUG [ReadiumBookViewModel]: Updated book progress to \(progression)") // Your existing line
-            // TODO: Update in database if needed
+            print("DEBUG [ReadiumBookViewModel]: Updated book progress to \(progression)")
         } else {
-            print("DEBUG [ReadiumBookViewModel]: Locator progression was nil, not updating.") // Added
+            print("DEBUG [ReadiumBookViewModel]: Locator progression was nil, not updating.")
         }
     }
 }

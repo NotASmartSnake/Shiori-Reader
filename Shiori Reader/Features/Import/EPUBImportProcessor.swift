@@ -31,20 +31,16 @@ class EPUBImportProcessor {
             // We successfully extracted a cover image
             return Book(
                 title: metadata.title,
-                coverImage: coverImageFilename,
-                isLocalCover: true,  // This is a local file, not an asset
-                readingProgress: 0.0,
-                filePath: fullPath
+                filePath: fullPath, isLocalCover: true,  // This is a local file, not an asset
+                readingProgress: 0.0
             )
         } else {
             // Use a default cover from assets
             let defaultCover = defaultCovers.randomElement() ?? "COTECover"
             return Book(
                 title: metadata.title,
-                coverImage: defaultCover,
-                isLocalCover: false,  // This is an asset
-                readingProgress: 0.0,
-                filePath: fullPath
+                filePath: fullPath, isLocalCover: false,  // This is an asset
+                readingProgress: 0.0
             )
         }
     }

@@ -339,8 +339,7 @@ struct SavedWordDetailView: View {
                 reading: "べんきょう",
                 definition: "study",
                 sentence: "日本語の勉強は楽しいけど、難しいです。",
-                timeAdded: Date(),
-                sourceBook: "ReZero"
+                sourceBook: "ReZero", timeAdded: Date()
             )
         )
     }

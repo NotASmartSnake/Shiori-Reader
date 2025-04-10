@@ -1,244 +1,38 @@
 import SwiftUI
 
 struct AnkiSettingsView: View {
-    // Settings stored in UserDefaults
-    @AppStorage("ankiNoteType") private var noteType = "Japanese"
-    @AppStorage("ankiDeckName") private var deckName = "Shiori-Reader"
-    @AppStorage("ankiTags") private var tags = "shiori-reader"
-    
-    // Primary field mappings
-    @AppStorage("ankiWordField") private var wordField = "Word"
-    @AppStorage("ankiReadingField") private var readingField = "Reading"
-    @AppStorage("ankiDefinitionField") private var definitionField = "Definition"
-    @AppStorage("ankiSentenceField") private var sentenceField = "Sentence"
-    @AppStorage("ankiWordWithReadingField") private var wordWithReadingField = "Word with Reading"
-    
-    // Additional field mappings as arrays
-    @State private var additionalFields: [AdditionalField] = []
-    
-    // UI state
-    @State private var showAlert = false
-    @State private var alertTitle = ""
-    @State private var alertMessage = ""
-    @State private var isLoading = false
+    @StateObject private var viewModel = AnkiSettingsViewModel()
     @State private var showingAddFieldMenu = false
     @State private var fieldTypeToAdd = ""
-    
-    // Anki data state
-    @State private var availableDecks: [String] = []
-    @State private var availableNoteTypes: [String: [String]] = [:]
-    @State private var selectedNoteTypeFields: [String] = []
+    @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         VStack {
             Form {
-                Section(header: Text("AnkiMobile Integration")) {
-                    // Note Type Menu
-                    HStack {
-                        Text("Note Type")
-                        Spacer()
-                        Menu {
-                            ForEach(Array(availableNoteTypes.keys.sorted()), id: \.self) { type in
-                                Button(action: {
-                                    noteType = type
-                                    selectedNoteTypeFields = availableNoteTypes[type] ?? []
-                                    loadAdditionalFields()
-                                }) {
-                                    HStack {
-                                        Text(type)
-                                        if type == noteType {
-                                            Spacer()
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Text(noteType)
-                                    .foregroundColor(.blue)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption)
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                        .disabled(availableNoteTypes.isEmpty)
-                    }
-                    
-                    // Deck Name Menu
-                    HStack {
-                        Text("Deck Name")
-                        Spacer()
-                        Menu {
-                            ForEach(availableDecks, id: \.self) { deck in
-                                Button(action: {
-                                    deckName = deck
-                                }) {
-                                    HStack {
-                                        Text(deck)
-                                        if deck == deckName {
-                                            Spacer()
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Text(deckName)
-                                    .foregroundColor(.blue)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption)
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                        .disabled(availableDecks.isEmpty)
-                    }
-                    
-                    // Fetch data from Anki button
-                    Button(action: {
-                        isLoading = true
-                        fetchAnkiInfo()
-                    }) {
-                        HStack {
-                            Text("Get Decks & Note Types from Anki")
-                            Spacer()
-                            if isLoading {
-                                ProgressView()
-                            }
-                        }
-                    }
-                    .disabled(isLoading)
+                // MARK: - AnkiMobile Integration Section
+                ankiIntegrationSection
+                
+                // MARK: - Primary Field Mapping Section
+                primaryFieldMappingSection
+                
+                // MARK: - Additional Fields Section
+                if !viewModel.settings.additionalFields.isEmpty {
+                    secondaryFieldMappingSection
                 }
                 
-                Section(header: Text("Primary Field Mapping"), footer: Text("These fields will always receive content in your Anki cards. Choose a blank value if you don't want to use a specific field.")) {
-                    // Word Field Menu
-                    HStack {
-                        Text("Word Field")
-                        Spacer()
-                        fieldPickerButton(for: $wordField, fields: selectedNoteTypeFields)
-                    }
-                    
-                    // Reading Field Menu
-                    HStack {
-                        Text("Reading Field")
-                        Spacer()
-                        fieldPickerButton(for: $readingField, fields: selectedNoteTypeFields)
-                    }
-                    
-                    // Definition Field Menu
-                    HStack {
-                        Text("Definition Field")
-                        Spacer()
-                        fieldPickerButton(for: $definitionField, fields: selectedNoteTypeFields)
-                    }
-                    
-                    // Sentence Field Menu
-                    HStack {
-                        Text("Sentence Field")
-                        Spacer()
-                        fieldPickerButton(for: $sentenceField, fields: selectedNoteTypeFields)
-                    }
-                    
-                    // Word With Reading Field Menu
-                    HStack {
-                        Text("Word with Reading Field")
-                        Spacer()
-                        fieldPickerButton(for: $wordWithReadingField, fields: selectedNoteTypeFields)
-                    }
-                }
+                // MARK: - Add Additional Field Button
+                addFieldSection
                 
-                // Additional Fields Section
-                if !additionalFields.isEmpty {
-                    Section(header: Text("Secondary Field Mapping"), footer: Text("These additional fields will also receive the same content as their primary counterparts.")) {
-                        ForEach(additionalFields.indices, id: \.self) { index in
-                            HStack {
-                                // Field type label
-                                Text(getFieldTypeDisplayName(additionalFields[index].type))
-                                
-                                Spacer()
-                                
-                                // Field selection menu
-                                fieldPickerButton(
-                                    for: Binding(
-                                        get: { additionalFields[index].fieldName },
-                                        set: {
-                                            additionalFields[index].fieldName = $0
-                                            saveAdditionalFields()
-                                        }
-                                    ),
-                                    fields: selectedNoteTypeFields
-                                )
-                                
-                                // Delete button
-                                Button(action: {
-                                    additionalFields.remove(at: index)
-                                    saveAdditionalFields()
-                                }) {
-                                    Image(systemName: "minus.circle.fill")
-                                        .foregroundColor(.red)
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Add additional field button
-                Section {
-                    Button(action: {
-                        showingAddFieldMenu = true
-                    }) {
-                        HStack {
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.blue)
-                            Text("Add Secondary Field Mapping")
-                        }
-                    }
-                    .confirmationDialog("Add Field Type", isPresented: $showingAddFieldMenu, titleVisibility: .visible) {
-                        Button("Word Field") {
-                            addEmptyField(type: "word")
-                        }
-                        Button("Reading Field") {
-                            addEmptyField(type: "reading")
-                        }
-                        Button("Definition Field") {
-                            addEmptyField(type: "definition")
-                        }
-                        Button("Sentence Field") {
-                            addEmptyField(type: "sentence")
-                        }
-                        Button("Word with Reading Field") {
-                            addEmptyField(type: "word_with_reading")
-                        }
-                        Button("Cancel", role: .cancel) { }
-                    }
-                }
-                
-                Section(footer: Text("Shiori Reader will open AnkiMobile to add your vocabulary cards. Make sure AnkiMobile is installed on your device.")) {
-                    Button(action: {
-                        testAnkiConnection()
-                    }) {
-                        Text("Test AnkiMobile Connection")
-                    }
-                }
-                
+                // MARK: - Test Connection Section
+                testConnectionSection
             }
             .navigationTitle("Anki Settings")
-            .alert(isPresented: $showAlert) {
+            .alert(isPresented: $viewModel.showAlert) {
                 Alert(
-                    title: Text(alertTitle),
-                    message: Text(alertMessage),
+                    title: Text(viewModel.alertTitle),
+                    message: Text(viewModel.alertMessage),
                     dismissButton: .default(Text("OK"))
                 )
-            }
-            .onAppear {
-                // Try to load field list if we already have the note type
-                if let currentNoteType = availableNoteTypes[noteType] {
-                    selectedNoteTypeFields = currentNoteType
-                }
-                
-                // Load existing additional fields
-                loadAdditionalFields()
             }
             
             // Spacer at the bottom for tab bar
@@ -246,10 +40,249 @@ struct AnkiSettingsView: View {
                 .frame(width: 0, height: 40)
                 .foregroundStyle(Color.clear)
         }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Done") {
+                    viewModel.saveSettings()
+                    presentationMode.wrappedValue.dismiss()
+                }
+            }
+        }
+    }
+    
+    // MARK: - Section Components
+    
+    private var ankiIntegrationSection: some View {
+        Section(header: Text("AnkiMobile Integration")) {
+            // Note Type Menu
+            noteTypeRow
+            
+            // Deck Name Menu
+            deckNameRow
+            
+            // Tags field
+            HStack {
+                Text("Tags")
+                Spacer()
+                TextField("Tags (comma separated)", text: $viewModel.settings.tags)
+                    .multilineTextAlignment(.trailing)
+            }
+            
+            // Fetch data from Anki button
+            fetchDataButton
+        }
+    }
+    
+    private var noteTypeRow: some View {
+        HStack {
+            Text("Note Type")
+            Spacer()
+            Menu {
+                ForEach(Array(viewModel.availableNoteTypes.keys.sorted()), id: \.self) { type in
+                    Button(action: {
+                        viewModel.updateNoteType(type)
+                    }) {
+                        HStack {
+                            Text(type)
+                            if type == viewModel.settings.noteType {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(viewModel.settings.noteType)
+                        .foregroundColor(.blue)
+                    Image(systemName: "chevron.down")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+            }
+            .disabled(viewModel.availableNoteTypes.isEmpty)
+        }
+    }
+    
+    private var deckNameRow: some View {
+        HStack {
+            Text("Deck Name")
+            Spacer()
+            Menu {
+                ForEach(viewModel.availableDecks, id: \.self) { deck in
+                    Button(action: {
+                        viewModel.updateDeckName(deck)
+                    }) {
+                        HStack {
+                            Text(deck)
+                            if deck == viewModel.settings.deckName {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(viewModel.settings.deckName)
+                        .foregroundColor(.blue)
+                    Image(systemName: "chevron.down")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+            }
+            .disabled(viewModel.availableDecks.isEmpty)
+        }
+    }
+    
+    private var fetchDataButton: some View {
+        Button(action: {
+            viewModel.fetchAnkiInfo()
+        }) {
+            HStack {
+                Text("Get Decks & Note Types from Anki")
+                Spacer()
+                if viewModel.isLoading {
+                    ProgressView()
+                }
+            }
+        }
+        .disabled(viewModel.isLoading)
+    }
+    
+    private var primaryFieldMappingSection: some View {
+        Section(header: Text("Primary Field Mapping"), footer: Text("These fields will always receive content in your Anki cards. Choose a blank value if you don't want to use a specific field.")) {
+            // Word Field Menu
+            fieldPickerRow(
+                title: "Word Field",
+                binding: Binding(
+                    get: { viewModel.settings.wordField },
+                    set: { viewModel.updateFieldMapping(fieldType: "word", fieldName: $0) }
+                ),
+                fields: viewModel.selectedNoteTypeFields
+            )
+            
+            // Reading Field Menu
+            fieldPickerRow(
+                title: "Reading Field",
+                binding: Binding(
+                    get: { viewModel.settings.readingField },
+                    set: { viewModel.updateFieldMapping(fieldType: "reading", fieldName: $0) }
+                ),
+                fields: viewModel.selectedNoteTypeFields
+            )
+            
+            // Definition Field Menu
+            fieldPickerRow(
+                title: "Definition Field",
+                binding: Binding(
+                    get: { viewModel.settings.definitionField },
+                    set: { viewModel.updateFieldMapping(fieldType: "definition", fieldName: $0) }
+                ),
+                fields: viewModel.selectedNoteTypeFields
+            )
+            
+            // Sentence Field Menu
+            fieldPickerRow(
+                title: "Sentence Field",
+                binding: Binding(
+                    get: { viewModel.settings.sentenceField },
+                    set: { viewModel.updateFieldMapping(fieldType: "sentence", fieldName: $0) }
+                ),
+                fields: viewModel.selectedNoteTypeFields
+            )
+        }
+    }
+    
+    private var secondaryFieldMappingSection: some View {
+        Section(header: Text("Secondary Field Mapping"), footer: Text("These additional fields will also receive the same content as their primary counterparts.")) {
+            ForEach(viewModel.settings.additionalFields.indices, id: \.self) { index in
+                additionalFieldRow(index: index)
+            }
+        }
+    }
+    
+    private func additionalFieldRow(index: Int) -> some View {
+        HStack {
+            // Field type label
+            Text(viewModel.getFieldTypeDisplayName(viewModel.settings.additionalFields[index].type))
+            
+            Spacer()
+            
+            // Field selection menu
+            fieldPickerButton(
+                binding: Binding(
+                    get: { viewModel.settings.additionalFields[index].fieldName },
+                    set: { viewModel.updateAdditionalField(at: index, fieldName: $0) }
+                ),
+                fields: viewModel.selectedNoteTypeFields
+            )
+            
+            // Delete button
+            Button(action: {
+                viewModel.removeField(at: index)
+            }) {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundColor(.red)
+            }
+        }
+    }
+    
+    private var addFieldSection: some View {
+        Section {
+            Button(action: {
+                showingAddFieldMenu = true
+            }) {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(.blue)
+                    Text("Add Secondary Field Mapping")
+                }
+            }
+            .confirmationDialog("Add Field Type", isPresented: $showingAddFieldMenu, titleVisibility: .visible) {
+                Button("Word Field") {
+                    viewModel.addEmptyField(type: "word")
+                }
+                Button("Reading Field") {
+                    viewModel.addEmptyField(type: "reading")
+                }
+                Button("Definition Field") {
+                    viewModel.addEmptyField(type: "definition")
+                }
+                Button("Sentence Field") {
+                    viewModel.addEmptyField(type: "sentence")
+                }
+                Button("Word with Reading Field") {
+                    viewModel.addEmptyField(type: "wordWithReading")
+                }
+                Button("Cancel", role: .cancel) { }
+            }
+        }
+    }
+    
+    private var testConnectionSection: some View {
+        Section(footer: Text("Shiori Reader will open AnkiMobile to add your vocabulary cards. Make sure AnkiMobile is installed on your device.")) {
+            Button(action: {
+                viewModel.testAnkiConnection()
+            }) {
+                Text("Test AnkiMobile Connection")
+            }
+        }
+    }
+    
+    // MARK: - Helper Functions
+    
+    // Field picker row with label and button
+    private func fieldPickerRow(title: String, binding: Binding<String>, fields: [String]) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            fieldPickerButton(binding: binding, fields: fields)
+        }
     }
     
     // Field picker button for menus
-    private func fieldPickerButton(for binding: Binding<String>, fields: [String]) -> some View {
+    private func fieldPickerButton(binding: Binding<String>, fields: [String]) -> some View {
         Menu {
             // Empty option - to not send any data for this field
              Button(action: {
@@ -288,99 +321,12 @@ struct AnkiSettingsView: View {
             }
         }
     }
-    
-    // Helper to get display name for field type
-    private func getFieldTypeDisplayName(_ type: String) -> String {
-        switch type {
-        case "word": return "Word Field"
-        case "reading": return "Reading Field"
-        case "definition": return "Definition Field"
-        case "sentence": return "Sentence Field"
-        case "word_with_reading": return "Word with Reading Field"
-        default: return "Field"
-        }
-    }
-    
-    // Add a new empty field
-    private func addEmptyField(type: String) {
-        // Default to first available field if any
-        let defaultField = selectedNoteTypeFields.first ?? "Field"
-        let newField = AdditionalField(type: type, fieldName: defaultField)
-        additionalFields.append(newField)
-        saveAdditionalFields()
-    }
-    
-    // Save additional fields to UserDefaults
-    private func saveAdditionalFields() {
-        let encodedData = try? JSONEncoder().encode(additionalFields)
-        UserDefaults.standard.set(encodedData, forKey: "ankiAdditionalFields")
-    }
-    
-    // Load additional fields from UserDefaults
-    private func loadAdditionalFields() {
-        if let data = UserDefaults.standard.data(forKey: "ankiAdditionalFields"),
-           let decoded = try? JSONDecoder().decode([AdditionalField].self, from: data) {
-            additionalFields = decoded
-        } else {
-            additionalFields = []
-        }
-    }
-    
-    private func fetchAnkiInfo() {
-        AnkiExportService.shared.fetchAnkiInfo { success, info in
-            DispatchQueue.main.async {
-                isLoading = false
-                
-                if success, let info = info {
-                    print("DEBUG: Received Anki info successfully")
-                    
-                    // Process deck information
-                    if let decks = info["decks"] as? [String] {
-                        self.availableDecks = decks
-                        print("DEBUG: Loaded \(decks.count) decks")
-                    }
-                    
-                    // Process note type information
-                    if let noteTypes = info["noteTypes"] as? [String: [String]] {
-                        self.availableNoteTypes = noteTypes
-                        print("DEBUG: Loaded \(noteTypes.count) note types")
-                        
-                        // Update the selected note type fields
-                        if let fields = noteTypes[self.noteType] {
-                            self.selectedNoteTypeFields = fields
-                        }
-                    }
-                    
-                    self.alertTitle = "Success"
-                    self.alertMessage = "Successfully retrieved Anki information. You can now select deck and note type."
-                    self.showAlert = true
-                } else {
-                    self.alertTitle = "Error"
-                    self.alertMessage = "Failed to fetch information from AnkiMobile."
-                    self.showAlert = true
-                }
-            }
-        }
-    }
-    
-    private func testAnkiConnection() {
-        AnkiExportService.shared.testAnkiConnection { success in
-            DispatchQueue.main.async {
-                if success {
-                    alertTitle = "Success"
-                    alertMessage = "AnkiMobile is installed and can be opened."
-                } else {
-                    alertTitle = "Error"
-                    alertMessage = "AnkiMobile is not installed or cannot be opened."
-                }
-                showAlert = true
-            }
-        }
-    }
 }
 
-#Preview {
-    NavigationView {
-        AnkiSettingsView()
+struct AnkiSettingsView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            AnkiSettingsView()
+        }
     }
 }

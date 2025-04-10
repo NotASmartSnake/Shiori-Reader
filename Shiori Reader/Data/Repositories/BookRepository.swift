@@ -6,78 +6,47 @@
 //
 
 import Foundation
+import CoreData
 
 class BookRepository {
-//    private let epubParser: EPUBParser
-//    
-//    init(epubParser: EPUBParser = EPUBParser()) {
-//        self.epubParser = epubParser
-//    }
+    private let coreDataManager = CoreDataManager.shared
     
-    @MainActor
-    func loadEPUB(at path: String) async throws -> (EPUBContent, URL) {
-        print("DEBUG: Attempting to load EPUB at path: \(path)")
-        
-        // First, try to find the file in the app's Documents directory
-        let fileManager = FileManager.default
-        let documentsDirectory = try fileManager.url(
-            for: .documentDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: false
+    // Get all books
+    func getAllBooks() -> [Book] {
+        let entities = coreDataManager.getAllBooks()
+        return entities.map { Book(entity: $0) }
+    }
+    
+    // Add a new book
+    func addBook(title: String, author: String? = nil, filePath: String,
+                coverImage: String? = nil, isLocalCover: Bool = false) -> Book {
+        let entity = coreDataManager.createBook(
+            title: title,
+            author: author,
+            filePath: filePath,
+            coverImagePath: coverImage
         )
-        
-        let documentsPath = documentsDirectory.appendingPathComponent("Books/\(path)").path
-        
-        print("DEBUG: File not found: \(path)")
-        throw EPUBError.fileNotFound
+        entity.isLocalCover = isLocalCover
+        coreDataManager.saveContext()
+        return Book(entity: entity)
     }
     
-    @MainActor
-    func saveProgress(for book: Book, exploredCharCount: Int, totalCharCount: Int) async throws {
-        let key = "book_progress_\(book.filePath)"
-        
-        // Save progress percentage
-        UserDefaults.standard.set(book.readingProgress, forKey: key)
-        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "book_progress_timestamp_\(book.filePath)")
-        
-        // Save character count data
-        UserDefaults.standard.set(exploredCharCount, forKey: "book_char_count_\(book.filePath)")
-        UserDefaults.standard.set(totalCharCount, forKey: "book_total_char_count_\(book.filePath)")
-        
-        // Force UserDefaults to save immediately
-        UserDefaults.standard.synchronize()
+    // Update book progress
+    func updateBookProgress(id: UUID, progress: Double, locatorData: Data? = nil) {
+        guard let entity = coreDataManager.getBook(by: id) else { return }
+        coreDataManager.updateBookProgress(book: entity, progress: progress, locatorData: locatorData)
     }
     
-    @MainActor
-    func getExploredCharCount(for filePath: String) -> Int {
-        return UserDefaults.standard.integer(forKey: "book_char_count_\(filePath)")
+    // Update book title
+    func updateBookTitle(id: UUID, newTitle: String) {
+        guard let entity = coreDataManager.getBook(by: id) else { return }
+        entity.title = newTitle
+        coreDataManager.saveContext()
     }
     
-    @MainActor
-    func getTotalCharCount(for filePath: String) -> Int {
-        return UserDefaults.standard.integer(forKey: "book_total_char_count_\(filePath)")
-    }
-    
-    @MainActor
-    func getProgress(for filePath: String) -> Double {
-        let key = "book_progress_\(filePath)"
-        let progress = UserDefaults.standard.double(forKey: key)
-        print("DEBUG: Getting progress with key: \(key), value: \(progress)")
-        return progress
-    }
-    
-    @MainActor
-    func getLastReadDate(for bookId: UUID) -> Date? {
-        let timestamp = UserDefaults.standard.double(forKey: "book_progress_timestamp_\(bookId)")
-        if timestamp > 0 {
-            return Date(timeIntervalSince1970: timestamp)
-        }
-        return nil
-    }
-    
-    enum EPUBError: Error {
-        case invalidArchive
-        case fileNotFound
+    // Delete a book
+    func deleteBook(with id: UUID) {
+        guard let entity = coreDataManager.getBook(by: id) else { return }
+        coreDataManager.deleteBook(entity)
     }
 }

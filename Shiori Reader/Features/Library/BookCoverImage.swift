@@ -14,12 +14,12 @@ struct BookCoverImage: View {
         Group {
             if book.isLocalCover {
                 // Load from local file system
-                loadLocalImage(named: book.coverImage)
+                loadLocalImage(named: book.coverImagePath ?? "")
                     .resizable()
                     .scaledToFit()
             } else {
                 // Load from asset catalog
-                Image(book.coverImage)
+                Image(book.coverImagePath ?? "COTECover")
                     .resizable()
                     .scaledToFit()
             }

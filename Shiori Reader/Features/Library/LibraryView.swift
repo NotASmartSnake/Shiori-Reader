@@ -50,8 +50,8 @@ struct LibraryView: View {
         }
         .onChange(of: isReadingBook.isReading) { _, isReading in
             if !isReading && lastViewedBookPath != nil {
-                // We just returned from reading a book
-                libraryManager.loadReadingProgress()
+                // We just returned from reading a book, refresh library
+                libraryManager.loadLibrary()
             }
         }
     }

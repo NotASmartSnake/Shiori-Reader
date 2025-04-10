@@ -280,9 +280,7 @@ struct ReaderView: View {
 #Preview {
     ReaderView(book: Book(
         title: "実力至上主義者の教室",
-        coverImage: "COTECover",
-        readingProgress: 0.1,
-        filePath: "3Days.epub"
+        filePath: "3Days.epub", readingProgress: 0.1
     ))
     .environmentObject(SavedWordsManager())
 }

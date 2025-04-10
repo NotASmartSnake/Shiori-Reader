@@ -6,6 +6,7 @@ class AnkiExportService {
     // Singleton instance
     static let shared = AnkiExportService()
     private let japaneseAnalyzer = JapaneseTextAnalyzer.shared
+    private let settingsRepository = SettingsRepository()
     
     private init() {}
     
@@ -16,19 +17,17 @@ class AnkiExportService {
     }
     
     func isConfigured() -> Bool {
-        // Check if basic settings exist
-        if UserDefaults.standard.string(forKey: "ankiNoteType") != nil &&
-           UserDefaults.standard.string(forKey: "ankiDeckName") != nil {
-            return true
-        }
-        return false
+        // Get settings from repository instead of UserDefaults
+        let settings = settingsRepository.getAnkiSettings()
+        return !settings.noteType.isEmpty && !settings.deckName.isEmpty
     }
     
-    // Create a full vocabulary card in Anki
-    func addVocabularyCard(word: String, reading: String, definition: String, sentence: String, sourceView: UIViewController? = nil, completion: ((Bool) -> Void)? = nil) {
+    // Create a full vocabulary card in Anki using repository data
+    func addVocabularyCard(word: String, reading: String, definition: String, sentence: String,
+                         sourceView: UIViewController? = nil, completion: ((Bool) -> Void)? = nil) {
         // Check if Anki is configured
         if !isConfigured() {
-            // If we have a source view, show a setup prompt
+            // Show setup UI if needed
             if let sourceViewController = sourceView {
                 let alert = UIAlertController(
                     title: "Anki Setup Required",
@@ -55,7 +54,15 @@ class AnkiExportService {
             return
         }
         
-        guard let url = createAnkiExportURL(word: word, reading: reading, definition: definition, sentence: sentence) else {
+        // Get Anki settings from repository
+        let settings = settingsRepository.getAnkiSettings()
+        guard let url = createAnkiExportURL(
+            word: word,
+            reading: reading,
+            definition: definition,
+            sentence: sentence,
+            settings: settings
+        ) else {
             completion?(false)
             return
         }
@@ -97,35 +104,18 @@ class AnkiExportService {
     }
     
     // Create the URL for AnkiMobile with all field mappings
-    private func createAnkiExportURL(word: String, reading: String, definition: String, sentence: String) -> URL? {
+    private func createAnkiExportURL(word: String, reading: String, definition: String,
+                                   sentence: String, settings: AnkiSettings) -> URL? {
         var components = URLComponents(string: "anki://x-callback-url/addnote")
         
-        // Get note type and deck
-        let noteType = UserDefaults.standard.string(forKey: "ankiNoteType") ?? "Japanese"
-        let deckName = UserDefaults.standard.string(forKey: "ankiDeckName") ?? "Shiori-Reader"
-        let tags = UserDefaults.standard.string(forKey: "ankiTags") ?? "shiori-reader"
-        
-        // Get all field mappings (including secondary fields)
-        let allFields = getAllFieldMappings()
-        
-        // Debug log
-        print("DEBUG: Creating URL for Anki export")
-        print("DEBUG: Word: \(word)")
-        print("DEBUG: Reading: \(reading)")
-        print("DEBUG: Definition: \(definition)")
-        print("DEBUG: Sentence: \(sentence)")
-        print("DEBUG: Note Type: \(noteType)")
-        print("DEBUG: Deck: \(deckName)")
-        print("DEBUG: All field mappings: \(allFields)")
+        let wordWithReading = japaneseAnalyzer.formatWordWithReading(word: word, reading: reading)
         
         // Create base query items
         var queryItems = [
-            URLQueryItem(name: "type", value: noteType),
-            URLQueryItem(name: "deck", value: deckName),
-            URLQueryItem(name: "tags", value: tags)
+            URLQueryItem(name: "type", value: settings.noteType),
+            URLQueryItem(name: "deck", value: settings.deckName),
+            URLQueryItem(name: "tags", value: settings.tags)
         ]
-        
-        let wordWithReading = japaneseAnalyzer.formatWordWithReading(word: word, reading: reading)
         
         // Map of content types to their values
         let contentMap = [
@@ -136,15 +126,24 @@ class AnkiExportService {
             "wordWithReading": wordWithReading
         ]
         
-        // Add all fields to query items
-        for (contentType, fieldNames) in allFields {
-            guard let content = contentMap[contentType] else { continue }
-            
-            for fieldName in fieldNames {
-                // Skip if the field is empty
-                if !fieldName.isEmpty {
-                    queryItems.append(URLQueryItem(name: "fld\(fieldName)", value: content))
-                }
+        // Add primary fields
+        if !settings.wordField.isEmpty {
+            queryItems.append(URLQueryItem(name: "fld\(settings.wordField)", value: word))
+        }
+        if !settings.readingField.isEmpty {
+            queryItems.append(URLQueryItem(name: "fld\(settings.readingField)", value: reading))
+        }
+        if !settings.definitionField.isEmpty {
+            queryItems.append(URLQueryItem(name: "fld\(settings.definitionField)", value: definition))
+        }
+        if !settings.sentenceField.isEmpty {
+            queryItems.append(URLQueryItem(name: "fld\(settings.sentenceField)", value: sentence))
+        }
+        
+        // Add additional fields
+        for additionalField in settings.additionalFields {
+            if let content = contentMap[additionalField.type], !additionalField.fieldName.isEmpty {
+                queryItems.append(URLQueryItem(name: "fld\(additionalField.fieldName)", value: content))
             }
         }
         
@@ -153,11 +152,7 @@ class AnkiExportService {
         queryItems.append(URLQueryItem(name: "x-success", value: appURLScheme))
         
         components?.queryItems = queryItems
-        
-        let url = components?.url
-        print("DEBUG: Final Anki URL: \(url?.absoluteString ?? "nil")")
-        
-        return url
+        return components?.url
     }
     
     // Test connection to AnkiMobile
@@ -261,7 +256,7 @@ class AnkiExportService {
         }
     }
     
-    // Helper method to process Anki data
+    // Helper method to process Anki data and update settings in Core Data
     private func processAnkiData(_ data: Data, completion: @escaping (Bool, [String: Any]?) -> Void) {
         // Clear clipboard after reading
         UIPasteboard.general.setData(Data(), forPasteboardType: "net.ankimobile.json")
@@ -278,6 +273,14 @@ class AnkiExportService {
                     let deckNames = decksArray.compactMap { $0["name"] }
                     processedData["decks"] = deckNames
                     print("DEBUG: Processed \(deckNames.count) decks")
+                    
+                    // Store first deck as default if we don't already have one set
+                    let settings = settingsRepository.getAnkiSettings()
+                    if settings.deckName.isEmpty && !deckNames.isEmpty {
+                        var updatedSettings = settings
+                        updatedSettings.deckName = deckNames.first ?? "Default"
+                        settingsRepository.updateAnkiSettings(updatedSettings)
+                    }
                 }
                 
                 // Process the notetypes data (convert from array of dictionaries to dictionary of arrays)
@@ -294,6 +297,38 @@ class AnkiExportService {
                     
                     processedData["noteTypes"] = noteTypesDict
                     print("DEBUG: Processed \(noteTypesDict.count) note types")
+                    
+                    // Store first note type as default if we don't already have one set
+                    let settings = settingsRepository.getAnkiSettings()
+                    if settings.noteType.isEmpty && !noteTypesDict.isEmpty {
+                        var updatedSettings = settings
+                        let firstNoteTypeName = noteTypesDict.keys.sorted().first ?? "Basic"
+                        updatedSettings.noteType = firstNoteTypeName
+                        
+                        // Also set default field mappings if available
+                        if let fields = noteTypesDict[firstNoteTypeName], !fields.isEmpty {
+                            // Try to find appropriate field names
+                            let wordField = fields.first(where: { $0.contains("Word") || $0.contains("Expression") }) ?? fields.first
+                            let readingField = fields.first(where: { $0.contains("Reading") || $0.contains("Reading") }) ?? (fields.count > 1 ? fields[1] : nil)
+                            let meaningField = fields.first(where: { $0.contains("Meaning") || $0.contains("Definition") }) ?? (fields.count > 2 ? fields[2] : nil)
+                            let sentenceField = fields.first(where: { $0.contains("Sentence") || $0.contains("Example") }) ?? (fields.count > 3 ? fields[3] : nil)
+                            
+                            if let wordField = wordField {
+                                updatedSettings.wordField = wordField
+                            }
+                            if let readingField = readingField {
+                                updatedSettings.readingField = readingField
+                            }
+                            if let meaningField = meaningField {
+                                updatedSettings.definitionField = meaningField
+                            }
+                            if let sentenceField = sentenceField {
+                                updatedSettings.sentenceField = sentenceField
+                            }
+                        }
+                        
+                        settingsRepository.updateAnkiSettings(updatedSettings)
+                    }
                 }
                 
                 // Return the processed data

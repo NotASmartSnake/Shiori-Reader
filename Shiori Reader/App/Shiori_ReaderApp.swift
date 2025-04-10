@@ -13,6 +13,7 @@ struct Shiori_ReaderApp: App {
     @StateObject private var isReadingBookState = IsReadingBook()
     @StateObject private var libraryManager = LibraryManager()
     @StateObject private var savedWordsManager = SavedWordsManager()
+    let coreDataManager = CoreDataManager.shared
     
     var body: some Scene {
         WindowGroup {
@@ -20,6 +21,7 @@ struct Shiori_ReaderApp: App {
                 .environmentObject(isReadingBookState)
                 .environmentObject(libraryManager)
                 .environmentObject(savedWordsManager)
+                .environment(\.managedObjectContext, coreDataManager.viewContext)
                 .preferredColorScheme(
                     isDarkMode == nil ? nil : (isDarkMode! ? .dark : .light)
                 )

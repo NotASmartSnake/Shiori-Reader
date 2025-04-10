@@ -214,8 +214,8 @@ struct DictionaryPopupView: View {
             reading: entry.reading,
             definition: entry.meanings.joined(separator: "; "),
             sentence: sentenceContext,
-            timeAdded: Date(),
-            sourceBook: bookTitle
+            sourceBook: bookTitle,
+            timeAdded: Date()
         )
         
         // Add to saved words manager

@@ -15,7 +15,7 @@
         <attribute name="sentenceField" optional="YES" attributeType="String"/>
         <attribute name="tags" optional="YES" attributeType="String"/>
         <attribute name="wordField" optional="YES" attributeType="String"/>
-        <relationship name="additionalFields" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="AdditionalFieldEntity" inverseName="ankiSettings" inverseEntity="AdditionalFieldEntity"/>
+        <relationship name="additionalFields" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="AdditionalFieldEntity" inverseName="ankiSettings" inverseEntity="AdditionalFieldEntity"/>
     </entity>
     <entity name="BookEntity" representedClassName="BookEntity" syncable="YES" codeGenerationType="class">
         <attribute name="addedDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>

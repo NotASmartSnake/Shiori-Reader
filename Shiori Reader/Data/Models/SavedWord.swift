@@ -9,10 +9,10 @@ import Foundation
 struct SavedWord: Identifiable, Equatable, Hashable {
     // MARK: - Properties
     let id: UUID
-    let word: String
-    let reading: String
-    let definition: String
-    let sentence: String
+    var word: String
+    var reading: String
+    var definition: String
+    var sentence: String
     let sourceBook: String
     let timeAdded: Date
     var bookId: UUID?
