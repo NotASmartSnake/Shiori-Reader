@@ -36,7 +36,8 @@ struct BookCell: View {
             }
             
             HStack {
-                Text(String(format: "%.2f%%", book.readingProgress * 100))
+                // Progress indicator with integer percentage (matching ReaderView)
+                Text(String(format: "%d%%", Int(book.readingProgress * 100)))
                     .font(.caption)
                     .foregroundStyle(.gray)
                 Spacer()

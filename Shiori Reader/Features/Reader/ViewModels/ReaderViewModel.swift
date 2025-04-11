@@ -43,6 +43,10 @@ class ReaderViewModel: ObservableObject {
     // Dictionary related properties
     @Published var showDictionary = false
     @Published var selectedWord = ""
+    
+    // Track both current chapter and total book progression
+    @Published var currentChapterProgression: Double = 0.0
+    @Published var totalBookProgression: Double = 0.0
     @Published var dictionaryMatches: [DictionaryMatch] = []
     @Published var currentSentenceContext: String = ""
     
@@ -73,6 +77,9 @@ class ReaderViewModel: ObservableObject {
         print("DEBUG [ReadiumBookViewModel]: Initialized for book '\(book.title)'")
         loadPreferences()
         loadInitialLocation()
+        
+        // Initialize progress properties with existing book progress
+        self.totalBookProgression = book.readingProgress
         
         // Load existing bookmarks
         Task {
@@ -577,8 +584,27 @@ class ReaderViewModel: ObservableObject {
         // Save location to Core Data
         saveLocation(locator)
 
-        if let progression = locator.locations.progression {
-            print("DEBUG [ReadiumBookViewModel]: Attempting to update progress to: \(progression)")
+        // Update progression properties (chapter and total)
+        self.currentChapterProgression = locator.locations.progression ?? 0.0
+        
+        // Use totalProgression if available, otherwise fall back to progression for compatibility
+        if let totalProgression = locator.locations.totalProgression {
+            self.totalBookProgression = totalProgression
+            
+            // Update the book's progress in the repository and local model
+            bookRepository.updateBookProgress(
+                id: book.id,
+                progress: totalProgression,
+                locatorData: book.currentLocatorData
+            )
+            
+            // Update our local book object as well
+            book.readingProgress = totalProgression
+            
+            print("DEBUG [ReadiumBookViewModel]: Updated book total progress to \(totalProgression)")
+        } else if let progression = locator.locations.progression {
+            // Fallback to using progression as total progression if totalProgression is not available
+            print("DEBUG [ReadiumBookViewModel]: No totalProgression available, using progression.")
             
             // Update the book's progress in the repository
             bookRepository.updateBookProgress(
@@ -592,12 +618,12 @@ class ReaderViewModel: ObservableObject {
             
             print("DEBUG [ReadiumBookViewModel]: After assignment, book.readingProgress is now: \(self.book.readingProgress)")
             print("DEBUG [ReadiumBookViewModel]: Updated book progress to \(progression)")
-            
-            // Check if current location is bookmarked
-            isCurrentLocationBookmarked = bookmarkRepository.isBookmarked(bookId: book.id, locator: locator)
         } else {
             print("DEBUG [ReadiumBookViewModel]: Locator progression was nil, not updating.")
         }
+        
+        // Check if current location is bookmarked
+        isCurrentLocationBookmarked = bookmarkRepository.isBookmarked(bookId: book.id, locator: locator)
     }
 }
 

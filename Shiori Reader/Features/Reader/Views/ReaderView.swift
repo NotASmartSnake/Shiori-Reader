@@ -37,6 +37,20 @@ struct ReaderView: View {
             
             if showOverlay {
                 overlayControls
+                
+                // Progress indicator at bottom
+                VStack {
+                    Spacer()
+                    // Display progress information in the format "x% of chapter • x% of book"
+                    Text("\(Int(viewModel.currentChapterProgression * 100))% of chapter • \(Int(viewModel.totalBookProgression * 100))% of book")
+                        .font(.caption)
+                        .foregroundStyle(.gray)
+                        .padding(.vertical,20)
+                        .padding(.horizontal, 10)
+                        .background(Color(.systemBackground).opacity(0.7))
+                        .cornerRadius(12)
+                        .padding(.bottom, 8)
+                }
             }
             
             if viewModel.showDictionary {
