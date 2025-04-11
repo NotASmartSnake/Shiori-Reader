@@ -97,7 +97,7 @@ class EPUBImportProcessor {
         case .success(let optionalCoverImage):
             // Result was success, now check if the optional UIImage has a value
             if let coverUIImage = optionalCoverImage {
-                print("DEBUG [EPUBImportProcessor]: Successfully extracted cover image using Readium.")
+                print("DEBUG [EPUBImportProcessor]: Extracted cover UIImage size: \(coverUIImage.size), scale: \(coverUIImage.scale)")
                 do {
                     // Pass the non-optional UIImage to saveCoverImage
                     coverImageFilename = try saveCoverImage(coverUIImage)
@@ -138,7 +138,7 @@ class EPUBImportProcessor {
     
     // Helper function to save the cover image and return its filename stem
     private func saveCoverImage(_ image: UIImage) throws -> String {
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+        guard let imageData = image.pngData() else {
             throw ImportError.coverExtractionFailed("Failed to convert UIImage to JPEG data")
         }
 
@@ -161,10 +161,11 @@ class EPUBImportProcessor {
 
         // Generate a unique filename (stem only)
         let filenameStem = "cover_\(UUID().uuidString)"
-        let coverURL = coversDirectory.appendingPathComponent("\(filenameStem).jpg") // Append extension
+        let coverURL = coversDirectory.appendingPathComponent("\(filenameStem).png") // Append extension
 
         // Write the image data
         try imageData.write(to: coverURL)
+        print("DEBUG [EPUBImportProcessor]: Saved cover as PNG: \(coverURL.path)")
 
         // Return just the unique filename stem
         return filenameStem

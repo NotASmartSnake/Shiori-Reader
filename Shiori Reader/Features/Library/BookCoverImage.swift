@@ -12,8 +12,10 @@ struct BookCoverImage: View {
     @State private var loadedUIImage: UIImage? = nil
     @State private var isLoading = true
     
-    private let coverWidth: CGFloat = UIScreen.main.bounds.width * 0.4
-    private var coverHeight: CGFloat { coverWidth * 1.5 }
+    private static let coverWidthRatio: CGFloat = 0.4
+    private static let coverAspectRatio: CGFloat = 1.5
+    private var coverWidth: CGFloat { UIScreen.main.bounds.width * Self.coverWidthRatio }
+    private var coverHeight: CGFloat { coverWidth * Self.coverAspectRatio }
     private let topGradientColor = Color(red: 214/255, green: 1/255, blue: 58/255)
     private let bottomGradientColor = Color(red: 179/255, green: 33/255, blue: 34/255)
     
@@ -33,10 +35,12 @@ struct BookCoverImage: View {
                     // Display the successfully loaded image
                     Image(uiImage: uiImage)
                         .resizable()
-                        .aspectRatio(contentMode: .fill) // Fill the frame
+                        .scaledToFill()
+                        .frame(width: coverWidth, height: coverHeight)
                 } else if !isLoading {
                     // Show default cover ONLY if not loading and no image loaded
                     defaultCoverView
+                        .frame(width: coverWidth, height: coverHeight)
                 }
             }
             .frame(width: coverWidth, height: coverHeight)
@@ -116,7 +120,7 @@ struct BookCoverImage: View {
             )
             let coverURL = documentsDirectory
                 .appendingPathComponent("BookCovers")
-                .appendingPathComponent("\(filenameStem).jpg")
+                .appendingPathComponent("\(filenameStem).png")
 
             if fileManager.fileExists(atPath: coverURL.path) {
                 let imageData = try Data(contentsOf: coverURL)
