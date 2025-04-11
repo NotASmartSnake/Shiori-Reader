@@ -480,9 +480,11 @@ class ReaderViewModel: ObservableObject {
         // Lookup words in the dictionary
         getDictionaryMatches(text: text) { matches in
             if !matches.isEmpty {
-                self.dictionaryMatches = matches
-                self.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
-                self.showDictionary = true
+                withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                    self.dictionaryMatches = matches
+                    self.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
+                    self.showDictionary = true
+                }
             } else {
                 print("DEBUG [ReaderViewModel]: No dictionary matches found for \(text)")
             }

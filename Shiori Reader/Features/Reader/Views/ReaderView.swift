@@ -32,30 +32,21 @@ struct ReaderView: View {
                     TableOfContentsView(viewModel: viewModel)
                 }
             contentLayer
-
+            
             tapAreas
             
             if showOverlay {
                 overlayControls
                 
-                // Progress indicator at bottom
-                VStack {
-                    Spacer()
-                    // Display progress information in the format "x% of chapter • x% of book"
-                    Text("\(Int(viewModel.currentChapterProgression * 100))% of chapter • \(Int(viewModel.totalBookProgression * 100))% of book")
-                        .font(.caption)
-                        .foregroundStyle(.gray)
-                        .padding(.vertical,20)
-                        .padding(.horizontal, 10)
-                        .background(Color(.systemBackground).opacity(0.7))
-                        .cornerRadius(12)
-                        .padding(.bottom, 8)
-                }
+                progressIndicator(viewModel: viewModel)
             }
             
-            if viewModel.showDictionary {
-                dictionaryPopup
+            Group {
+                if viewModel.showDictionary {
+                    dictionaryPopup
+                }
             }
+            .animation(.spring(duration: 0.3, bounce: 0.2), value: viewModel.showDictionary)
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
@@ -211,34 +202,43 @@ struct ReaderView: View {
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
     
-    private var dictionaryPopup: some View {
-        ZStack {
-            Color.black.opacity(0.3)
-                .edgesIgnoringSafeArea(.all)
-                .onTapGesture {
-                    // Dismiss the dictionary popup when tapped
-                    viewModel.showDictionary = false
-                }
-                .transition(.opacity)
-            
+    struct progressIndicator: View {
+        @StateObject var viewModel: ReaderViewModel
+        
+        var body: some View {
             VStack {
                 Spacer()
-                
-                DictionaryPopupView(
-                    matches: viewModel.dictionaryMatches,
-                    onDismiss: {
-                        viewModel.showDictionary = false
-                    },
-                    sentenceContext: viewModel.currentSentenceContext,
-                    bookTitle: viewModel.book.title
-                )
-                .environmentObject(savedWordsManager)
+                // Display progress information in the format "x% of chapter • x% of book"
+                Text("\(Int(viewModel.currentChapterProgression * 100))% of chapter • \(Int(viewModel.totalBookProgression * 100))% of book")
+                    .font(.caption)
+                    .foregroundStyle(.gray)
+                    .padding(.vertical,20)
+                    .padding(.horizontal, 10)
+                    .background(Color(.systemBackground).opacity(0.7))
+                    .cornerRadius(12)
+                    .padding(.bottom, 8)
             }
-            .transition(.move(edge: .bottom))
         }
-        .ignoresSafeArea(edges: .bottom)
-        .animation(.spring(duration: 0.3, bounce: 0.2), value: viewModel.showDictionary)
+    }
+    
+    private var dictionaryPopup: some View {
+        VStack {
+            Spacer()
+            DictionaryPopupView(
+                matches: viewModel.dictionaryMatches,
+                onDismiss: {
+                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                        viewModel.showDictionary = false
+                    }
+                },
+                sentenceContext: viewModel.currentSentenceContext,
+                bookTitle: viewModel.book.title
+            )
+            .environmentObject(savedWordsManager)
+        }
+        .transition(.move(edge: .bottom))
         .zIndex(2)
+        .ignoresSafeArea(edges: .bottom)
     }
 
 
