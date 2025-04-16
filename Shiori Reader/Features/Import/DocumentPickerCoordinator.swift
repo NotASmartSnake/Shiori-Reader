@@ -20,6 +20,9 @@ class DocumentPickerCoordinator: NSObject, UIDocumentPickerDelegate {
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         guard let url = urls.first else { return }
         
+        // Set to importing state internally (but no UI will show)
+        parent.status = .importing
+        
         // Get security-scoped access
         guard url.startAccessingSecurityScopedResource() else {
             parent.status = .failure("Access denied to file")

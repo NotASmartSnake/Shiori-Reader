@@ -25,9 +25,6 @@ struct DocumentImporter: UIViewControllerRepresentable {
         controller.delegate = context.coordinator
         controller.allowsMultipleSelection = false
         
-        // Update status
-        status = .importing
-        
         return controller
     }
     

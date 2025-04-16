@@ -28,26 +28,19 @@ struct ImportStatusOverlay: View {
                     .multilineTextAlignment(.center)
                     .foregroundColor(.secondary)
                 
-                // Dismiss button for success and error states
-                if case .importing = status {
-                    // For importing state, show nothing (progress indicator is shown elsewhere)
-                } else if case .idle = status {
-                    // For idle state, show nothing
-                } else {
-                    // For all other states (success, failure, cancelled), show dismiss button
-                    Button(action: {
-                        isPresented = false
-                    }) {
-                        Text("OK")
-                            .fontWeight(.medium)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                    .padding(.top, 10)
+                // Only show dismiss button for failure cases since that's the only one we'll display
+                Button(action: {
+                    isPresented = false
+                }) {
+                    Text("OK")
+                        .fontWeight(.medium)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
                 }
+                .padding(.top, 10)
             }
             .padding(25)
             .background(Color(.systemBackground))

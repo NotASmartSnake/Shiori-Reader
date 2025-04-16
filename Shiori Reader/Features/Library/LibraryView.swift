@@ -71,22 +71,17 @@ struct LibraryView: View {
                 DocumentImporter(status: $importStatus) { newBook in
                     libraryManager.addBook(newBook)
                     
+                    // Reset import status to idle without showing success overlay
                     if importStatus.isSuccess {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            showImportStatusOverlay = false
-                            importStatus = .idle
-                        }
+                        importStatus = .idle
                     }
                 }
             }
             .onChange(of: importStatus) { _, newValue in
-                if newValue != .idle {
-                    // Delay showing the overlay slightly for smoother UX
+                // Only show overlay for failure cases
+                if case .failure = newValue {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        // Only show if we're still not idle (user didn't cancel super fast)
-                        if importStatus != .idle {
-                            showImportStatusOverlay = true
-                        }
+                        showImportStatusOverlay = true
                     }
                 }
             }
