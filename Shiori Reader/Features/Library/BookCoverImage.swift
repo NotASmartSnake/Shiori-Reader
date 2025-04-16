@@ -6,11 +6,13 @@
 //
 
 import SwiftUI
+import Combine
 
 struct BookCoverImage: View {
     let book: Book
     @State private var loadedUIImage: UIImage? = nil
     @State private var isLoading = true
+    @Environment(\.colorScheme) private var colorScheme
     
     // Standard book cover aspect ratio (height:width) is typically around 1.5:1
     private static let coverAspectRatio: CGFloat = 0.66 // This is width:height (1/1.5)
@@ -21,10 +23,10 @@ struct BookCoverImage: View {
         GeometryReader { geometry in
             ZStack(alignment: .center) {
                 // Shadow layer
-                RoundedRectangle(cornerRadius: 5) // Increased corner radius for better visibility
-                    .fill(Color.black.opacity(0.5))
+                RoundedRectangle(cornerRadius: 50)
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.3) : Color.black.opacity(0.5))
                     .blur(radius: 10)
-                    .offset(x: 0, y: 10)
+                    .offset(x: 0, y: 12)
                     .opacity(isLoading ? 0 : 0.3)
                     .frame(width: geometry.size.width, height: geometry.size.height)
                 
