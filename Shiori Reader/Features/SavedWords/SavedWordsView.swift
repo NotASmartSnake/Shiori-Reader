@@ -105,11 +105,6 @@ struct SavedWordsView: View {
                         }
                     }
                     .listStyle(PlainListStyle())
-                    
-                    // Spacer at the bottom for tab bar
-                    Rectangle()
-                        .frame(width: 0, height: 50)
-                        .foregroundStyle(Color.clear)
                 }
             }
             .navigationTitle("Saved Words")

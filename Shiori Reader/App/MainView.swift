@@ -6,12 +6,16 @@
 //
 
 import SwiftUI
+import Combine
 
 struct MainView: View {
     @State private var selectedIndex = 0
     @EnvironmentObject private var isReadingBookState: IsReadingBook
     @EnvironmentObject private var libraryManager: LibraryManager
     @EnvironmentObject private var savedWordsManager: SavedWordsManager
+    
+    // Keyboard observer to detect when keyboard appears/disappears
+    @StateObject private var keyboardObserver = KeyboardObserver()
     
     // Lock orientation to portrait for MainView
     private let orientationManager = OrientationManager.shared
@@ -38,12 +42,13 @@ struct MainView: View {
                 }
             }
 
-            if !isReadingBookState.isReading {
+            if !isReadingBookState.isReading && !keyboardObserver.isKeyboardVisible {
                 CustomTabBar(selectedIndex: $selectedIndex)
-                    .transition(.opacity.animation(.none))
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.none, value: isReadingBookState.isReading)
+        .animation(.easeInOut(duration: keyboardObserver.animationDuration), value: keyboardObserver.isKeyboardVisible)
         .onAppear {
             // Lock to portrait when MainView appears
             orientationManager.lockPortrait()

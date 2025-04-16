@@ -101,11 +101,6 @@ struct SearchView: View {
                         }
                         .listStyle(PlainListStyle())
                     }
-                    
-                    // Space for tab bar
-                    Rectangle()
-                        .frame(width: 0, height: 60)
-                        .foregroundStyle(.clear)
                 }
             }
             .navigationTitle("Dictionary")
