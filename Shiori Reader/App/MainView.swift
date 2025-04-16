@@ -13,6 +13,9 @@ struct MainView: View {
     @EnvironmentObject private var libraryManager: LibraryManager
     @EnvironmentObject private var savedWordsManager: SavedWordsManager
     
+    // Lock orientation to portrait for MainView
+    private let orientationManager = OrientationManager.shared
+    
     var body: some View {
         
         ZStack(alignment: .bottom) {
@@ -41,7 +44,10 @@ struct MainView: View {
             }
         }
         .animation(.none, value: isReadingBookState.isReading)
-        
+        .onAppear {
+            // Lock to portrait when MainView appears
+            orientationManager.lockPortrait()
+        }
     }
 }
 

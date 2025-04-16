@@ -13,11 +13,15 @@ struct ReaderView: View {
     @StateObject var viewModel: ReaderViewModel
     @StateObject private var settingsViewModel: ReaderSettingsViewModel
     @EnvironmentObject private var savedWordsManager: SavedWordsManager
+    @EnvironmentObject private var isReadingBookState: IsReadingBook
     @State private var showOverlay = true
     @State private var showSearchSheet = false
     @State private var showSettingsSheet = false
     @State private var showContentsSheet = false
     @Environment(\.dismiss) var dismiss
+    
+    // Access the orientation manager
+    private let orientationManager = OrientationManager.shared
 
     init(book: Book) {
         _viewModel = StateObject(wrappedValue: ReaderViewModel(book: book))
@@ -54,6 +58,11 @@ struct ReaderView: View {
         .navigationBarHidden(true)
         .statusBarHidden(!showOverlay)
         .onAppear {
+            // Allow all orientations when reading
+            orientationManager.unlockOrientation()
+            // Set reading state
+            isReadingBookState.setReading(true)
+            
             if viewModel.publication == nil && !viewModel.isLoading {
                 print("DEBUG [ReaderView]: onAppear - Triggering loadPublication")
                 Task {
@@ -61,6 +70,12 @@ struct ReaderView: View {
                 }
             }
             updateReaderPreferences()
+        }
+        .onDisappear {
+            // Lock back to portrait when leaving
+            orientationManager.lockPortrait()
+            // Reset reading state
+            isReadingBookState.setReading(false)
         }
         .onChange(of: settingsViewModel.preferences) { _, _ in
             updateReaderPreferences()
@@ -303,4 +318,5 @@ struct ReaderView: View {
         filePath: "3Days.epub", readingProgress: 0.1
     ))
     .environmentObject(SavedWordsManager())
+    .environmentObject(IsReadingBook())
 }

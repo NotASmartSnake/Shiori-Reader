@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
+import UIKit
 
 @main
 struct Shiori_ReaderApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @AppStorage("isDarkMode") var isDarkMode: Bool?
     @StateObject private var isReadingBookState = IsReadingBook()
     @StateObject private var libraryManager = LibraryManager()
