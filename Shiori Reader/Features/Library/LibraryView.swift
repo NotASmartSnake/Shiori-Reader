@@ -14,36 +14,34 @@ struct LibraryView: View {
     @State private var showDocumentPicker = false
     @State private var importStatus: ImportStatus = .idle
     @State private var showImportStatusOverlay = false
-    
-    let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Color("BackgroundColor").ignoresSafeArea(edges: .all)
-                
+
                 if libraryManager.books.isEmpty {
                     ScrollView {
-                        // Show empty state when no books are available
                         EmptyLibraryView(showDocumentPicker: $showDocumentPicker)
+                            .padding(.horizontal)
+                            .padding(.vertical, 50)
                     }
                 } else {
+                    // GeometryReader and column calculation removed
                     ScrollView {
-                        VStack {
-                            // Extract grid to separate view
-                            BookGrid(books: libraryManager.books, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
-                            
-                            Rectangle()
-                                .frame(width: 0, height: 60)
-                                .foregroundStyle(.clear)
+                        VStack { // Add VStack for potential future elements if needed
+                            BookGrid(
+                                books: libraryManager.books,
+                                isReadingBook: isReadingBook,
+                                lastViewedBookPath: $lastViewedBookPath
+                                // No columns passed, BookGrid handles its layout
+                            )
+                            // Spacer for bottom clearance (can be inside or outside VStack)
+                            Spacer(minLength: 60)
                         }
                     }
                 }
-                
-                // Import status overlay
+
                 if showImportStatusOverlay {
                     ImportStatusOverlay(status: importStatus, isPresented: $showImportStatusOverlay)
                         .transition(.opacity)
@@ -52,11 +50,8 @@ struct LibraryView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        showDocumentPicker = true
-                    }) {
-                        Image(systemName: "plus")
-                            .imageScale(.large)
+                    Button(action: { showDocumentPicker = true }) {
+                        Image(systemName: "plus").imageScale(.large)
                     }
                 }
             }
@@ -64,21 +59,14 @@ struct LibraryView: View {
             .toolbarBackground(.visible, for: .tabBar)
             .navigationTitle("Library")
             .sheet(isPresented: $showDocumentPicker, onDismiss: {
-                if case .importing = importStatus {
-                    importStatus = .cancelled
-                }
+                if case .importing = importStatus { importStatus = .cancelled }
             }) {
                 DocumentImporter(status: $importStatus) { newBook in
                     libraryManager.addBook(newBook)
-                    
-                    // Reset import status to idle without showing success overlay
-                    if importStatus.isSuccess {
-                        importStatus = .idle
-                    }
+                    if importStatus.isSuccess { importStatus = .idle }
                 }
             }
             .onChange(of: importStatus) { _, newValue in
-                // Only show overlay for failure cases
                 if case .failure = newValue {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         showImportStatusOverlay = true
@@ -86,22 +74,28 @@ struct LibraryView: View {
                 }
             }
         }
-        .onAppear {
-            libraryManager.loadLibrary()
-        }
+        .onAppear { /*libraryManager.loadLibrary()*/ }
         .onChange(of: isReadingBook.isReading) { _, isReading in
             if !isReading && lastViewedBookPath != nil {
-                // We just returned from reading a book, refresh library
                 libraryManager.loadLibrary()
             }
         }
     }
 }
 
-
+// Simple preview - just enough to see the book covers
 #Preview {
-    LibraryView()
+    let manager = LibraryManager()
+    // Add books directly to the manager
+    manager.books = [
+        Book(id: UUID(), title: "Classroom of the Elite", author: "Kinugasa", filePath: "", coverImagePath: "COTECover", isLocalCover: false, addedDate: Date(), readingProgress: 0.25),
+        Book(id: UUID(), title: "Oregairu", author: "Watari", filePath: "", coverImagePath: "OregairuCover", isLocalCover: false, addedDate: Date(), readingProgress: 0.5),
+        Book(id: UUID(), title: "86", author: "Asato", filePath: "", coverImagePath: "86Cover", isLocalCover: false, addedDate: Date(), readingProgress: 0.75),
+        Book(id: UUID(), title: "Overlord", author: "Maruyama", filePath: "", coverImagePath: "OverlordCover", isLocalCover: false, addedDate: Date(), readingProgress: 0.1)
+    ]
+    
+    return LibraryView()
         .environmentObject(IsReadingBook())
-        .environmentObject(LibraryManager())
+        .environmentObject(manager)
         .environmentObject(SavedWordsManager())
 }

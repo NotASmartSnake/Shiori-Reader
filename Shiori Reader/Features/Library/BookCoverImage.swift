@@ -12,41 +12,41 @@ struct BookCoverImage: View {
     @State private var loadedUIImage: UIImage? = nil
     @State private var isLoading = true
     
-    private static let coverWidthRatio: CGFloat = 0.4
-    private static let coverAspectRatio: CGFloat = 1.5
-    private var coverWidth: CGFloat { UIScreen.main.bounds.width * Self.coverWidthRatio }
-    private var coverHeight: CGFloat { coverWidth * Self.coverAspectRatio }
+    // Standard book cover aspect ratio (height:width) is typically around 1.5:1
+    private static let coverAspectRatio: CGFloat = 0.66 // This is width:height (1/1.5)
     private let topGradientColor = Color(red: 214/255, green: 1/255, blue: 58/255)
     private let bottomGradientColor = Color(red: 179/255, green: 33/255, blue: 34/255)
     
     var body: some View {
-        ZStack {
-            // Shadow layer
-            RoundedRectangle(cornerRadius: 3)
-                .fill(Color.black.opacity(0.8))
-                .frame(width: coverWidth, height: coverHeight)
-                .blur(radius: 8)
-                .offset(x: 0, y: 10)
-                .opacity(isLoading ? 0 : 0.6)
-            
-            // Content layer
-            Group {
-                if let uiImage = loadedUIImage {
-                    // Display the successfully loaded image
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: coverWidth, height: coverHeight)
-                } else if !isLoading {
-                    // Show default cover ONLY if not loading and no image loaded
-                    defaultCoverView
-                        .frame(width: coverWidth, height: coverHeight)
+        GeometryReader { geometry in
+            ZStack(alignment: .center) {
+                // Shadow layer
+                RoundedRectangle(cornerRadius: 5) // Increased corner radius for better visibility
+                    .fill(Color.black.opacity(0.5))
+                    .blur(radius: 10)
+                    .offset(x: 0, y: 10)
+                    .opacity(isLoading ? 0 : 0.3)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                
+                // Content layer
+                Group {
+                    if let uiImage = loadedUIImage {
+                        // Display the successfully loaded image
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                    } else if !isLoading {
+                        // Show default cover ONLY if not loading and no image loaded
+                        defaultCoverView
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                    }
                 }
+                .cornerRadius(5)
             }
-            .frame(width: coverWidth, height: coverHeight)
-            .cornerRadius(3)
-            .clipped()
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
+        .aspectRatio(Self.coverAspectRatio, contentMode: .fit)
         .onAppear(perform: loadImage)
         .onChange(of: book.coverImagePath) { _, _ in loadImage() }
         .onChange(of: book.isLocalCover) { _, _ in loadImage() }
@@ -137,43 +137,20 @@ struct BookCoverImage: View {
 }
 
 #Preview("BookCoverImage Preview") {
-    // Define a wrapper struct specifically for the preview
-    struct LibraryView_PreviewWrapper: View {
-    // Create StateObjects for the required environment objects
-    @StateObject var isReadingBook = IsReadingBook()
-    @StateObject var libraryManager = LibraryManager()
-    @StateObject var savedWordsManager = SavedWordsManager()
-
-    // Define the dummy book data
-    let dummyBooks: [Book] = [
-        Book(id: UUID(), title: "Classroom of the Elite Vol. 1", author: "Syougo Kinugasa", filePath: "dummy1.epub", coverImagePath: "COTECover", isLocalCover: false, addedDate: Date().addingTimeInterval(-86400 * 5), lastOpenedDate: Date().addingTimeInterval(-3600), readingProgress: 0.25, currentLocatorData: nil),
-        Book(id: UUID(), title: "My Teen Romantic Comedy SNAFU Vol. 14", author: "Wataru Watari", filePath: "dummy2.epub", coverImagePath: "OregairuCover", isLocalCover: false, addedDate: Date().addingTimeInterval(-86400 * 2), lastOpenedDate: Date().addingTimeInterval(-7200), readingProgress: 0.90, currentLocatorData: nil),
-        Book(id: UUID(), title: "Three Days of Happiness", author: "Sugaru Miaki", filePath: "dummy3.epub", coverImagePath: "cover_local_dummy_1", isLocalCover: true, addedDate: Date().addingTimeInterval(-86400 * 10), lastOpenedDate: Date().addingTimeInterval(-10800), readingProgress: 0.05, currentLocatorData: nil), // Example local cover (will likely default in preview)
-        Book(id: UUID(), title: "86 - Eighty Six - Ep. 1", author: "Asato Asato", filePath: "dummy4.epub", coverImagePath: nil, isLocalCover: false, addedDate: Date().addingTimeInterval(-86400 * 1), lastOpenedDate: nil, readingProgress: 0.0, currentLocatorData: nil), // No cover path -> Default gradient
-        Book(id: UUID(), title: "That Time I Got Reincarnated as a Slime Vol. 10", author: "Fuse", filePath: "dummy5.epub", coverImagePath: "", isLocalCover: false, addedDate: Date().addingTimeInterval(-86400 * 3), lastOpenedDate: Date().addingTimeInterval(-14400), readingProgress: 0.15, currentLocatorData: nil), // Empty cover path -> Default gradient
-        Book(id: UUID(), title: "Overlord Vol. 1", author: "Kugane Maruyama", filePath: "dummy6.epub", coverImagePath: "OverlordCover", isLocalCover: false, addedDate: Date().addingTimeInterval(-86400 * 7), lastOpenedDate: Date().addingTimeInterval(-18000), readingProgress: 0.70, currentLocatorData: nil),
-        Book(id: UUID(), title: "Mushoku Tensei Vol. 7", author: "Rifujin na Magonote", filePath: "dummy7.epub", coverImagePath: "MushokuCover", isLocalCover: false, addedDate: Date().addingTimeInterval(-86400 * 4), lastOpenedDate: Date().addingTimeInterval(-21600), readingProgress: 0.42, currentLocatorData: nil),
-        Book(id: UUID(), title: "Is It Wrong to Try to Pick Up Girls in a Dungeon? Vol. 17", author: "Fujino Ōmori", filePath: "dummy8.epub", coverImagePath: "invalid_local_path", isLocalCover: true, addedDate: Date().addingTimeInterval(-86400 * 6), lastOpenedDate: Date().addingTimeInterval(-25200), readingProgress: 0.88, currentLocatorData: nil) // Invalid local path -> Default gradient
-    ]
-
-    var body: some View {
-        // Embed LibraryView within a NavigationView or NavigationStack if needed for title/toolbar testing
-        NavigationStack {
-            LibraryView() // The actual view we want to preview
-                .environmentObject(isReadingBook)
-                .environmentObject(libraryManager)
-                .environmentObject(savedWordsManager)
-                .onAppear {
-                    // Load the dummy data into the manager when the preview appears
-                    // Sort books by last opened date descending for a realistic look
-                     libraryManager.books = dummyBooks.sorted {
-                         ($0.lastOpenedDate ?? Date.distantPast) > ($1.lastOpenedDate ?? Date.distantPast)
-                     }
-                }
-        }
-    }
-    }
-
-    // Return an instance of the wrapper for the preview
-    return LibraryView_PreviewWrapper()
+    // Create a sample book for preview
+    let sampleBook = Book(
+        id: UUID(), 
+        title: "Classroom of the Elite Vol. 1", 
+        author: "Syougo Kinugasa", 
+        filePath: "dummy1.epub", 
+        coverImagePath: "COTECover", 
+        isLocalCover: false, 
+        addedDate: Date(), 
+        lastOpenedDate: Date(), 
+        readingProgress: 0.25, 
+        currentLocatorData: nil
+    )
+    
+    // Simple preview that just shows the book cover image directly
+    return BookCoverImage(book: sampleBook)
 }

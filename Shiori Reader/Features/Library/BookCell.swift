@@ -18,7 +18,7 @@ struct BookCell: View {
     @EnvironmentObject private var savedWordsManager: SavedWordsManager
     
     var body: some View {
-        VStack {
+        VStack(spacing: 2) { // Reduced spacing between elements
             NavigationLink(destination:
                 ReaderView(book: book)
                 .environmentObject(savedWordsManager)
@@ -33,8 +33,12 @@ struct BookCell: View {
                 }
             ) {
                 BookCoverImage(book: book)
+                    .frame(maxWidth: .infinity)
             }
-            
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+            .layoutPriority(1)
+
             HStack {
                 // Progress indicator with integer percentage (matching ReaderView)
                 Text(String(format: "%d%%", Int(book.readingProgress * 100)))
@@ -62,8 +66,6 @@ struct BookCell: View {
                 }
             }
             .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .frame(width: 150)
         }
         .alert("Rename Book", isPresented: $showingRenameDialog) {
             TextField("Title", text: $newTitle)
@@ -87,4 +89,42 @@ struct BookCell: View {
             Text("Are you sure you want to remove '\(book.title)'? This action cannot be undone.")
         }
     }
+}
+
+// Add a preview for BookCell
+#Preview("BookCell Preview") {
+    // Create necessary environment for preview
+    // Must provide LibraryManager and SavedWordsManager as environment objects
+    let isReadingBook = IsReadingBook()
+    let libraryManager = LibraryManager()
+    let savedWordsManager = SavedWordsManager()
+    
+    // Sample book
+    let sampleBook = Book(
+        id: UUID(), 
+        title: "Classroom of the Elite Vol. 1", 
+        author: "Syougo Kinugasa", 
+        filePath: "dummy1.epub", 
+        coverImagePath: "COTECover", 
+        isLocalCover: false, 
+        addedDate: Date(), 
+        lastOpenedDate: Date(), 
+        readingProgress: 0.25, 
+        currentLocatorData: nil
+    )
+    
+    // Use a StateObject wrapper to provide the binding
+    struct PreviewWrapper: View {
+        @State var lastViewedBookPath: String? = nil
+        let book: Book
+        let isReadingBook: IsReadingBook
+        
+        var body: some View {
+            BookCell(book: book, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
+        }
+    }
+    
+    return PreviewWrapper(book: sampleBook, isReadingBook: isReadingBook)
+        .environmentObject(libraryManager)
+        .environmentObject(savedWordsManager)
 }
