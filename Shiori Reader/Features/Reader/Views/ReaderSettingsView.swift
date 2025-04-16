@@ -98,20 +98,21 @@ struct ReaderSettingsView: View {
                 
                 // MARK: - Layout Section
                 Section(header: Text("Layout")) {
-                    // Reading direction
-                    Picker("Reading Direction", selection: Binding(
-                        get: { viewModel.preferences.readingDirection },
-                        set: { viewModel.updateReadingDirection($0) }
-                    )) {
-                        Text("Left to Right").tag("ltr")
-                        Text("Right to Left").tag("rtl")
-                    }
-                    
-                    // Vertical text toggle
-                    Toggle("Vertical Text", isOn: Binding(
-                        get: { viewModel.preferences.isVerticalText },
-                        set: { _ in viewModel.toggleVerticalText() }
-                    ))
+                    // Holding off on applying reading direction and vertical text until Readium implementation is more stable
+//                    // Reading direction
+//                    Picker("Reading Direction", selection: Binding(
+//                        get: { viewModel.preferences.readingDirection },
+//                        set: { viewModel.updateReadingDirection($0) }
+//                    )) {
+//                        Text("Left to Right").tag("ltr")
+//                        Text("Right to Left").tag("rtl")
+//                    }
+//                    
+//                    // Vertical text toggle
+//                    Toggle("Vertical Text", isOn: Binding(
+//                        get: { viewModel.preferences.isVerticalText },
+//                        set: { _ in viewModel.toggleVerticalText() }
+//                    ))
                     
                     // Scroll mode toggle
                     Toggle("Scroll Mode", isOn: Binding(
