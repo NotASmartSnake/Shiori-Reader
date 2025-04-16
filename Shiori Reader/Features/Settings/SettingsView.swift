@@ -48,17 +48,6 @@ struct SettingsView: View {
                 }
                 
             }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        print("Settings tapped")
-                    }) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                }
-            }
-            .toolbarBackground(Color.black, for: .tabBar)
-            .toolbarBackground(.visible, for: .tabBar)
             .navigationTitle(
                 Text("Settings")
             )
