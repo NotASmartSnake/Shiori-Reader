@@ -8,6 +8,7 @@
 
 import SwiftUI
 import ReadiumShared
+import ReadiumNavigator
 
 struct ReaderView: View {
     @StateObject var viewModel: ReaderViewModel
@@ -42,7 +43,7 @@ struct ReaderView: View {
             if showOverlay {
                 overlayControls
                 
-                progressIndicator(viewModel: viewModel)
+                progressIndicator(viewModel: viewModel, settingsViewModel: settingsViewModel)
             }
             
             Group {
@@ -219,6 +220,7 @@ struct ReaderView: View {
     
     struct progressIndicator: View {
         @StateObject var viewModel: ReaderViewModel
+        @ObservedObject var settingsViewModel: ReaderSettingsViewModel
         
         var body: some View {
             VStack {
@@ -226,12 +228,48 @@ struct ReaderView: View {
                 // Display progress information in the format "x% of chapter • x% of book"
                 Text("\(Int(viewModel.currentChapterProgression * 100))% of chapter • \(Int(viewModel.totalBookProgression * 100))% of book")
                     .font(.caption)
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(getTextColor())
+                    .shadow(color: getContrastingShadowColor(), radius: 0.5, x: 0, y: 0.5)
                     .padding(.vertical,20)
                     .padding(.horizontal, 10)
-                    .background(Color(.systemBackground).opacity(0.7))
-                    .cornerRadius(12)
                     .padding(.bottom, 8)
+            }
+        }
+        
+        // Helper function to get the text color based on the current theme
+        private func getTextColor() -> SwiftUI.Color {
+            // Use the theme from settingsViewModel
+            let theme = settingsViewModel.preferences.theme
+            
+            switch theme {
+            case "dark":
+                return SwiftUI.Color(UIColor(hex: "#FEFEFE") ?? .white)
+            case "sepia": 
+                return SwiftUI.Color(UIColor(hex: "#121212") ?? .black)
+            case "light":
+                return SwiftUI.Color(UIColor(hex: "#121212") ?? .black)
+            case "custom":
+                // For custom theme, use the text color directly
+                return SwiftUI.Color(UIColor(hex: settingsViewModel.preferences.textColor) ?? .black)
+            default:
+                return .gray
+            }
+        }
+        
+        // Helper function to get a contrasting shadow color
+        private func getContrastingShadowColor() -> SwiftUI.Color {
+            // Use a shadow color that contrasts with the text color but is very transparent
+            let theme = settingsViewModel.preferences.theme
+            
+            switch theme {
+            case "dark":
+                // For dark theme (white text), use a dark shadow
+                return SwiftUI.Color.black.opacity(0.3)
+            case "sepia", "light", "custom":
+                // For light theme (dark text), use a light shadow
+                return SwiftUI.Color.white.opacity(0.3)
+            default:
+                return SwiftUI.Color.gray.opacity(0.2)
             }
         }
     }

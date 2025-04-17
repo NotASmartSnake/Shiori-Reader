@@ -32,8 +32,11 @@ struct BookCell: View {
                     print("DEBUG: Book disappeared")
                 }
             ) {
-                BookCoverImage(book: book)
-                    .frame(maxWidth: .infinity)
+                VStack {
+                    Spacer()
+                    BookCoverImage(book: book)
+                        .frame(maxWidth: .infinity)
+                }
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)

@@ -74,7 +74,7 @@ struct LibraryView: View {
                 }
             }
         }
-        .onAppear { /*libraryManager.loadLibrary()*/ }
+//        .onAppear { libraryManager.loadLibrary() }
         .onChange(of: isReadingBook.isReading) { _, isReading in
             if !isReading && lastViewedBookPath != nil {
                 libraryManager.loadLibrary()
@@ -88,7 +88,7 @@ struct LibraryView: View {
     let manager = LibraryManager()
     // Add books directly to the manager
     manager.books = [
-        Book(id: UUID(), title: "Classroom of the Elite", author: "Kinugasa", filePath: "", coverImagePath: "COTECover", isLocalCover: false, addedDate: Date(), readingProgress: 0.25),
+        Book(id: UUID(), title: "Classroom of the Elite", author: "Kinugasa", filePath: "cote.epub", coverImagePath: "COTECover", isLocalCover: false, addedDate: Date(), readingProgress: 0.25),
         Book(id: UUID(), title: "Oregairu", author: "Watari", filePath: "", coverImagePath: "OregairuCover", isLocalCover: false, addedDate: Date(), readingProgress: 0.5),
         Book(id: UUID(), title: "86", author: "Asato", filePath: "", coverImagePath: "86Cover", isLocalCover: false, addedDate: Date(), readingProgress: 0.75),
         Book(id: UUID(), title: "Overlord", author: "Maruyama", filePath: "", coverImagePath: "OverlordCover", isLocalCover: false, addedDate: Date(), readingProgress: 0.1)
