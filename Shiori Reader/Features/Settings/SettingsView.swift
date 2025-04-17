@@ -7,6 +7,7 @@
 
 
 import SwiftUI
+import Foundation
 
 struct SettingsView: View {
     
@@ -25,9 +26,11 @@ struct SettingsView: View {
                         }
                         .listRowBackground(Color(.systemGray6))
                         
-                        HStack {
-                            Image(systemName: "text.book.closed")
-                            Text("Dictionaries")
+                        NavigationLink(destination: DictionarySettingsView()) {
+                            HStack {
+                                Image(systemName: "text.book.closed")
+                                Text("Dictionaries")
+                            }
                         }
                         .listRowBackground(Color(.systemGray6))
 
