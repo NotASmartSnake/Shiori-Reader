@@ -10,6 +10,44 @@ import Foundation
 class SettingsRepository {
     private let coreDataManager = CoreDataManager.shared
     
+    // MARK: - Default Appearance Settings
+    
+    // Get or create default appearance settings
+    func getDefaultAppearanceSettings() -> DefaultAppearanceSettings {
+        if let entity = coreDataManager.getDefaultAppearanceSettings() {
+            return DefaultAppearanceSettings(entity: entity)
+        } else {
+            // Create default settings
+            let entity = coreDataManager.createOrUpdateDefaultAppearanceSettings(
+                fontSize: 1.0,
+                fontFamily: "Default",
+                fontWeight: 400.0,
+                backgroundColor: "#FFFFFF",
+                textColor: "#000000",
+                readingDirection: "ltr",
+                isVerticalText: false,
+                isScrollMode: false,
+                theme: "light"
+            )
+            return DefaultAppearanceSettings(entity: entity)
+        }
+    }
+    
+    // Update default appearance settings
+    func saveDefaultAppearanceSettings(_ settings: DefaultAppearanceSettings) {
+        coreDataManager.createOrUpdateDefaultAppearanceSettings(
+            fontSize: settings.fontSize,
+            fontFamily: settings.fontFamily,
+            fontWeight: settings.fontWeight,
+            backgroundColor: settings.backgroundColor,
+            textColor: settings.textColor,
+            readingDirection: settings.readingDirection,
+            isVerticalText: settings.isVerticalText,
+            isScrollMode: settings.isScrollMode,
+            theme: settings.theme
+        )
+    }
+    
     // Get or create Anki settings
     func getAnkiSettings() -> AnkiSettings {
         if let entity = coreDataManager.getAnkiSettings() {

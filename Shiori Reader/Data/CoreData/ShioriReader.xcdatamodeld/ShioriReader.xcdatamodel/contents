@@ -52,6 +52,18 @@
         <attribute name="theme" optional="YES" attributeType="String"/>
         <relationship name="book" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="BookEntity" inverseName="preferences" inverseEntity="BookEntity"/>
     </entity>
+    <entity name="DefaultAppearanceSettingsEntity" representedClassName="DefaultAppearanceSettingsEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="backgroundColor" optional="YES" attributeType="String" defaultValueString="#FFFFFF"/>
+        <attribute name="fontFamily" optional="YES" attributeType="String" defaultValueString="Default"/>
+        <attribute name="fontSize" optional="YES" attributeType="Float" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="fontWeight" optional="YES" attributeType="Float" defaultValueString="400" usesScalarValueType="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isScrollMode" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="isVerticalText" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="readingDirection" optional="YES" attributeType="String" defaultValueString="ltr"/>
+        <attribute name="textColor" optional="YES" attributeType="String" defaultValueString="#000000"/>
+        <attribute name="theme" optional="YES" attributeType="String" defaultValueString="light"/>
+    </entity>
     <entity name="SavedWordEntity" representedClassName="SavedWordEntity" syncable="YES" codeGenerationType="class">
         <attribute name="definition" optional="YES" attributeType="String"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>

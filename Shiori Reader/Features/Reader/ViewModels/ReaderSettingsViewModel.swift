@@ -19,21 +19,22 @@ class ReaderSettingsViewModel: ObservableObject {
     init(bookId: UUID, settingsRepository: SettingsRepository = SettingsRepository()) {
         self.settingsRepository = settingsRepository
         
-        // Try to load book preferences, or create default
+        // Try to load book preferences, use default appearance settings if none exist
         if let bookPrefs = settingsRepository.getBookPreferences(bookId: bookId) {
             self.preferences = bookPrefs
         } else {
-            // Default preferences
+            // Get default appearance settings and convert to book preferences
+            let defaultSettings = settingsRepository.getDefaultAppearanceSettings()
             self.preferences = BookPreference(
-                fontSize: 1.0,
-                fontFamily: "Default",
-                fontWeight: 400.0,
-                backgroundColor: "#FFFFFF",
-                textColor: "#000000",
-                readingDirection: "ltr",
-                isVerticalText: false,
-                isScrollMode: false,
-                theme: "light",
+                fontSize: defaultSettings.fontSize,
+                fontFamily: defaultSettings.fontFamily,
+                fontWeight: defaultSettings.fontWeight,
+                backgroundColor: defaultSettings.backgroundColor,
+                textColor: defaultSettings.textColor,
+                readingDirection: defaultSettings.readingDirection,
+                isVerticalText: defaultSettings.isVerticalText,
+                isScrollMode: defaultSettings.isScrollMode,
+                theme: defaultSettings.theme,
                 bookId: bookId
             )
         }

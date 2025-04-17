@@ -20,9 +20,11 @@ struct SettingsView: View {
                 VStack {
                     List {
                         
-                        HStack {
-                            Image(systemName: "sun.min")
-                            Text("Appearance")
+                        NavigationLink(destination: DefaultAppearanceSettingsView()) {
+                            HStack {
+                                Image(systemName: "sun.min")
+                                Text("Default Appearance")
+                            }
                         }
                         .listRowBackground(Color(.systemGray6))
                         

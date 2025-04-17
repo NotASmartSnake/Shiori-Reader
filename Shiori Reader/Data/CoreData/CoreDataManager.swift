@@ -180,6 +180,63 @@ class CoreDataManager {
         saveContext()
     }
     
+    // MARK: - DefaultAppearanceSettings Operations
+    
+    func getDefaultAppearanceSettings() -> DefaultAppearanceSettingsEntity? {
+        let request: NSFetchRequest<DefaultAppearanceSettingsEntity> = DefaultAppearanceSettingsEntity.fetchRequest()
+        request.fetchLimit = 1
+        
+        do {
+            let results = try viewContext.fetch(request)
+            return results.first
+        } catch {
+            print("Error fetching default appearance settings: \(error)")
+            return nil
+        }
+    }
+    
+    func createOrUpdateDefaultAppearanceSettings(fontSize: Float,
+                                              fontFamily: String,
+                                              fontWeight: Float,
+                                              backgroundColor: String,
+                                              textColor: String,
+                                              readingDirection: String,
+                                              isVerticalText: Bool,
+                                              isScrollMode: Bool,
+                                              theme: String) -> DefaultAppearanceSettingsEntity {
+        
+        // Check if settings already exist
+        if let existingSettings = getDefaultAppearanceSettings() {
+            // Update existing settings
+            existingSettings.fontSize = fontSize
+            existingSettings.fontFamily = fontFamily
+            existingSettings.fontWeight = fontWeight
+            existingSettings.backgroundColor = backgroundColor
+            existingSettings.textColor = textColor
+            existingSettings.readingDirection = readingDirection
+            existingSettings.isVerticalText = isVerticalText
+            existingSettings.isScrollMode = isScrollMode
+            existingSettings.theme = theme
+            saveContext()
+            return existingSettings
+        } else {
+            // Create new settings
+            let settings = DefaultAppearanceSettingsEntity(context: viewContext)
+            settings.id = UUID()
+            settings.fontSize = fontSize
+            settings.fontFamily = fontFamily
+            settings.fontWeight = fontWeight
+            settings.backgroundColor = backgroundColor
+            settings.textColor = textColor
+            settings.readingDirection = readingDirection
+            settings.isVerticalText = isVerticalText
+            settings.isScrollMode = isScrollMode
+            settings.theme = theme
+            saveContext()
+            return settings
+        }
+    }
+    
     // MARK: - BookPreference Operations
     
     func createOrUpdateBookPreference(for book: BookEntity,
