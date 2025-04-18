@@ -66,6 +66,20 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
             }
         }
         
+        // Check if scroll mode has changed and trigger a scroll inset update
+        let isScrollMode = viewModel.preferences.scroll ?? false
+        let wasScrollMode = context.coordinator.lastKnownScrollMode
+        
+        if isScrollMode != wasScrollMode {
+            print("DEBUG [EPUBNavigatorView]: Scroll mode changed from \(wasScrollMode) to \(isScrollMode)")
+            context.coordinator.lastKnownScrollMode = isScrollMode
+            
+            // Allow time for the preference to be applied before adjusting insets
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                context.coordinator.applyScrollModeContentInsets(in: uiViewController)
+            }
+        }
+        
         // Use the view model's current preferences
         uiViewController.submitPreferences(viewModel.preferences)
     }

@@ -14,9 +14,13 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
     weak var viewModel: ReaderViewModel?
     private let wordTapHandler: WordTapHandler
     
+    // Track the last known scroll mode to detect changes
+    var lastKnownScrollMode: Bool = false
+    
     init(viewModel: ReaderViewModel) {
         self.viewModel = viewModel
         self.wordTapHandler = WordTapHandler(viewModel: viewModel)
+        self.lastKnownScrollMode = viewModel.preferences.scroll ?? false
         super.init()
         print("DEBUG [Coordinator]: Initialized with WordTapHandler.")
     }
@@ -44,6 +48,9 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
         if let epubNavigator = navigator as? EPUBNavigatorViewController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 self.findAndSetupWebViews(in: epubNavigator.view)
+                
+                // Apply appropriate content insets to scroll views if in scroll mode
+                self.applyScrollModeContentInsets(in: epubNavigator)
             }
         }
     }
@@ -60,6 +67,46 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
         }
     }
     
+    /// Apply content insets specifically for scroll mode
+    func applyScrollModeContentInsets(in navigator: EPUBNavigatorViewController) {
+        // Only apply special scroll mode insets when in scroll mode
+        guard let viewModel = viewModel, viewModel.preferences.scroll == true else {
+            print("DEBUG [Coordinator]: Not in scroll mode, skipping scroll insets")
+            return
+        }
+        
+        print("DEBUG [Coordinator]: Applying scroll mode insets")
+        
+        // Find all WKWebViews in the navigator's view hierarchy
+        findWebViews(in: navigator.view) { webView in
+            // Determine appropriate insets based on device type
+            let topInset: CGFloat = 100.0
+            let bottomInset: CGFloat = 100.0
+            
+            // Apply the insets to the scroll views within the WebView
+            webView.adjustScrollViewContentInsets(top: topInset, bottom: bottomInset)
+            print("DEBUG [Coordinator]: Applied scroll mode insets - top: \(topInset), bottom: \(bottomInset)")
+        }
+    }
+    
+    /// Find all WKWebViews in a view hierarchy and apply the given action
+    private func findWebViews(in view: UIView, action: (WKWebView) -> Void) {
+        // Check if this view is a WKWebView
+        if let webView = view as? WKWebView {
+            action(webView)
+        }
+        
+        // Recursively check all subviews
+        for subview in view.subviews {
+            findWebViews(in: subview, action: action)
+        }
+    }
+    
+    /// Detect if the current device is an iPad
+    private func isIpad() -> Bool {
+        return UIDevice.current.userInterfaceIdiom == .pad
+    }
+    
     @MainActor // Ensure UI updates or VM calls happen on the main thread
     func navigator(_ navigator: Navigator, presentError error: NavigatorError) {
         // Called if the navigator encounters an internal error (e.g., cannot load a resource)
@@ -70,6 +117,19 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
     
     func navigator(_ navigator: any ReadiumNavigator.Navigator, didFailToLoadResourceAt href: ReadiumShared.RelativeURL, withError error: ReadiumShared.ReadError) {
         print("ERROR [Coordinator]: Failed to load resource \(href): \(error)")
+    }
+    
+    // Called when a resource has been loaded successfully
+    func navigator(_ navigator: Navigator, didLoadResourceAt href: ReadiumShared.RelativeURL) {
+        print("DEBUG [Coordinator]: Loaded resource at \(href)")
+        
+        // When in scroll mode, ensure content insets are reapplied after resource is loaded
+        if viewModel?.preferences.scroll == true, let epubNavigator = navigator as? EPUBNavigatorViewController {
+            // Apply insets after a short delay to ensure the content has rendered
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.applyScrollModeContentInsets(in: epubNavigator)
+            }
+        }
     }
     
     // This handles messages sent via `window.webkit.messageHandlers.yourName.postMessage(...)`
