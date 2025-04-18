@@ -5,7 +5,6 @@
 //  Created by Russell Graviet on 2/13/25.
 //
 
-
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -54,57 +53,65 @@ struct SavedWordsView: View {
             ZStack {
                 Color("BackgroundColor").ignoresSafeArea(edges: .all)
                 
-                VStack(spacing: 0) {
-                    // Search bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
-                        
-                        TextField("Search saved words", text: $searchText)
-                            .autocapitalization(.none)
-                            .disableAutocorrection(true)
+                if wordsManager.savedWords.isEmpty {
+                    ScrollView {
+                        EmptySavedWordsView()
+                            .padding(.horizontal)
+                            .padding(.vertical, 50)
                     }
-                    .padding(10)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-                    .padding(.top, 5)
-                    
-                    // Sort menu
-                    HStack {
-                        Text("Sort by:")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                        
-                        Picker("Sort by", selection: $sortOption) {
-                            Text("Date Added").tag(SortOption.dateAdded)
-                            Text("Word").tag(SortOption.word)
-                            Text("Book").tag(SortOption.book)
+                } else {
+                    VStack(spacing: 0) {
+                        // Search bar
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.gray)
+                            
+                            TextField("Search saved words", text: $searchText)
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
                         }
-                        .pickerStyle(SegmentedPickerStyle())
-                        .padding(.leading, 5)
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 5)
-                    
-                    // List of saved words
-                    List {
-                        ForEach(filteredWords) { word in
-                            NavigationLink(destination: SavedWordDetailView(word: word)) {
-                                SavedWordRow(word: word)
+                        .padding(10)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                        .padding(.horizontal)
+                        .padding(.top, 5)
+                        
+                        // Sort menu
+                        HStack {
+                            Text("Sort by:")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            
+                            Picker("Sort by", selection: $sortOption) {
+                                Text("Date Added").tag(SortOption.dateAdded)
+                                Text("Word").tag(SortOption.word)
+                                Text("Book").tag(SortOption.book)
                             }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .padding(.leading, 5)
                         }
-                        .onDelete { indexSet in
-                            // Map the filtered indices to the original indices
-                            let indices = indexSet.map { filteredWords[$0] }
-                            indices.forEach { word in
-                                if let index = wordsManager.savedWords.firstIndex(where: { $0.id == word.id }) {
-                                    wordsManager.savedWords.remove(at: index)
+                        .padding(.horizontal)
+                        .padding(.top, 5)
+                        
+                        // List of saved words
+                        List {
+                            ForEach(filteredWords) { word in
+                                NavigationLink(destination: SavedWordDetailView(word: word)) {
+                                    SavedWordRow(word: word)
+                                }
+                            }
+                            .onDelete { indexSet in
+                                // Map the filtered indices to the original indices
+                                let indices = indexSet.map { filteredWords[$0] }
+                                indices.forEach { word in
+                                    if let index = wordsManager.savedWords.firstIndex(where: { $0.id == word.id }) {
+                                        wordsManager.savedWords.remove(at: index)
+                                    }
                                 }
                             }
                         }
+                        .listStyle(PlainListStyle())
                     }
-                    .listStyle(PlainListStyle())
                 }
             }
             .navigationTitle("Saved Words")

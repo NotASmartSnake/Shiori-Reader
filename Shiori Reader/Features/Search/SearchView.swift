@@ -71,16 +71,17 @@ struct SearchView: View {
                         // Initial state
                         VStack(spacing: 20) {
                             Image(systemName: "character.book.closed")
-                                .font(.system(size: 60))
+                                .font(.system(size: 70))
                                 .foregroundColor(.gray.opacity(0.7))
                                 .padding(.top, 50)
                             
                             Text("Search for Japanese words")
-                                .font(.headline)
+                                .font(.title2)
+                                .fontWeight(.semibold)
                             
                             Text("Enter Japanese characters or English meanings")
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
+                                .font(.body)
+                                .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
                             
