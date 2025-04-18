@@ -51,7 +51,7 @@ struct ReaderView: View {
                     dictionaryPopup
                 }
             }
-            .animation(.spring(duration: 0.3, bounce: 0.2), value: viewModel.showDictionary)
+            .animation(.easeInOut(duration: 0.3), value: viewModel.showDictionary)
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)

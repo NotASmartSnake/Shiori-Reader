@@ -31,20 +31,20 @@ struct BookCoverImage: View {
                     .frame(width: geometry.size.width, height: geometry.size.height)
                 
                 // Content layer
-                Group {
                     if let uiImage = loadedUIImage {
                         // Display the successfully loaded image
                         Image(uiImage: uiImage)
                             .resizable()
                             .scaledToFit()
                             .frame(width: geometry.size.width, height: geometry.size.height)
+                            .cornerRadius(3)
                     } else if !isLoading {
                         // Show default cover ONLY if not loading and no image loaded
                         defaultCoverView
                             .frame(width: geometry.size.width, height: geometry.size.height)
+                            .cornerRadius(3)
                     }
-                }
-                .cornerRadius(5)
+
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
