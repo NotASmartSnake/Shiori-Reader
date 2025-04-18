@@ -100,8 +100,9 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
     
     /// Creates a navigator configuration with device-specific settings
     private func createNavigatorConfiguration() -> EPUBNavigatorViewController.Configuration {
-        // Create a configuration with default values based on the Readium code you shared
+        // Create a configuration with default values including one column layout
         let config = EPUBNavigatorViewController.Configuration(
+            defaults: EPUBDefaults(columnCount: .one), // Force 1 column layout for all devices
             contentInset: getDeviceSpecificContentInsets()
         )
         

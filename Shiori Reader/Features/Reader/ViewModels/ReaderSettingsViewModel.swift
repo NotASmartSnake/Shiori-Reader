@@ -135,6 +135,9 @@ class ReaderSettingsViewModel: ObservableObject {
         // Scroll mode
         prefs.scroll = preferences.isScrollMode
         
+        // Set column count to 1 by default for all devices
+        prefs.columnCount = .one
+        
         // Theme colors
         if preferences.theme == "custom" {
             // For custom theme, set colors directly

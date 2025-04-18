@@ -342,6 +342,10 @@ struct ReaderView: View {
     // Helper method to update reader preferences
     private func updateReaderPreferences() {
         viewModel.preferences = settingsViewModel.toReadiumPreferences()
+        
+        // Make sure columnCount stays at 1
+        viewModel.preferences.columnCount = .one
+        
         if let navigator = viewModel.navigatorController {
             Task { @MainActor in
                 navigator.submitPreferences(viewModel.preferences)

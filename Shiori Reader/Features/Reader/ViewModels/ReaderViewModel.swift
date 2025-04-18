@@ -234,6 +234,9 @@ class ReaderViewModel: ObservableObject {
                 // Left-to-right is the default
                 preferences.readingProgression = .ltr
             }
+            
+            // Always use single column layout
+            preferences.columnCount = .one
         } else {
             // If no book-specific preferences, use global defaults
             print("DEBUG [ReadiumBookViewModel]: No book preferences found, using defaults")
@@ -245,6 +248,7 @@ class ReaderViewModel: ObservableObject {
             preferences.publisherStyles = true
             preferences.scroll = false    // paginated by default
             preferences.verticalText = false
+            preferences.columnCount = .one   // always use single column layout
             
             // Check for default reading direction
             let savedDirection = UserDefaults.standard.string(forKey: "preferred_reading_direction")
