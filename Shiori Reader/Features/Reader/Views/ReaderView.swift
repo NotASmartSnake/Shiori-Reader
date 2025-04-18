@@ -9,6 +9,7 @@
 import SwiftUI
 import ReadiumShared
 import ReadiumNavigator
+import Combine
 
 struct ReaderView: View {
     @StateObject var viewModel: ReaderViewModel
@@ -23,6 +24,8 @@ struct ReaderView: View {
     
     // Access the orientation manager
     private let orientationManager = OrientationManager.shared
+    // Access the navigation coordinator
+    private let navigationCoordinator = NavigationCoordinator.shared
 
     init(book: Book) {
         _viewModel = StateObject(wrappedValue: ReaderViewModel(book: book))
@@ -61,6 +64,8 @@ struct ReaderView: View {
         .onAppear {
             // Allow all orientations when reading
             orientationManager.unlockOrientation()
+            // Ensure tab bar is hidden immediately
+            navigationCoordinator.hideTabBar()
             // Set reading state
             isReadingBookState.setReading(true)
             
@@ -75,6 +80,8 @@ struct ReaderView: View {
         .onDisappear {
             // Lock back to portrait when leaving
             orientationManager.lockPortrait()
+            // Ensure tab bar is shown when leaving
+            navigationCoordinator.showTabBar()
             // Reset reading state
             isReadingBookState.setReading(false)
         }
@@ -147,6 +154,10 @@ struct ReaderView: View {
             HStack {
                 // Back Button (Left)
                 Button {
+                    // Use navigation coordinator for better UI coordination
+                    navigationCoordinator.showTabBar()
+                    // Then set reading state to false and dismiss
+                    isReadingBookState.setReading(false)
                     dismiss() // Use the environment dismiss action
                 } label: {
                     Image(systemName: "chevron.backward")
