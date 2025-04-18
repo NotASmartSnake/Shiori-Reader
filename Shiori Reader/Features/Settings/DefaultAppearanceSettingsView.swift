@@ -130,9 +130,16 @@ struct DefaultAppearanceSettingsView: View {
                     }
                 }
             }
+            
+            // MARK: - Info Section
+            Section {
+                Text("These settings apply to all new books you open. You can also set different appearance preferences for each individual book when reading.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
         }
         .listStyle(InsetGroupedListStyle())
-        .navigationTitle("Default Appearance")
+        .navigationTitle("Reader Appearance")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

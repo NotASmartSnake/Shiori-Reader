@@ -18,6 +18,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UINavigationBar.appearance().layoutMargins.left = 30
+        
+        // Initialize and apply appearance settings
+        _ = AppearanceManager.shared
+        
         return true
     }
 }

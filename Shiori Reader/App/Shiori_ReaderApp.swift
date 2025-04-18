@@ -11,7 +11,6 @@ import UIKit
 @main
 struct Shiori_ReaderApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @AppStorage("isDarkMode") var isDarkMode: Bool?
     @StateObject private var isReadingBookState = IsReadingBook()
     @StateObject private var libraryManager = LibraryManager()
     @StateObject private var savedWordsManager = SavedWordsManager()
@@ -28,9 +27,7 @@ struct Shiori_ReaderApp: App {
                     .environmentObject(libraryManager)
                     .environmentObject(savedWordsManager)
                     .environment(\.managedObjectContext, coreDataManager.viewContext)
-                    .preferredColorScheme(
-                        isDarkMode == nil ? nil : (isDarkMode! ? .dark : .light)
-                    )
+                    .withAppearanceSettings() // Apply custom appearance settings
                 
                 // Welcome view overlay on first launch
                 if userPreferences.isFirstLaunch {

@@ -86,7 +86,7 @@ struct LibraryView: View {
     // Add books directly to the manager
     manager.books = [
         // Original sample books with more complete information
-        Book(id: UUID(), title: "Classroom of the Elite Vol. 1", author: "Syougo Kinugasa", filePath: "dummy1.epub", coverImagePath: "COTECover", isLocalCover: false, addedDate: Date(), lastOpenedDate: Date(), readingProgress: 0.25, currentLocatorData: nil),
+        Book(id: UUID(), title: "Classroom of the Elite Vol. 1", author: "Syougo Kinugasa", filePath: "honzuki.epub", coverImagePath: "COTECover", isLocalCover: false, addedDate: Date(), lastOpenedDate: Date(), readingProgress: 0.25, currentLocatorData: nil),
         Book(id: UUID(), title: "My Teen Romantic Comedy SNAFU Vol. 14", author: "Wataru Watari", filePath: "dummy2.epub", coverImagePath: "OregairuCover", isLocalCover: false, addedDate: Date(), lastOpenedDate: Date(), readingProgress: 0.90, currentLocatorData: nil),
         Book(id: UUID(), title: "Overlord Vol. 1", author: "Kugane Maruyama", filePath: "dummy6.epub", coverImagePath: "OverlordCover", isLocalCover: false, addedDate: Date(), lastOpenedDate: Date(), readingProgress: 0.70, currentLocatorData: nil),
         Book(id: UUID(), title: "Mushoku Tensei Vol. 7", author: "Rifujin na Magonote", filePath: "dummy7.epub", coverImagePath: "MushokuCover", isLocalCover: false, addedDate: Date(), lastOpenedDate: Date(), readingProgress: 0.42, currentLocatorData: nil),
