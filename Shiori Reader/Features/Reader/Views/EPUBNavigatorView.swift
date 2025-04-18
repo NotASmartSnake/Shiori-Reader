@@ -77,6 +77,11 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
             // Allow time for the preference to be applied before adjusting insets
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 context.coordinator.applyScrollModeContentInsets(in: uiViewController)
+                
+                // When changing modes, forcibly reload the handlers and scripts on all WebViews
+                // This is more aggressive than just reinjecting scripts
+                print("DEBUG [EPUBNavigatorView]: Forcibly reloading scripts after mode change")
+                context.coordinator.forceReloadScriptsInAllWebViews(in: uiViewController.view)
             }
         }
         

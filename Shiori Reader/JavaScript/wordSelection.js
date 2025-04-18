@@ -1,5 +1,21 @@
 // wordSelection.js - Enhanced version with proper ruby handling
 
+// Store references to our event listeners for later cleanup
+let documentClickListener = null;
+
+// Cleanup function that will be exposed globally
+window.shioriCleanupEventListeners = function() {
+    if (documentClickListener) {
+        document.removeEventListener('click', documentClickListener);
+        console.log('Removed previous Shiori click listener');
+    }
+    // Reset the reference
+    documentClickListener = null;
+    
+    // Return true to indicate successful cleanup
+    return true;
+};
+
 // Function to safely send logs
 function shioriLog(message) {
     // Use console log first (always works)
@@ -35,8 +51,8 @@ function dismissDictionary() {
     }
 }
 
-// Set up click handler
-document.addEventListener('click', function(event) {
+// Define the click handler function
+documentClickListener = function(event) {
     shioriLog("Click detected at " + event.clientX + "," + event.clientY);
     
     // Skip interactive elements
@@ -102,7 +118,10 @@ document.addEventListener('click', function(event) {
     } else {
         dismissDictionary();
     }
-}, false);
+};
+
+// Register the click event listener
+document.addEventListener('click', documentClickListener, false);
 
 // Ruby handling functions with improved handling
 function handleRubyClick(event, rubyElement) {

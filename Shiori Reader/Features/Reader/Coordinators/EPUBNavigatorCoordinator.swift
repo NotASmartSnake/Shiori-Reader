@@ -47,10 +47,14 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
         // Search for WebViews after a slight delay to ensure rendering is complete
         if let epubNavigator = navigator as? EPUBNavigatorViewController {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // This already registers word tap handlers on each WebView it finds
                 self.findAndSetupWebViews(in: epubNavigator.view)
                 
                 // Apply appropriate content insets to scroll views if in scroll mode
                 self.applyScrollModeContentInsets(in: epubNavigator)
+                
+                // Additionally, explicitly call reinject to ensure it works in all cases
+                self.reinjectScriptsInAllWebViews(in: epubNavigator.view)
             }
         }
     }
@@ -102,6 +106,83 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
         }
     }
     
+    /// Reinjects scripts into all WebViews in the view hierarchy
+    func reinjectScriptsInAllWebViews(in view: UIView) {
+        print("DEBUG [Coordinator]: Starting script reinjection in all WebViews")
+        
+        var webViewCount = 0
+        findWebViews(in: view) { webView in
+            webViewCount += 1
+            print("DEBUG [Coordinator]: Reinjecting scripts into WebView #\(webViewCount)")
+            // Reinject the word tap handlers
+            let success = wordTapHandler.registerHandlers(for: webView)
+            print("DEBUG [Coordinator]: Script reinjection for WebView #\(webViewCount) \(success ? "succeeded" : "failed")")
+            
+            // Check if it's already loading content, as that can interfere with script injection
+            if webView.isLoading {
+                print("WARNING [Coordinator]: WebView #\(webViewCount) is still loading content, which might affect script injection")
+            }
+        }
+        
+        if webViewCount == 0 {
+            print("WARNING [Coordinator]: No WebViews found to reinject scripts into!")
+        } else {
+            print("DEBUG [Coordinator]: Completed script reinjection for \(webViewCount) WebViews")
+        }
+    }
+    
+    /// Force reloads scripts in all WebViews by completely removing and re-adding them
+    func forceReloadScriptsInAllWebViews(in view: UIView) {
+        print("DEBUG [Coordinator]: FORCE RELOADING all scripts in WebViews")
+        
+        var webViewCount = 0
+        findWebViews(in: view) { webView in
+            webViewCount += 1
+            print("DEBUG [Coordinator]: Forcibly reloading scripts in WebView #\(webViewCount)")
+            
+            // First, unregister all handlers for this WebView to clean slate
+            wordTapHandler.unregisterHandlers(for: webView)
+            
+            // Then inject a script to clear any existing event listeners
+            let cleanupScript = """
+            (function() {
+                console.log('Cleaning up previous event listeners before reinjection');
+                // Clean up any global event listeners that might have been added
+                try {
+                    if (window.shioriCleanupEventListeners) {
+                        window.shioriCleanupEventListeners();
+                        console.log('Cleanup function executed successfully');
+                    } else {
+                        console.log('No cleanup function found, proceeding with fresh injection');
+                    }
+                } catch(e) {
+                    console.error('Error during cleanup: ' + e);
+                }
+            })();
+            """
+            
+            webView.evaluateJavaScript(cleanupScript) { _, error in
+                if let error = error {
+                    print("DEBUG [Coordinator]: Error during cleanup script: \(error)")
+                } else {
+                    print("DEBUG [Coordinator]: Cleanup script executed successfully")
+                }
+                
+                // Now register the handlers fresh
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    let success = self.wordTapHandler.registerHandlers(for: webView)
+                    print("DEBUG [Coordinator]: Force script reinjection for WebView #\(webViewCount) \(success ? "succeeded" : "failed")")
+                }
+            }
+        }
+        
+        if webViewCount == 0 {
+            print("WARNING [Coordinator]: No WebViews found for force script reloading!")
+        } else {
+            print("DEBUG [Coordinator]: Force reload initiated for \(webViewCount) WebViews")
+        }
+    }
+    
     /// Detect if the current device is an iPad
     private func isIpad() -> Bool {
         return UIDevice.current.userInterfaceIdiom == .pad
@@ -123,11 +204,17 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
     func navigator(_ navigator: Navigator, didLoadResourceAt href: ReadiumShared.RelativeURL) {
         print("DEBUG [Coordinator]: Loaded resource at \(href)")
         
-        // When in scroll mode, ensure content insets are reapplied after resource is loaded
-        if viewModel?.preferences.scroll == true, let epubNavigator = navigator as? EPUBNavigatorViewController {
-            // Apply insets after a short delay to ensure the content has rendered
+        // Handle any post-load adjustments
+        if let epubNavigator = navigator as? EPUBNavigatorViewController {
+            // Apply insets and reinject scripts after a short delay to ensure the content has rendered
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.applyScrollModeContentInsets(in: epubNavigator)
+                // Apply scroll mode insets if needed
+                if self.viewModel?.preferences.scroll == true {
+                    self.applyScrollModeContentInsets(in: epubNavigator)
+                }
+                
+                // Reinject scripts for all WebViews when new content is loaded
+                self.reinjectScriptsInAllWebViews(in: epubNavigator.view)
             }
         }
     }
