@@ -8,6 +8,10 @@
 import SwiftUI
 
 struct BookCell: View {
+    // Access the device type using the UIDevice extension
+    private var deviceType: UIDevice.DeviceType {
+        return UIDevice.current.deviceType
+    }
     let book: Book
     @ObservedObject var isReadingBook: IsReadingBook
     @Binding var lastViewedBookPath: String?
@@ -45,7 +49,7 @@ struct BookCell: View {
             HStack {
                 // Progress indicator with integer percentage (matching ReaderView)
                 Text(String(format: "%d%%", Int(book.readingProgress * 100)))
-                    .font(.caption)
+                    .font(deviceType == .iPad ? .caption2 : .caption) // Smaller font on iPad
                     .foregroundStyle(.gray)
                 Spacer()
                 
@@ -65,7 +69,7 @@ struct BookCell: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .foregroundStyle(.gray)
-                        .padding(8)
+                        .padding(deviceType == .iPad ? 6 : 8) // Smaller padding on iPad
                 }
             }
             .padding(.horizontal, 6)

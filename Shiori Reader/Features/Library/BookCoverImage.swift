@@ -9,6 +9,10 @@ import SwiftUI
 import Combine
 
 struct BookCoverImage: View {
+    // Access the device type using the UIDevice extension
+    private var deviceType: UIDevice.DeviceType {
+        return UIDevice.current.deviceType
+    }
     let book: Book
     @State private var loadedUIImage: UIImage? = nil
     @State private var isLoading = true
@@ -63,12 +67,12 @@ struct BookCoverImage: View {
         )
         .overlay(
             Text(book.title)
-                .font(.title2)
+                .font(deviceType == .iPad ? .body : .title2) // Smaller font on iPad for 4 column layout
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.5)
-                .padding()
+                .minimumScaleFactor(0.4) // Allow slightly smaller scaling on iPad
+                .padding(deviceType == .iPad ? 8 : 12) // Less padding on iPad
         )
     }
     
