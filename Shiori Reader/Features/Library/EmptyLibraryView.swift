@@ -60,7 +60,7 @@ struct EmptyLibraryView: View {
             .padding(20)
             .background(Color(.systemGray6))
             .cornerRadius(12)
-            .padding(.top, 30)
+            .padding(.top, 10)
             .padding(.horizontal, 20)
         }
         .padding()
