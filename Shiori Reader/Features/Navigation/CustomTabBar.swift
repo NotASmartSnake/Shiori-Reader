@@ -43,6 +43,11 @@ struct CustomTabBar: View {
                 }
             }
             .background(.ultraThinMaterial)
+            .background(
+                (colorScheme == .light ? Color.white : Color.black)
+                    .opacity(colorScheme == .light ? 0.85 : 0.2)
+                    .background(.ultraThinMaterial)
+            )
             
         }
     }
