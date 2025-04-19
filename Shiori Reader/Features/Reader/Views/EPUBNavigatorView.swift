@@ -21,11 +21,11 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
     // MARK: - UIViewControllerRepresentable Core Methods
 
     func makeUIViewController(context: Context) -> EPUBNavigatorViewController {
-        print("DEBUG [EPUBNavigatorView]: Making EPUBNavigatorViewController...")
+        Logger.debug(category: "EPUBNavigator", "Making EPUBNavigatorViewController...")
 
         let server = ServerManager.shared.httpServer
 
-        print("DEBUG [EPUBNavigatorView]: Using server instance provided by ServerManager.")
+        Logger.debug(category: "EPUBNavigator", "Using server instance provided by ServerManager.")
 
         // Create a configuration with custom content insets for iPad
         let config = createNavigatorConfiguration()
@@ -46,7 +46,7 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
             
             return navigator
         } catch {
-            print("ERROR [EPUBNavigatorView]: Failed to create EPUBNavigatorViewController: \(error)")
+            Logger.debug(category: "EPUBNavigator", "Failed to create EPUBNavigatorViewController: \(error)")
             fatalError("Failed to initialize EPUBNavigatorViewController: \(error.localizedDescription)")
         }
     }
@@ -56,13 +56,13 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
         uiViewController.submitPreferences(viewModel.preferences)
         
         if let targetLocator = viewModel.navigationRequest {
-            print("DEBUG [EPUBNavigatorView]: Detected navigation request for locator: \(targetLocator.href)")
+            Logger.debug(category: "EPUBNavigator", "Detected navigation request for locator: \(targetLocator.href)")
             viewModel.clearNavigationRequest()
             
             Task {
-                print("DEBUG [EPUBNavigatorView]: Starting async task to navigate to locator...")
+                Logger.debug(category: "EPUBNavigator", "Starting async task to navigate to locator...")
                 let success = await uiViewController.go(to: targetLocator, options: .init(animated: false))
-                print("DEBUG [EPUBNavigatorView]: Navigation to locator finished. Success: \(success)")
+                Logger.debug(category: "EPUBNavigator", "Navigation to locator finished. Success: \(success)")
             }
         }
         
@@ -71,7 +71,7 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
         let wasScrollMode = context.coordinator.lastKnownScrollMode
         
         if isScrollMode != wasScrollMode {
-            print("DEBUG [EPUBNavigatorView]: Scroll mode changed from \(wasScrollMode) to \(isScrollMode)")
+            Logger.debug(category: "EPUBNavigator", "Scroll mode changed from \(wasScrollMode) to \(isScrollMode)")
             context.coordinator.lastKnownScrollMode = isScrollMode
             
             // Allow time for the preference to be applied before adjusting insets
@@ -80,7 +80,7 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
                 
                 // When changing modes, forcibly reload the handlers and scripts on all WebViews
                 // This is more aggressive than just reinjecting scripts
-                print("DEBUG [EPUBNavigatorView]: Forcibly reloading scripts after mode change")
+                Logger.debug(category: "EPUBNavigator", "Forcibly reloading scripts after mode change")
                 context.coordinator.forceReloadScriptsInAllWebViews(in: uiViewController.view)
             }
         }
@@ -113,14 +113,14 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
     private func getDeviceSpecificContentInsets() -> [UIUserInterfaceSizeClass: (top: CGFloat, bottom: CGFloat)] {
         if isIpad() {
             // Apply larger top inset for iPads to keep text away from the top navigation bar
-            print("DEBUG [EPUBNavigatorView]: Applying iPad-specific content insets")
+            Logger.debug(category: "EPUBNavigator", "Applying iPad-specific content insets")
             return [
                 .compact: (top: 60, bottom: 20),
                 .regular: (top: 95, bottom: 40)
             ]
         } else {
             // For iPhone, use smaller insets
-            print("DEBUG [EPUBNavigatorView]: Applying iPhone-specific content insets")
+            Logger.debug(category: "EPUBNavigator", "Applying iPhone-specific content insets")
             return [
                 .compact: (top: 16, bottom: 16),  
                 .regular: (top: 40, bottom: 20)

@@ -63,7 +63,7 @@ class CoreDataManager {
             } catch {
                 // Handle error
                 let nserror = error as NSError
-                print("Error saving context: \(nserror), \(nserror.userInfo)")
+                Logger.debug(category: "CoreData", "Error saving context: \(nserror), \(nserror.userInfo)")
             }
         }
     }
@@ -90,7 +90,7 @@ class CoreDataManager {
         do {
             return try viewContext.fetch(request)
         } catch {
-            print("Error fetching books: \(error)")
+            Logger.debug(category: "CoreData", "Error fetching books: \(error)")
             return []
         }
     }
@@ -104,7 +104,7 @@ class CoreDataManager {
             let results = try viewContext.fetch(request)
             return results.first
         } catch {
-            print("Error fetching book: \(error)")
+            Logger.debug(category: "CoreData", "Error fetching book: \(error)")
             return nil
         }
     }
@@ -150,7 +150,7 @@ class CoreDataManager {
         do {
             return try viewContext.fetch(request)
         } catch {
-            print("Error fetching saved words: \(error)")
+            Logger.debug(category: "CoreData", "Error fetching saved words: \(error)")
             return []
         }
     }
@@ -164,7 +164,7 @@ class CoreDataManager {
             let results = try viewContext.fetch(request)
             return results.first
         } catch {
-            print("Error fetching saved word: \(error)")
+            Logger.debug(category: "CoreData", "Error fetching saved word: \(error)")
             return nil
         }
     }
@@ -190,7 +190,7 @@ class CoreDataManager {
             let results = try viewContext.fetch(request)
             return results.first
         } catch {
-            print("Error fetching default appearance settings: \(error)")
+            Logger.debug(category: "CoreData", "Error fetching default appearance settings: \(error)")
             return nil
         }
     }
@@ -292,7 +292,7 @@ class CoreDataManager {
             let results = try viewContext.fetch(request)
             return results.first
         } catch {
-            print("Error fetching Anki settings: \(error)")
+            Logger.debug(category: "CoreData", "Error fetching Anki settings: \(error)")
             return nil
         }
     }
@@ -364,7 +364,7 @@ class CoreDataManager {
             let locatorData = try JSONSerialization.data(withJSONObject: locatorJSON)
             bookmark.locatorData = locatorData
         } catch {
-            print("Error serializing locator: \(error)")
+            Logger.debug(category: "CoreData", "Error serializing locator: \(error)")
         }
         
         // Link to book if available
@@ -384,7 +384,7 @@ class CoreDataManager {
         do {
             return try viewContext.fetch(request)
         } catch {
-            print("Error fetching bookmarks: \(error)")
+            Logger.debug(category: "CoreData", "Error fetching bookmarks: \(error)")
             return []
         }
     }
@@ -398,7 +398,7 @@ class CoreDataManager {
             let results = try viewContext.fetch(request)
             return results.first
         } catch {
-            print("Error fetching bookmark: \(error)")
+            Logger.debug(category: "CoreData", "Error fetching bookmark: \(error)")
             return nil
         }
     }
@@ -443,7 +443,7 @@ class CoreDataManager {
                 return hrefMatch && progressionMatch
             }
         } catch {
-            print("Error checking if location is bookmarked: \(error)")
+            Logger.debug(category: "CoreData", "Error checking if location is bookmarked: \(error)")
             return false
         }
     }
@@ -482,7 +482,7 @@ class CoreDataManager {
             
             return nil
         } catch {
-            print("Error finding bookmark ID: \(error)")
+            Logger.debug(category: "CoreData", "Error finding bookmark ID: \(error)")
             return nil
         }
     }

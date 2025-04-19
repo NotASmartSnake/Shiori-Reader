@@ -75,7 +75,6 @@ class IsReadingBook: ObservableObject {
     @Published var isReading: Bool = false
     
     func setReading(_ value: Bool) {
-        print("DEBUG: IsReadingBook.setReading(\(value))")
         isReading = value
     }
 }
