@@ -8,6 +8,7 @@
 
 import SwiftUI
 import Foundation
+import SafariServices
 
 struct SettingsView: View {
     
@@ -48,6 +49,14 @@ struct SettingsView: View {
                             HStack {
                                 Image(systemName: "rectangle.stack.fill")
                                 Text("Anki Integration")
+                            }
+                        }
+                        .listRowBackground(Color(.systemGray6))
+                        
+                        NavigationLink(destination: AttributionView()) {
+                            HStack {
+                                Image(systemName: "info.circle")
+                                Text("Attributions")
                             }
                         }
                         .listRowBackground(Color(.systemGray6))

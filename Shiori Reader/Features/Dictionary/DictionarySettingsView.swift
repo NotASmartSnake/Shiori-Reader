@@ -34,6 +34,7 @@ struct DictionarySettingsView: View {
                 }
             }
             .navigationTitle("Dictionary Settings")
+            .navigationBarTitleDisplayMode(.inline)
             .alert(isPresented: $viewModel.showAlert) {
                 Alert(
                     title: Text(viewModel.alertTitle),

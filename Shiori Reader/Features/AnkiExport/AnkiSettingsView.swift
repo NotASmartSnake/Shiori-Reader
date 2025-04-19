@@ -27,6 +27,7 @@ struct AnkiSettingsView: View {
                 testConnectionSection
             }
             .navigationTitle("Anki Settings")
+            .navigationBarTitleDisplayMode(.inline)
             .alert(isPresented: $viewModel.showAlert) {
                 Alert(
                     title: Text(viewModel.alertTitle),
