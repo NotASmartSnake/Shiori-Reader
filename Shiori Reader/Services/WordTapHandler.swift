@@ -63,9 +63,9 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
             
         default:
             if message.name.starts(with: "shioriLog") {
-                print("JS LOG [Shiori]: \(message.body)")
+                Logger.jsLog(category: "Shiori", "\(message.body)")
             } else {
-                print("DEBUG [WordTapHandler]: Received unhandled message type: \(message.name)")
+                Logger.debug(category: "WordTapHandler", "Received unhandled message type: \(message.name)")
             }
         }
     }
@@ -76,10 +76,10 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
         
         // If already registered, forcibly remove and re-register (clean approach for mode switching)
         if registeredHandlers.contains(identifier) {
-            print("DEBUG [WordTapHandler]: Re-registering handlers for WebView: \(identifier)")
+            Logger.debug(category: "WordTapHandler", "Re-registering handlers for WebView: \(identifier)")
             unregisterHandlers(for: webView)
         } else {
-            print("DEBUG [WordTapHandler]: First-time registering handlers for WebView: \(identifier)")
+            Logger.debug(category: "WordTapHandler", "First-time registering handlers for WebView: \(identifier)")
         }
         
         let userContentController = webView.configuration.userContentController
@@ -105,7 +105,7 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
     // Explicitly unregister handlers for a WebView to clean up and avoid duplicates
     func unregisterHandlers(for webView: WKWebView) {
         let identifier = "\(Unmanaged.passUnretained(webView).toOpaque())"
-        print("DEBUG [WordTapHandler]: Unregistering handlers for WebView: \(identifier)")
+        Logger.debug(category: "WordTapHandler", "Unregistering handlers for WebView: \(identifier)")
         
         let userContentController = webView.configuration.userContentController
         
@@ -122,11 +122,11 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
         // Load the script
         guard let scriptPath = Bundle.main.path(forResource: "wordSelection", ofType: "js"),
               let scriptContent = try? String(contentsOfFile: scriptPath, encoding: .utf8) else {
-            print("ERROR [WordTapHandler]: Could not load wordSelection.js")
+            Logger.error(category: "WordTapHandler", "Could not load wordSelection.js")
             return
         }
         
-        print("DEBUG [WordTapHandler]: Injecting script into WebView with log handler: \(logHandlerName)")
+        Logger.debug(category: "WordTapHandler", "Injecting script into WebView with log handler: \(logHandlerName)")
         
         // Modify the script to use the unique log handler name
         let modifiedScript = """
@@ -154,9 +154,9 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
         // Inject the script
         webView.evaluateJavaScript(modifiedScript) { result, error in
             if let error = error {
-                print("ERROR [WordTapHandler]: Script injection failed: \(error)")
+                Logger.error(category: "WordTapHandler", "Script injection failed: \(error)")
             } else {
-                print("DEBUG [WordTapHandler]: Script injection succeeded for \(logHandlerName)")
+                Logger.debug(category: "WordTapHandler", "Script injection succeeded for \(logHandlerName)")
                 
                 // Now inject a test to verify the handler is working
                 let testScript = """
@@ -173,9 +173,9 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
                 
                 webView.evaluateJavaScript(testScript) { _, testError in
                     if let testError = testError {
-                        print("ERROR [WordTapHandler]: Test message injection failed: \(testError)")
+                        Logger.error(category: "WordTapHandler", "Test message injection failed: \(testError)")
                     } else {
-                        print("DEBUG [WordTapHandler]: Test message injection succeeded")
+                        Logger.debug(category: "WordTapHandler", "Test message injection succeeded")
                     }
                 }
             }

@@ -44,11 +44,11 @@ class EPUBImportProcessor {
             throw ImportError.invalidFileType
         }
 
-        print("DEBUG [EPUBImportProcessor]: Processing EPUB at \(url.path)")
+        Logger.debug(category: "EPUBImportProcessor", "Processing EPUB at \(url.path)")
 
         // Open the Publication using Readium
         guard let anyURL = url.anyURL else {
-            print("ERROR [EPUBImportProcessor]: Could not create AnyURL from \(url)")
+            Logger.error(category: "EPUBImportProcessor", "Could not create AnyURL from \(url)")
             throw ImportError.metadataExtractionFailed("Invalid URL format")
         }
 
@@ -57,11 +57,11 @@ class EPUBImportProcessor {
         switch assetResult {
         case .success(let retrievedAsset):
             asset = retrievedAsset
-            print("DEBUG [EPUBImportProcessor]: Asset retrieved successfully. Format: \(asset.format)")
+            Logger.debug(category: "EPUBImportProcessor", "Asset retrieved successfully. Format: \(asset.format)")
 
         case .failure(let assetError):
             let errorDescription = assetError.localizedDescription
-            print("ERROR [EPUBImportProcessor]: Failed to retrieve asset: \(errorDescription)")
+            Logger.error(category: "EPUBImportProcessor", "Failed to retrieve asset: \(errorDescription)")
             throw ImportError.metadataExtractionFailed("Failed to retrieve EPUB asset: \(errorDescription)")
         }
 
@@ -70,22 +70,22 @@ class EPUBImportProcessor {
         switch pubResult {
         case .success(let openedPublication):
             publication = openedPublication
-            print("DEBUG [EPUBImportProcessor]: Publication opened successfully.")
+            Logger.debug(category: "EPUBImportProcessor", "Publication opened successfully.")
 
         case .failure(let openError):
             let errorDescription = openError.localizedDescription
-            print("ERROR [EPUBImportProcessor]: Failed to open publication: \(errorDescription)")
+            Logger.error(category: "EPUBImportProcessor", "Failed to open publication: \(errorDescription)")
             throw ImportError.metadataExtractionFailed("Failed to open EPUB: \(errorDescription)")
         }
 
-        print("DEBUG [EPUBImportProcessor]: Publication opened successfully.")
+        Logger.debug(category: "EPUBImportProcessor", "Publication opened successfully.")
 
         // Extract Metadata using Readium
         let metadata = publication.metadata
         let title = metadata.title ?? url.deletingPathExtension().lastPathComponent // Fallback title
         let author = metadata.authors.first?.name // Get first author's name
 
-        print("DEBUG [EPUBImportProcessor]: Extracted Metadata - Title: \(title), Author: \(author ?? "N/A")")
+        Logger.debug(category: "EPUBImportProcessor", "Extracted Metadata - Title: \(title), Author: \(author ?? "N/A")")
 
         // Extract Cover Image using Readium
         var coverImageFilename: String? = nil
@@ -97,23 +97,23 @@ class EPUBImportProcessor {
         case .success(let optionalCoverImage):
             // Result was success, now check if the optional UIImage has a value
             if let coverUIImage = optionalCoverImage {
-                print("DEBUG [EPUBImportProcessor]: Extracted cover UIImage size: \(coverUIImage.size), scale: \(coverUIImage.scale)")
+                Logger.debug(category: "EPUBImportProcessor", "Extracted cover UIImage size: \(coverUIImage.size), scale: \(coverUIImage.scale)")
                 do {
                     // Pass the non-optional UIImage to saveCoverImage
                     coverImageFilename = try saveCoverImage(coverUIImage)
                     isLocalCover = true
-                    print("DEBUG [EPUBImportProcessor]: Saved cover image as \(coverImageFilename ?? "N/A")")
+                    Logger.debug(category: "EPUBImportProcessor", "Saved cover image as \(coverImageFilename ?? "N/A")")
                 } catch {
-                    print("ERROR [EPUBImportProcessor]: Failed to save extracted cover image: \(error). Falling back to default.")
+                    Logger.error(category: "EPUBImportProcessor", "Failed to save extracted cover image: \(error). Falling back to default.")
                     // Fallback will be handled after this switch block
                 }
             } else {
                 // coverResult was .success, but the UIImage? was nil
-                print("WARN [EPUBImportProcessor]: coverFitting succeeded but returned nil image. Falling back.")
+                Logger.warning(category: "EPUBImportProcessor", "coverFitting succeeded but returned nil image. Falling back.")
             }
 
         case .failure(let coverError): // Capture the ReadError
-            print("ERROR [EPUBImportProcessor]: Failed to extract cover using publication.coverFitting: \(coverError.localizedDescription). Falling back.")
+            Logger.error(category: "EPUBImportProcessor", "Failed to extract cover using publication.coverFitting: \(coverError.localizedDescription). Falling back.")
             // Fallback will be handled after this switch block
         }
 
@@ -121,7 +121,7 @@ class EPUBImportProcessor {
         if coverImageFilename == nil {
             coverImageFilename = defaultCovers.randomElement() ?? "COTECover" // Use asset name
             isLocalCover = false // Indicate it's an asset
-            print("DEBUG [EPUBImportProcessor]: Using default asset cover: \(coverImageFilename ?? "N/A")")
+            Logger.debug(category: "EPUBImportProcessor", "Using default asset cover: \(coverImageFilename ?? "N/A")")
         }
 
         // Create the Book object
@@ -156,7 +156,7 @@ class EPUBImportProcessor {
         // Create the Covers directory if it doesn't exist
         if !fileManager.fileExists(atPath: coversDirectory.path) {
             try fileManager.createDirectory(at: coversDirectory, withIntermediateDirectories: true, attributes: nil)
-            print("DEBUG [EPUBImportProcessor]: Created BookCovers directory at \(coversDirectory.path)")
+            Logger.debug(category: "EPUBImportProcessor", "Created BookCovers directory at \(coversDirectory.path)")
         }
 
         // Generate a unique filename (stem only)
@@ -165,7 +165,7 @@ class EPUBImportProcessor {
 
         // Write the image data
         try imageData.write(to: coverURL)
-        print("DEBUG [EPUBImportProcessor]: Saved cover as PNG: \(coverURL.path)")
+        Logger.debug(category: "EPUBImportProcessor", "Saved cover as PNG: \(coverURL.path)")
 
         // Return just the unique filename stem
         return filenameStem

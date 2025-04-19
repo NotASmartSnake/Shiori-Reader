@@ -9,6 +9,7 @@ import SwiftUI
 import ReadiumShared
 import ReadiumNavigator
 import WebKit
+import Foundation
 
 class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessageHandler {
     weak var viewModel: ReaderViewModel?
@@ -22,11 +23,11 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
         self.wordTapHandler = WordTapHandler(viewModel: viewModel)
         self.lastKnownScrollMode = viewModel.preferences.scroll ?? false
         super.init()
-        print("DEBUG [Coordinator]: Initialized with WordTapHandler.")
+        Logger.debug(category: "Coordinator", "Initialized with WordTapHandler.")
     }
     
     func navigator(_ navigator: Navigator, setupUserScripts userContentController: WKUserContentController) {
-        print("DEBUG [Coordinator]: setupUserScripts delegate method called!")
+        Logger.debug(category: "Coordinator", "setupUserScripts delegate method called!")
         addMessageHandlers(userContentController)
     }
     
@@ -34,12 +35,12 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
         userContentController.add(self, name: "wordTapped")
         userContentController.add(self, name: "dismissDictionary")
         userContentController.add(self, name: "shioriLog")
-        print("DEBUG [Coordinator]: Added message handlers via delegate method")
+        Logger.debug(category: "Coordinator", "Added message handlers via delegate method")
     }
 
     @MainActor // Ensure UI updates or VM calls happen on the main thread
     func navigator(_ navigator: Navigator, locationDidChange locator: Locator) {
-        print("DEBUG [Coordinator]: Location changed to \(locator.href)")
+        Logger.debug(category: "Coordinator", "Location changed to \(locator.href)")
         
         // Pass the updated location to ViewModel
         viewModel?.handleLocationUpdate(locator)
@@ -75,11 +76,11 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
     func applyScrollModeContentInsets(in navigator: EPUBNavigatorViewController) {
         // Only apply special scroll mode insets when in scroll mode
         guard let viewModel = viewModel, viewModel.preferences.scroll == true else {
-            print("DEBUG [Coordinator]: Not in scroll mode, skipping scroll insets")
+            Logger.debug(category: "Coordinator", "Not in scroll mode, skipping scroll insets")
             return
         }
         
-        print("DEBUG [Coordinator]: Applying scroll mode insets")
+        Logger.debug(category: "Coordinator", "Applying scroll mode insets")
         
         // Find all WKWebViews in the navigator's view hierarchy
         findWebViews(in: navigator.view) { webView in
@@ -89,7 +90,7 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
             
             // Apply the insets to the scroll views within the WebView
             webView.adjustScrollViewContentInsets(top: topInset, bottom: bottomInset)
-            print("DEBUG [Coordinator]: Applied scroll mode insets - top: \(topInset), bottom: \(bottomInset)")
+            Logger.debug(category: "Coordinator", "Applied scroll mode insets - top: \(topInset), bottom: \(bottomInset)")
         }
     }
     
@@ -108,37 +109,37 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
     
     /// Reinjects scripts into all WebViews in the view hierarchy
     func reinjectScriptsInAllWebViews(in view: UIView) {
-        print("DEBUG [Coordinator]: Starting script reinjection in all WebViews")
+        Logger.debug(category: "Coordinator", "Starting script reinjection in all WebViews")
         
         var webViewCount = 0
         findWebViews(in: view) { webView in
             webViewCount += 1
-            print("DEBUG [Coordinator]: Reinjecting scripts into WebView #\(webViewCount)")
+            Logger.debug(category: "Coordinator", "Reinjecting scripts into WebView #\(webViewCount)")
             // Reinject the word tap handlers
             let success = wordTapHandler.registerHandlers(for: webView)
-            print("DEBUG [Coordinator]: Script reinjection for WebView #\(webViewCount) \(success ? "succeeded" : "failed")")
+            Logger.debug(category: "Coordinator", "Script reinjection for WebView #\(webViewCount) \(success ? "succeeded" : "failed")")
             
             // Check if it's already loading content, as that can interfere with script injection
             if webView.isLoading {
-                print("WARNING [Coordinator]: WebView #\(webViewCount) is still loading content, which might affect script injection")
+                Logger.warning(category: "Coordinator", "WebView #\(webViewCount) is still loading content, which might affect script injection")
             }
         }
         
         if webViewCount == 0 {
-            print("WARNING [Coordinator]: No WebViews found to reinject scripts into!")
+            Logger.warning(category: "Coordinator", "No WebViews found to reinject scripts into!")
         } else {
-            print("DEBUG [Coordinator]: Completed script reinjection for \(webViewCount) WebViews")
+            Logger.debug(category: "Coordinator", "Completed script reinjection for \(webViewCount) WebViews")
         }
     }
     
     /// Force reloads scripts in all WebViews by completely removing and re-adding them
     func forceReloadScriptsInAllWebViews(in view: UIView) {
-        print("DEBUG [Coordinator]: FORCE RELOADING all scripts in WebViews")
+        Logger.debug(category: "Coordinator", "FORCE RELOADING all scripts in WebViews")
         
         var webViewCount = 0
         findWebViews(in: view) { webView in
             webViewCount += 1
-            print("DEBUG [Coordinator]: Forcibly reloading scripts in WebView #\(webViewCount)")
+            Logger.debug(category: "Coordinator", "Forcibly reloading scripts in WebView #\(webViewCount)")
             
             // First, unregister all handlers for this WebView to clean slate
             wordTapHandler.unregisterHandlers(for: webView)
@@ -163,23 +164,23 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
             
             webView.evaluateJavaScript(cleanupScript) { _, error in
                 if let error = error {
-                    print("DEBUG [Coordinator]: Error during cleanup script: \(error)")
+                    Logger.debug(category: "Coordinator", "Error during cleanup script: \(error)")
                 } else {
-                    print("DEBUG [Coordinator]: Cleanup script executed successfully")
+                    Logger.debug(category: "Coordinator", "Cleanup script executed successfully")
                 }
                 
                 // Now register the handlers fresh
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     let success = self.wordTapHandler.registerHandlers(for: webView)
-                    print("DEBUG [Coordinator]: Force script reinjection for WebView #\(webViewCount) \(success ? "succeeded" : "failed")")
+                    Logger.debug(category: "Coordinator", "Force script reinjection for WebView #\(webViewCount) \(success ? "succeeded" : "failed")")
                 }
             }
         }
         
         if webViewCount == 0 {
-            print("WARNING [Coordinator]: No WebViews found for force script reloading!")
+            Logger.warning(category: "Coordinator", "No WebViews found for force script reloading!")
         } else {
-            print("DEBUG [Coordinator]: Force reload initiated for \(webViewCount) WebViews")
+            Logger.debug(category: "Coordinator", "Force reload initiated for \(webViewCount) WebViews")
         }
     }
     
@@ -191,18 +192,18 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
     @MainActor // Ensure UI updates or VM calls happen on the main thread
     func navigator(_ navigator: Navigator, presentError error: NavigatorError) {
         // Called if the navigator encounters an internal error (e.g., cannot load a resource)
-        print("ERROR [Coordinator]: Navigator failed with error: \(error)")
+        Logger.error(category: "Coordinator", "Navigator failed with error: \(error)")
         // Update the ViewModel's error state so the UI can react
         viewModel?.errorMessage = "Reader error: \(error.localizedDescription)"
     }
     
     func navigator(_ navigator: any ReadiumNavigator.Navigator, didFailToLoadResourceAt href: ReadiumShared.RelativeURL, withError error: ReadiumShared.ReadError) {
-        print("ERROR [Coordinator]: Failed to load resource \(href): \(error)")
+        Logger.error(category: "Coordinator", "Failed to load resource \(href): \(error)")
     }
     
     // Called when a resource has been loaded successfully
     func navigator(_ navigator: Navigator, didLoadResourceAt href: ReadiumShared.RelativeURL) {
-        print("DEBUG [Coordinator]: Loaded resource at \(href)")
+        Logger.debug(category: "Coordinator", "Loaded resource at \(href)")
         
         // Handle any post-load adjustments
         if let epubNavigator = navigator as? EPUBNavigatorViewController {
@@ -221,7 +222,7 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
     
     // This handles messages sent via `window.webkit.messageHandlers.yourName.postMessage(...)`
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-         print("DEBUG [Coordinator]: userContentController received message: \(message.name)")
+         Logger.debug(category: "Coordinator", "userContentController received message: \(message.name)")
          // Forward to the main message handling logic
          handleScriptMessage(name: message.name, body: message.body)
     }
@@ -229,7 +230,7 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
     // This handles messages sent via `window.R2NAVIGATOR_SEND_MESSAGE(...)`
     @MainActor // Ensure UI updates happen on main thread
     func navigator(_ navigator: Navigator, didReceiveMessage name: String, body: Any) {
-        print("DEBUG [Coordinator]: navigator received message: \(name)")
+        Logger.debug(category: "Coordinator", "navigator received message: \(name)")
         // Forward to the main message handling logic
         handleScriptMessage(name: name, body: body)
     }
@@ -239,42 +240,41 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
         switch name {
         case "shioriLog":
             if let logMessage = body as? String {
-                print("JS LOG [Shiori]: \(logMessage)")
+                Logger.jsLog(category: "Shiori", logMessage)
             } else {
-                 print("JS LOG [Shiori]: Received non-string log message: \(body)")
+                 Logger.jsLog(category: "Shiori", "Received non-string log message: \(body)")
             }
 
         case "wordTapped":
-            print("DEBUG [Coordinator]: Received wordTapped message with body: \(body)")
+            Logger.debug(category: "Coordinator", "Received wordTapped message with body: \(body)")
             guard let bodyString = body as? String, // Readium often sends payload as JSON string
                   let data = bodyString.data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let text = json["text"] as? String else {
                 // Fallback: Check if body is already a dictionary (might happen with WKScriptMessageHandler)
                  if let json = body as? [String: Any], let text = json["text"] as? String {
-                     print("DEBUG [Coordinator]: Parsed wordTapped message directly from dictionary.")
+                     Logger.debug(category: "Coordinator", "Parsed wordTapped message directly from dictionary.")
                      viewModel?.handleWordSelection(text: text, options: json)
                  } else {
-                    print("ERROR [Coordinator]: Failed to parse wordTapped message body. Type: \(type(of: body)), Content: \(body)")
+                    Logger.error(category: "Coordinator", "Failed to parse wordTapped message body. Type: \(type(of: body)), Content: \(body)")
                  }
                 return
             }
-            print("DEBUG [Coordinator]: Successfully parsed wordTapped message from JSON string, text: \(text)")
+            Logger.debug(category: "Coordinator", "Successfully parsed wordTapped message from JSON string, text: \(text)")
             viewModel?.handleWordSelection(text: text, options: json) // Forward to view model
 
         case "dismissDictionary":
-            print("DEBUG [Coordinator]: Received dismissDictionary message")
+            Logger.debug(category: "Coordinator", "Received dismissDictionary message")
             viewModel?.showDictionary = false
 
         // Handle console messages if using the console logger script
         case "consoleLog", "consoleWarn", "consoleError":
              if let message = body as? String {
-                 print("JS CONSOLE [\(name)]: \(message)")
+                 Logger.jsConsole(type: name, message)
              }
 
         default:
-            print("DEBUG [Coordinator]: Received unknown message: \(name) with body: \(body)")
+            Logger.debug(category: "Coordinator", "Received unknown message: \(name) with body: \(body)")
         }
     }
-    
 }

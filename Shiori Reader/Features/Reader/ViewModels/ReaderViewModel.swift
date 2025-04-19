@@ -74,7 +74,7 @@ class ReaderViewModel: ObservableObject {
             contentProtections: [] // No DRM
         )
 
-        print("DEBUG [ReadiumBookViewModel]: Initialized for book '\(book.title)'")
+        Logger.debug(category: "ReadiumBookViewModel", "Initialized for book '\(book.title)'")
         loadPreferences()
         loadInitialLocation()
         
@@ -101,48 +101,48 @@ class ReaderViewModel: ObservableObject {
     // MARK: - Loading Publication
     func loadPublication() async {
         guard publication == nil else {
-            print("DEBUG [loadPublication]: Publication already loaded.") // Added
+            Logger.debug(category: "loadPublication", "Publication already loaded.")
             return
         }
         guard !isLoading else {
-            print("DEBUG [loadPublication]: Already loading.") // Added
+            Logger.debug(category: "loadPublication", "Already loading.")
             return
         }
         isLoading = true
         errorMessage = nil // Clear previous error
-        print("DEBUG [loadPublication]: Starting load process...") // Added
+        Logger.debug(category: "loadPublication", "Starting load process...")
 
         guard let fileURL = getFileURL(for: book.filePath) else {
             // This part is NOT happening based on your logs
             errorMessage = "EPUB file not found or invalid URL: \(book.filePath)"
             isLoading = false
-            print("ERROR [loadPublication]: getFileURL failed.") // Added
+            Logger.error(category: "loadPublication", "EPUB file not found or invalid URL: \(book.filePath)")
             return
         }
-        print("DEBUG [loadPublication]: Got fileURL: \(fileURL.absoluteString)") // Added
+        Logger.debug(category: "loadPublication", "Got fileURL: \(fileURL.absoluteString)")
 
         let url = fileURL.absoluteURL
 
         do {
-            print("DEBUG [loadPublication]: Creating anyURL...") // Added
+            Logger.debug(category: "loadPublication", "Creating anyURL...")
             guard let anyURL = url.anyURL else {
                 errorMessage = "Invalid URL format for anyURL" // More specific error
                 isLoading = false
-                print("ERROR [loadPublication]: Failed to create anyURL from \(url)") // Added
+                Logger.error(category: "loadPublication", "Failed to create anyURL from \(url)")
                 return
             }
-            print("DEBUG [loadPublication]: Created anyURL: \(anyURL)") // Added
+            Logger.debug(category: "loadPublication", "Created anyURL: \(anyURL)")
 
-            print("DEBUG [loadPublication]: Retrieving asset...") // Added
+            Logger.debug(category: "loadPublication", "Retrieving asset...")
             let assetResult = await assetRetriever.retrieve(url: anyURL)
 
             // --- Log Asset Retrieval Result ---
             switch assetResult {
             case .success(let asset):
-                print("DEBUG [loadPublication]: Asset retrieved successfully. Format: \(asset.format)") // Added
+                Logger.debug(category: "loadPublication", "Asset retrieved successfully. Format: \(asset.format)")
 
                 // --- Open Publication ---
-                print("DEBUG [loadPublication]: Opening publication from asset...") // Added
+                Logger.debug(category: "loadPublication", "Opening publication from asset...")
                 let result = await publicationOpener.open(
                     asset: asset,
                     allowUserInteraction: false, // Should be false for background loading
@@ -152,30 +152,30 @@ class ReaderViewModel: ObservableObject {
                 // --- Log Publication Opening Result ---
                 switch result {
                 case .success(let pub):
-                    print("DEBUG [loadPublication]: Publication opened successfully!") // Added
+                    Logger.debug(category: "loadPublication", "Publication opened successfully!")
                     self.publication = pub
                     // Start TOC loading (keep existing logic)
                     Task {
-                        print("DEBUG [loadPublication]: Starting TOC load...") // Added
+                        Logger.debug(category: "loadPublication", "Starting TOC load...")
                         let tocResult = await pub.tableOfContents()
                         if case .success(let toc) = tocResult {
-                            print("DEBUG [loadPublication]: TOC loaded with \(toc.count) items.") // Added
+                            Logger.debug(category: "loadPublication", "TOC loaded with \(toc.count) items.")
                             self.tableOfContents = toc
                         } else {
-                            print("ERROR [loadPublication]: Failed to load TOC.") // Added
+                            Logger.error(category: "loadPublication", "Failed to load TOC.")
                             self.tableOfContents = []
                         }
                     }
                     self.errorMessage = nil // Clear error on success
                     self.state.epubBaseURL = fileURL.deletingLastPathComponent()
-                    print("DEBUG [loadPublication]: Publication setup complete.") // Added
+                    Logger.debug(category: "loadPublication", "Publication setup complete.")
 
                 case .failure(let openError):
                     // Specific error during opening
                     self.errorMessage = "Failed to open EPUB: \(openError.localizedDescription)" // Set specific error
                     self.publication = nil
                     self.tableOfContents = []
-                    print("ERROR [loadPublication]: publicationOpener.open failed: \(openError)") // Log specific error
+                    Logger.error(category: "loadPublication", "publicationOpener.open failed: \(openError)")
                 }
                 // --- End Publication Opening ---
 
@@ -183,7 +183,7 @@ class ReaderViewModel: ObservableObject {
                 // Specific error during asset retrieval
                 self.errorMessage = "Failed to retrieve asset: \(assetError.localizedDescription)" // Set specific error
                 self.publication = nil // Ensure publication is nil on asset error
-                print("ERROR [loadPublication]: assetRetriever.retrieve failed: \(assetError)") // Log specific error
+                Logger.error(category: "loadPublication", "assetRetriever.retrieve failed: \(assetError)")
             }
             // --- End Asset Retrieval ---
 
@@ -191,16 +191,16 @@ class ReaderViewModel: ObservableObject {
 
         // Ensure isLoading is set to false regardless of success or failure path within do-catch
         isLoading = false
-        print("DEBUG [loadPublication]: Load process finished. isLoading: \(isLoading), publication != nil: \(publication != nil), errorMessage: \(errorMessage ?? "None")") // Added final state log
+        Logger.debug(category: "loadPublication", "Load process finished. isLoading: \(isLoading), publication != nil: \(publication != nil), errorMessage: \(errorMessage ?? "None")")
     }
 
     // MARK: - Preferences
     private func loadPreferences() {
-        print("DEBUG [ReadiumBookViewModel]: Loading user preferences...")
+        Logger.debug(category: "ReadiumBookViewModel", "Loading user preferences...")
         
         // First try to load book-specific preferences from Core Data
         if let bookPrefs = settingsRepository.getBookPreferences(bookId: book.id) {
-            print("DEBUG [ReadiumBookViewModel]: Found book-specific preferences in Core Data")
+            Logger.debug(category: "ReadiumBookViewModel", "Found book-specific preferences in Core Data")
             
             // FIXED: Properly map BookPreference to EPUBPreferences
             let fontSize = Double(bookPrefs.fontSize)
@@ -239,7 +239,7 @@ class ReaderViewModel: ObservableObject {
             preferences.columnCount = .one
         } else {
             // If no book-specific preferences, use global defaults
-            print("DEBUG [ReadiumBookViewModel]: No book preferences found, using defaults")
+            Logger.debug(category: "ReadiumBookViewModel", "No book preferences found, using defaults")
             
             // Set default preferences if none saved
             preferences = EPUBPreferences()
@@ -254,17 +254,17 @@ class ReaderViewModel: ObservableObject {
             let savedDirection = UserDefaults.standard.string(forKey: "preferred_reading_direction")
             if savedDirection == "rtl" {
                 preferences.readingProgression = .rtl
-                print("DEBUG [ReadiumBookViewModel]: Using RTL reading direction from defaults")
+                Logger.debug(category: "ReadiumBookViewModel", "Using RTL reading direction from defaults")
             } else {
                 preferences.readingProgression = .ltr
-                print("DEBUG [ReadiumBookViewModel]: Using LTR reading direction from defaults")
+                Logger.debug(category: "ReadiumBookViewModel", "Using LTR reading direction from defaults")
             }
         }
     }
     
     // Save preferences to Core Data
     func savePreferences() {
-        print("DEBUG [ReadiumBookViewModel]: Saving preferences to Core Data")
+        Logger.debug(category: "ReadiumBookViewModel", "Saving preferences to Core Data")
         
         // Determine reading direction string representation
         let readingDirection: String
@@ -294,7 +294,7 @@ class ReaderViewModel: ObservableObject {
     // Submit preferences to navigator (to be called from SwiftUI view when navigator is available)
     func submitPreferencesToNavigator(_ navigator: EPUBNavigatorViewController) {
         navigator.submitPreferences(preferences)
-        print("DEBUG [ReadiumBookViewModel]: Submitted preferences to navigator")
+        Logger.debug(category: "ReadiumBookViewModel", "Submitted preferences to navigator")
     }
 
     // MARK: - Location Handling
@@ -304,7 +304,7 @@ class ReaderViewModel: ObservableObject {
            let jsonString = String(data: locatorData, encoding: .utf8),
            let locator = try? Locator(jsonString: jsonString) {
             self.initialLocation = locator
-            print("DEBUG [ReadiumBookViewModel]: Loaded initial locator from Core Data: \(locator.locations.progression ?? -1.0)%")
+            Logger.debug(category: "ReadiumBookViewModel", "Loaded initial locator from Core Data: \(locator.locations.progression ?? -1.0)%")
             return
         }
         
@@ -313,13 +313,13 @@ class ReaderViewModel: ObservableObject {
         guard let data = UserDefaults.standard.data(forKey: key),
               let jsonString = String(data: data, encoding: .utf8),
               let locator = try? Locator(jsonString: jsonString) else {
-            print("DEBUG [ReadiumBookViewModel]: No saved locator found for book \(book.id)")
+            Logger.debug(category: "ReadiumBookViewModel", "No saved locator found for book \(book.id)")
             initialLocation = nil
             return
         }
 
         self.initialLocation = locator
-        print("DEBUG [ReadiumBookViewModel]: Loaded initial locator from UserDefaults: \(locator.locations.progression ?? -1.0)%")
+        Logger.debug(category: "ReadiumBookViewModel", "Loaded initial locator from UserDefaults: \(locator.locations.progression ?? -1.0)%")
     }
     
     func saveLocation(_ locator: Locator) {
@@ -341,13 +341,13 @@ class ReaderViewModel: ObservableObject {
             book.readingProgress = locator.locations.progression ?? book.readingProgress
             book.currentLocatorData = jsonData
             
-            print("DEBUG [ReadiumBookViewModel]: Saved locator to Core Data successfully.")
+            Logger.debug(category: "ReadiumBookViewModel", "Saved locator to Core Data successfully.")
             
             // Legacy: Also save to UserDefaults for backward compatibility
             let key = "readium_locator_\(book.id.uuidString)"
             UserDefaults.standard.set(jsonData, forKey: key)
         } catch {
-            print("ERROR [ReadiumBookViewModel]: Failed to serialize or save locator: \(error)")
+            Logger.error(category: "ReadiumBookViewModel", "Failed to serialize or save locator: \(error)")
         }
     }
     
@@ -364,7 +364,7 @@ class ReaderViewModel: ObservableObject {
     @MainActor
     func toggleBookmark() async {
         guard let navigator = navigatorController, let locator = navigator.currentLocation else {
-            print("ERROR [ReadiumBookViewModel]: Cannot toggle bookmark - no current location")
+            Logger.error(category: "ReadiumBookViewModel", "Cannot toggle bookmark - no current location")
             return
         }
         
@@ -372,7 +372,7 @@ class ReaderViewModel: ObservableObject {
             // Find the bookmark ID to remove
             if let bookmarkId = bookmarkRepository.findBookmarkId(bookId: book.id, locator: locator) {
                 _ = await bookmarkRepository.remove(bookmarkId)
-                print("DEBUG [ReadiumBookViewModel]: Removed bookmark at \(locator.href)")
+                Logger.debug(category: "ReadiumBookViewModel", "Removed bookmark at \(locator.href)")
                 isCurrentLocationBookmarked = false
             }
         } else {
@@ -384,7 +384,7 @@ class ReaderViewModel: ObservableObject {
             )
             
             _ = await bookmarkRepository.add(bookmark)
-            print("DEBUG [ReadiumBookViewModel]: Added bookmark at \(locator.href)")
+            Logger.debug(category: "ReadiumBookViewModel", "Added bookmark at \(locator.href)")
             isCurrentLocationBookmarked = true
         }
         
@@ -396,7 +396,7 @@ class ReaderViewModel: ObservableObject {
     @MainActor
     func removeBookmark(_ bookmark: Bookmark) async {
         _ = await bookmarkRepository.remove(bookmark.id)
-        print("DEBUG [ReadiumBookViewModel]: Removed bookmark \(bookmark.id)")
+        Logger.debug(category: "ReadiumBookViewModel", "Removed bookmark \(bookmark.id)")
         
         // Refresh bookmarks list
         await refreshBookmarks()
@@ -404,7 +404,7 @@ class ReaderViewModel: ObservableObject {
     
     /// Navigate to a bookmarked location
     func navigateToBookmark(_ bookmark: Bookmark) {
-        print("DEBUG [ReadiumBookViewModel]: Navigating to bookmark at \(bookmark.locator.href)")
+        Logger.debug(category: "ReadiumBookViewModel", "Navigating to bookmark at \(bookmark.locator.href)")
         requestNavigation(to: bookmark.locator)
     }
     
@@ -412,46 +412,46 @@ class ReaderViewModel: ObservableObject {
     
     private func getFileURL(for storedPath: String) -> URL? {
         let fileManager = FileManager.default
-        print("DEBUG [getFileURL] Checking path: \(storedPath)")
+        Logger.debug(category: "getFileURL", "Checking path: \(storedPath)")
 
         if storedPath.starts(with: "/") && fileManager.fileExists(atPath: storedPath) {
-            print("DEBUG [getFileURL] Found as absolute path.")
+            Logger.debug(category: "getFileURL", "Found as absolute path.")
             return URL(fileURLWithPath: storedPath)
         }
         do {
             let documentsDirectory = try fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
             let booksDirectory = documentsDirectory.appendingPathComponent("Books")
             let fileURLInBooks = booksDirectory.appendingPathComponent(storedPath)
-            print("DEBUG [getFileURL] Checking Documents/Books path: \(fileURLInBooks.path)")
+            Logger.debug(category: "getFileURL", "Checking Documents/Books path: \(fileURLInBooks.path)")
             if fileManager.fileExists(atPath: fileURLInBooks.path) {
-                print("DEBUG [getFileURL] Found in Documents/Books.")
+                Logger.debug(category: "getFileURL", "Found in Documents/Books.")
                 return fileURLInBooks
             }
-        } catch { print("ERROR [getFileURL]: Couldn't access Documents directory: \(error)") }
+        } catch { Logger.error(category: "getFileURL", "Couldn't access Documents directory: \(error)") }
 
         let filename = URL(fileURLWithPath: storedPath).lastPathComponent
-        print("DEBUG [getFileURL] Checking Bundle for filename: \(filename)")
+        Logger.debug(category: "getFileURL", "Checking Bundle for filename: \(filename)")
         if let bundleURL = Bundle.main.url(forResource: filename, withExtension: nil, subdirectory: "Books") ?? Bundle.main.url(forResource: filename, withExtension: nil) {
-             print("DEBUG [getFileURL] Found potential bundle URL: \(bundleURL.path)")
+             Logger.debug(category: "getFileURL", "Found potential bundle URL: \(bundleURL.path)")
              if fileManager.fileExists(atPath: bundleURL.path) {
-                 print("DEBUG [getFileURL] Found in Bundle.")
+                 Logger.debug(category: "getFileURL", "Found in Bundle.")
                  return bundleURL
              } else {
-                  print("DEBUG [getFileURL] Bundle URL exists but file not present at path.")
+                  Logger.debug(category: "getFileURL", "Bundle URL exists but file not present at path.")
              }
         }
-        print("WARN [getFileURL]: File not found for path: \(storedPath)")
+        Logger.warning(category: "getFileURL", "File not found for path: \(storedPath)")
         return nil
     }
 
     // MARK: - Dictionary Lookups
     
     func handleWordSelection(text: String, options: [String: Any]) {
-        print("DEBUG [ReaderViewModel]: Word tapped - \(text) with options: \(options)")
+        Logger.debug(category: "ReaderViewModel", "Word tapped - \(text) with options: \(options)")
         
         // Check if this is just an initialization message
         if let type = options["type"] as? String, type == "initialization" {
-            print("DEBUG [ReaderViewModel]: Received initialization message, not showing dictionary")
+            Logger.debug(category: "ReaderViewModel", "Received initialization message, not showing dictionary")
             return
         }
         
@@ -459,7 +459,7 @@ class ReaderViewModel: ObservableObject {
         var sentenceContext = ""
         if let surroundingText = options["surroundingText"] as? String {
             sentenceContext = surroundingText
-            print("DEBUG [ReaderViewModel]: Raw sentence context: \(sentenceContext)")
+            Logger.debug(category: "ReaderViewModel", "Raw sentence context: \(sentenceContext)")
             
             // Clean up the sentence context
             sentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -469,13 +469,13 @@ class ReaderViewModel: ObservableObject {
                 sentenceContext = String(sentenceContext.prefix(250)) + "..."
             }
             
-            print("DEBUG [ReaderViewModel]: Processed sentence context: \(sentenceContext)")
+            Logger.debug(category: "ReaderViewModel", "Processed sentence context: \(sentenceContext)")
         } else if let textFromClickedKanji = options["textFromClickedKanji"] as? String {
             // Try alternative fields if surroundingText is not available
             sentenceContext = textFromClickedKanji
-            print("DEBUG [ReaderViewModel]: Using textFromClickedKanji as context: \(sentenceContext)")
+            Logger.debug(category: "ReaderViewModel", "Using textFromClickedKanji as context: \(sentenceContext)")
         } else {
-            print("DEBUG [ReaderViewModel]: No context text found in options")
+            Logger.debug(category: "ReaderViewModel", "No context text found in options")
         }
         
         // Set the selected word for display
@@ -490,7 +490,7 @@ class ReaderViewModel: ObservableObject {
                     self.showDictionary = true
                 }
             } else {
-                print("DEBUG [ReaderViewModel]: No dictionary matches found for \(text)")
+                Logger.debug(category: "ReaderViewModel", "No dictionary matches found for \(text)")
             }
         }
     }
@@ -546,18 +546,18 @@ class ReaderViewModel: ObservableObject {
     func requestNavigation(to locator: Locator) {
         // Normalize the locator before publishing the request
         let normalizedLocator = publication?.normalizeLocator(locator) ?? locator
-        print("DEBUG [ReadiumBookViewModel]: Navigation requested to locator: \(normalizedLocator.href)")
+        Logger.debug(category: "ReadiumBookViewModel", "Navigation requested to locator: \(normalizedLocator.href)")
         self.navigationRequest = normalizedLocator
     }
 
     /// Call this after the navigation attempt has been made by the actual navigator view.
     func clearNavigationRequest() {
         if navigationRequest != nil {
-             print("DEBUG [ReadiumBookViewModel]: Scheduling navigation request to be cleared.")
+             Logger.debug(category: "ReadiumBookViewModel", "Scheduling navigation request to be cleared.")
              // Schedule the actual modification for the next run loop cycle
              DispatchQueue.main.async {
                  if self.navigationRequest != nil {
-                     print("DEBUG [ReadiumBookViewModel]: Executing clear navigation request.")
+                     Logger.debug(category: "ReadiumBookViewModel", "Executing clear navigation request.")
                      self.navigationRequest = nil
                  }
              }
@@ -566,26 +566,26 @@ class ReaderViewModel: ObservableObject {
 
     /// Renamed/Updated method for TOC or similar link navigation
     func requestNavigation(to link: ReadiumShared.Link) {
-         print("DEBUG [ReadiumBookViewModel]: Navigation requested to link: \(link.href)")
+         Logger.debug(category: "ReadiumBookViewModel", "Navigation requested to link: \(link.href)")
          // Resolve the Link to a Locator before requesting navigation
          Task {
              if let locator = await publication?.locate(link) {
                  self.requestNavigation(to: locator)
              } else {
-                 print("WARN [ReadiumBookViewModel]: Could not create locator for link: \(link.href)")
+                 Logger.warning(category: "ReadiumBookViewModel", "Could not create locator for link: \(link.href)")
              }
          }
      }
 
     // Keep your existing navigateToLink if used elsewhere, or rename it like above
     func navigateToLink(_ link: ReadiumShared.Link) {
-         print("DEBUG [ReadiumBookViewModel]: Request to navigate to link: \(link.href)")
+         Logger.debug(category: "ReadiumBookViewModel", "Request to navigate to link: \(link.href)")
          // This now becomes a request
          requestNavigation(to: link)
      }
     
     func handleLocationUpdate(_ locator: Locator) {
-        print("DEBUG [ReadiumBookViewModel]: handleLocationUpdate called with locator progression: \(locator.locations.progression ?? -1.0)")
+        Logger.debug(category: "ReadiumBookViewModel", "handleLocationUpdate called with locator progression: \(locator.locations.progression ?? -1.0)")
         
         // Save location to Core Data
         saveLocation(locator)
@@ -607,10 +607,10 @@ class ReaderViewModel: ObservableObject {
             // Update our local book object as well
             book.readingProgress = totalProgression
             
-            print("DEBUG [ReadiumBookViewModel]: Updated book total progress to \(totalProgression)")
+            Logger.debug(category: "ReadiumBookViewModel", "Updated book total progress to \(totalProgression)")
         } else if let progression = locator.locations.progression {
             // Fallback to using progression as total progression if totalProgression is not available
-            print("DEBUG [ReadiumBookViewModel]: No totalProgression available, using progression.")
+            Logger.debug(category: "ReadiumBookViewModel", "No totalProgression available, using progression.")
             
             // Update the book's progress in the repository
             bookRepository.updateBookProgress(
@@ -622,10 +622,10 @@ class ReaderViewModel: ObservableObject {
             // Update our local book object as well
             book.readingProgress = progression
             
-            print("DEBUG [ReadiumBookViewModel]: After assignment, book.readingProgress is now: \(self.book.readingProgress)")
-            print("DEBUG [ReadiumBookViewModel]: Updated book progress to \(progression)")
+            Logger.debug(category: "ReadiumBookViewModel", "After assignment, book.readingProgress is now: \(self.book.readingProgress)")
+            Logger.debug(category: "ReadiumBookViewModel", "Updated book progress to \(progression)")
         } else {
-            print("DEBUG [ReadiumBookViewModel]: Locator progression was nil, not updating.")
+            Logger.debug(category: "ReadiumBookViewModel", "Locator progression was nil, not updating.")
         }
         
         // Check if current location is bookmarked
