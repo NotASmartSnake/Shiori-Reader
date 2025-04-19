@@ -35,7 +35,7 @@ class SettingsRepository {
     
     // Update default appearance settings
     func saveDefaultAppearanceSettings(_ settings: DefaultAppearanceSettings) {
-        coreDataManager.createOrUpdateDefaultAppearanceSettings(
+        _ = coreDataManager.createOrUpdateDefaultAppearanceSettings(
             fontSize: settings.fontSize,
             fontFamily: settings.fontFamily,
             fontWeight: settings.fontWeight,
@@ -88,7 +88,7 @@ class SettingsRepository {
             
             // Add additional fields
             for field in settings.additionalFields {
-                coreDataManager.createAdditionalField(
+                _ = coreDataManager.createAdditionalField(
                     type: field.type,
                     fieldName: field.fieldName,
                     for: entity
@@ -113,7 +113,7 @@ class SettingsRepository {
             return
         }
         
-        coreDataManager.createOrUpdateBookPreference(
+        _ = coreDataManager.createOrUpdateBookPreference(
             for: bookEntity,
             fontSize: preferences.fontSize,
             fontFamily: preferences.fontFamily,

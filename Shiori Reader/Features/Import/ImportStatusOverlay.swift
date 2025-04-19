@@ -105,7 +105,7 @@ extension ImportStatus {
             return ""
         case .importing:
             return "Please wait while your book is being processed..."
-        case .success(let url):
+        case .success:
             return "Your book has been successfully imported and is ready to read."
         case .failure(let message):
             return "There was a problem importing your book: \(message)"

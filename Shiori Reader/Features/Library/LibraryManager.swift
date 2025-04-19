@@ -22,7 +22,7 @@ class LibraryManager: ObservableObject {
     // MARK: - Book Management Functions
     
     func addBook(_ book: Book) {
-        bookRepository.addBook(
+        _ = bookRepository.addBook(
             title: book.title,
             author: book.author,
             filePath: book.filePath,

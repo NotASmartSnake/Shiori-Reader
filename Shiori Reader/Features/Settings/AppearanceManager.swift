@@ -67,8 +67,8 @@ struct AppearanceModifier: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .onChange(of: scenePhase) { phase in
-                if phase == .active {
+            .onChange(of: scenePhase) { oldPhase, newPhase in
+                if newPhase == .active {
                     // Reapply appearance settings when app becomes active
                     AppearanceManager.shared.applyAppearanceMode()
                 }

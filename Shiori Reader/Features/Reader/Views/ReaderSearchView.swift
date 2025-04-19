@@ -103,7 +103,7 @@ struct ReaderSearchView: View {
                         .id(index)
                     }
                     .listStyle(PlainListStyle())
-                    .onChange(of: viewVisible) { newValue in
+                    .onChange(of: viewVisible) { oldValue, newValue in
                         if newValue, let lastSelectedIndex = viewModel.selectedIndex {
                             proxy.scrollTo(lastSelectedIndex, anchor: .top)
                         }

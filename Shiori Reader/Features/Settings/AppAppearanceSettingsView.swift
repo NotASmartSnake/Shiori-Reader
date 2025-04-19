@@ -26,7 +26,7 @@ struct AppAppearanceSettingsView: View {
                     Text("Follow System").tag("system")
                 }
                 .pickerStyle(SegmentedPickerStyle())
-                .onChange(of: appearanceMode) { newValue in
+                .onChange(of: appearanceMode) { oldValue, newValue in
                     AppearanceManager.shared.setAppearanceMode(newValue)
                 }
                 

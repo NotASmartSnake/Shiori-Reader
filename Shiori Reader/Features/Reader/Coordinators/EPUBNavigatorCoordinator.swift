@@ -62,7 +62,7 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
     private func findAndSetupWebViews(in view: UIView) {
         // First check for direct WebViews
         if let webView = view as? WKWebView {
-            wordTapHandler.registerHandlers(for: webView)
+            _ = wordTapHandler.registerHandlers(for: webView)
         }
         
         // Then check children
