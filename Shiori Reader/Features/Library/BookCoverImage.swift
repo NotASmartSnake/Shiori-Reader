@@ -142,21 +142,3 @@ struct BookCoverImage: View {
     }
 }
 
-#Preview("BookCoverImage Preview") {
-    // Create a sample book for preview
-    let sampleBook = Book(
-        id: UUID(), 
-        title: "Classroom of the Elite Vol. 1", 
-        author: "Syougo Kinugasa", 
-        filePath: "dummy1.epub", 
-        coverImagePath: "COTECover", 
-        isLocalCover: false, 
-        addedDate: Date(), 
-        lastOpenedDate: Date(), 
-        readingProgress: 0.25, 
-        currentLocatorData: nil
-    )
-    
-    // Simple preview that just shows the book cover image directly
-    return BookCoverImage(book: sampleBook)
-}

@@ -139,13 +139,3 @@ struct EnhancedBookmarkRow: View {
         .padding(.vertical, 6)
     }
 }
-
-#Preview {
-    let viewModel = ReaderViewModel(book: Book(
-        title: "Test Book",
-        filePath: "test.epub",
-        readingProgress: 0.5
-    ))
-    
-    return TableOfContentsView(viewModel: viewModel)
-}
