@@ -49,22 +49,9 @@
 		518DCEFC2D9DE1F200B45824 /* Shiori-Reader.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Shiori-Reader.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		519BA3002D9F800A0039501B /* Exceptions for "Books" folder in "Shiori ReaderTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				hakomari.epub,
-			);
-			target = 51811C4E2D5E4D2D00E2D973 /* Shiori ReaderTests */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		511842932D6835F100D1C8EA /* Books */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				519BA3002D9F800A0039501B /* Exceptions for "Books" folder in "Shiori ReaderTests" target */,
-			);
 			path = Books;
 			sourceTree = "<group>";
 		};

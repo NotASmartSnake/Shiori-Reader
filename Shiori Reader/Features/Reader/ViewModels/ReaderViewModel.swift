@@ -32,7 +32,6 @@ class ReaderViewModel: ObservableObject {
     @Published private(set) var tableOfContents: [ReadiumShared.Link] = []
 
     // Other state
-    @Published var state = BookState() // Temporary bridge to your existing state model
     @Published var pendingNavigationLink: ReadiumShared.Link? = nil
     @Published var navigationRequest: Locator? = nil
     
@@ -167,7 +166,6 @@ class ReaderViewModel: ObservableObject {
                         }
                     }
                     self.errorMessage = nil // Clear error on success
-                    self.state.epubBaseURL = fileURL.deletingLastPathComponent()
                     Logger.debug(category: "loadPublication", "Publication setup complete.")
 
                 case .failure(let openError):
