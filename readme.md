@@ -82,3 +82,12 @@ Created by Russell Graviet
 
 ## 🛡 Disclaimer
 This app is for educational purposes and to support Japanese language learning.
+
+## 👤 Privacy Policy
+Shiori Reader does not collect, transmit, or share any user data. All data including imported books, reading progress, bookmarks, and saved vocabulary words are stored locally on your device and never leave it.
+
+The only external communication occurs when using the optional Anki integration feature, which uses iOS URL schemes to communicate with the Anki app on the same device (if installed).
+
+No analytics, tracking, or telemetry data is collected.
+
+Last updated: 4/23/2025
