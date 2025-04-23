@@ -58,6 +58,19 @@ Shiori Reader is an iOS application designed for Japanese language learners to r
 - Configure note types and field mappings
 - Customize export settings
 
+## 🛠 Issues & Support
+If you run into a bug or have a feature request, feel free to open an issue!
+
+- 👉 [Submit an issue here](https://github.com/russgrav/Shiori-Reader/issues)
+
+- Before submitting, please:
+
+  - Check if the issue has already been reported
+
+  - Include details like your device, iOS version, and steps to reproduce (if it’s a bug)
+
+If you're not sure whether something is a bug or a question, it's totally okay — just open an issue and tag it appropriately!
+
 ## 📦 Dependencies
 - Readium Swift Toolkit
 - MeCab Swift

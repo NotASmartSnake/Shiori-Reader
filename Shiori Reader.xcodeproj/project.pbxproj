@@ -16,7 +16,6 @@
 		516125572DAF7E4F0062B40A /* ReadiumShared in Frameworks */ = {isa = PBXBuildFile; productRef = 516125562DAF7E4F0062B40A /* ReadiumShared */; };
 		516125592DAF7E4F0062B40A /* ReadiumStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = 516125582DAF7E4F0062B40A /* ReadiumStreamer */; };
 		516EAA672D83777C00F57059 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 516EAA662D83777C00F57059 /* GRDB */; };
-		51811C942D5EDE5F00E2D973 /* Heuristica-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */; };
 		51B6094E2D94B3CF003A7AF5 /* CharacterFilter in Frameworks */ = {isa = PBXBuildFile; productRef = 51B6094D2D94B3CF003A7AF5 /* CharacterFilter */; };
 		51B609502D94B3CF003A7AF5 /* IPADic in Frameworks */ = {isa = PBXBuildFile; productRef = 51B6094F2D94B3CF003A7AF5 /* IPADic */; };
 		51B609522D94B3CF003A7AF5 /* Mecab-Swift in Frameworks */ = {isa = PBXBuildFile; productRef = 51B609512D94B3CF003A7AF5 /* Mecab-Swift */; };
@@ -45,16 +44,10 @@
 		51811C3F2D5E4D2C00E2D973 /* Shiori Reader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Shiori Reader.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		51811C4F2D5E4D2D00E2D973 /* Shiori ReaderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Shiori ReaderTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		51811C592D5E4D2D00E2D973 /* Shiori ReaderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Shiori ReaderUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Heuristica-Bold.otf"; sourceTree = "<group>"; };
 		518DCEFC2D9DE1F200B45824 /* Shiori-Reader.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Shiori-Reader.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		511842932D6835F100D1C8EA /* Books */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Books;
-			sourceTree = "<group>";
-		};
 		51811C412D5E4D2C00E2D973 /* Shiori Reader */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Shiori Reader";
@@ -118,8 +111,6 @@
 				51811C522D5E4D2D00E2D973 /* Shiori ReaderTests */,
 				51811C5C2D5E4D2D00E2D973 /* Shiori ReaderUITests */,
 				51811C402D5E4D2C00E2D973 /* Products */,
-				51811C932D5EDE5F00E2D973 /* Heuristica-Bold.otf */,
-				511842932D6835F100D1C8EA /* Books */,
 			);
 			sourceTree = "<group>";
 		};
@@ -157,7 +148,6 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				511842932D6835F100D1C8EA /* Books */,
 				51811C412D5E4D2C00E2D973 /* Shiori Reader */,
 			);
 			name = "Shiori Reader";
@@ -281,7 +271,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				510F67DB2DA5B8E600FCF43E /* LICENSE in Resources */,
-				51811C942D5EDE5F00E2D973 /* Heuristica-Bold.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
