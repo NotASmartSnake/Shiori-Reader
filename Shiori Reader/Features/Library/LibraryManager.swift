@@ -13,7 +13,6 @@ class LibraryManager: ObservableObject {
     @Published var books: [Book] = []
     private let bookRepository = BookRepository()
     private let settingsRepository = SettingsRepository()
-    private let useInitialBooksForTesting = true
     
     init() {
         loadLibrary()
