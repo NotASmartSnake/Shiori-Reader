@@ -101,7 +101,6 @@ struct SavedWordsView: View {
                                 }
                             }
                             .onDelete { indexSet in
-                                // Map the filtered indices to the original indices
                                 let indices = indexSet.map { filteredWords[$0] }
                                 indices.forEach { word in
                                     if let index = wordsManager.savedWords.firstIndex(where: { $0.id == word.id }) {
@@ -111,6 +110,8 @@ struct SavedWordsView: View {
                             }
                         }
                         .listStyle(PlainListStyle())
+                        
+                        Spacer(minLength: 50)
                     }
                 }
             }
