@@ -178,7 +178,13 @@ extension Color {
     init?(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
+        let success = Scanner(string: hex).scanHexInt64(&int)
+        
+        // Return nil if scan fails or if string is empty
+        if !success || hex.isEmpty {
+            return nil
+        }
+        
         let a, r, g, b: UInt64
         switch hex.count {
         case 3: // RGB (12-bit)
@@ -190,12 +196,19 @@ extension Color {
         default:
             return nil
         }
+        
+        // Make sure values are within valid range
+        let red = Double(min(r, 255)) / 255.0
+        let green = Double(min(g, 255)) / 255.0
+        let blue = Double(min(b, 255)) / 255.0
+        let alpha = Double(min(a, 255)) / 255.0
+        
         self.init(
             .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue: Double(b) / 255,
-            opacity: Double(a) / 255
+            red: red,
+            green: green,
+            blue: blue,
+            opacity: alpha
         )
     }
 }

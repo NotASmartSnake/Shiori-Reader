@@ -44,7 +44,9 @@ struct ReaderSettingsView: View {
                     ColorPicker("Text Color", selection: Binding(
                         get: { viewModel.preferences.getTextColor() },
                         set: { color in
-                            viewModel.preferences.textColor = color.toHex() ?? "#000000"
+                            // Safely convert color to hex
+                            let uiColor = color.toUIColor()
+                            viewModel.preferences.textColor = uiColor.toHexString()
                             // Set theme to custom when manually changing colors
                             viewModel.preferences.theme = "custom"
                             viewModel.savePreferences()
@@ -56,7 +58,9 @@ struct ReaderSettingsView: View {
                     ColorPicker("Background Color", selection: Binding(
                         get: { viewModel.preferences.getBackgroundColor() },
                         set: { color in
-                            viewModel.preferences.backgroundColor = color.toHex() ?? "#FFFFFF"
+                            // Safely convert color to hex
+                            let uiColor = color.toUIColor()
+                            viewModel.preferences.backgroundColor = uiColor.toHexString()
                             // Set theme to custom when manually changing colors
                             viewModel.preferences.theme = "custom"
                             viewModel.savePreferences()
@@ -175,6 +179,11 @@ extension Color {
         var a: CGFloat = 0
         
         uic.getRed(&r, green: &g, blue: &b, alpha: &a)
+        
+        // Clamp values between 0 and 1 to ensure valid hex output
+        r = max(0, min(1, r))
+        g = max(0, min(1, g))
+        b = max(0, min(1, b))
         
         let hex = String(
             format: "#%02X%02X%02X",
