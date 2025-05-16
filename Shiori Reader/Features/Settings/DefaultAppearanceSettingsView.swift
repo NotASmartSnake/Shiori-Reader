@@ -10,6 +10,7 @@ import SwiftUI
 struct DefaultAppearanceSettingsView: View {
     @StateObject var viewModel = DefaultAppearanceSettingsViewModel()
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showSaveThemePopup = false
     
     // Font families available
     private let fontFamilies = ["Default", "Sans Serif", "Serif", "Monospace"]
@@ -22,130 +23,153 @@ struct DefaultAppearanceSettingsView: View {
     private let fontSizeStep: Float = 0.1
     
     var body: some View {
-        List {
-            // MARK: - Theme Section
-            Section(header: Text("Theme")) {
-                Picker("Theme", selection: Binding(
-                    get: { viewModel.preferences.theme },
-                    set: { viewModel.setTheme($0) }
-                )) {
-                    Text("Light").tag("light")
-                    Text("Dark").tag("dark")
-                    Text("Sepia").tag("sepia")
-                    Text("Custom").tag("custom")
+        NavigationView {
+            ZStack {
+                List {
+                    // MARK: - Theme Section
+                    Section(header: Text("Theme")) {
+                        Picker("Theme", selection: Binding(
+                            get: { viewModel.preferences.theme },
+                            set: { viewModel.setTheme($0) }
+                        )) {
+                            Text("Light").tag("light")
+                            Text("Dark").tag("dark")
+                            Text("Sepia").tag("sepia")
+                            Text("Custom").tag("custom")
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        
+                        // Only show custom theme options when "custom" is selected
+                        if viewModel.preferences.theme == "custom" {
+                            // Custom theme selection
+                            HStack {
+                                Text("Current Theme")
+                                Spacer()
+                                CustomThemePickerView(
+                                    customThemes: $viewModel.customThemes,
+                                    selectedThemeId: $viewModel.selectedCustomThemeId,
+                                    onThemeSelected: { theme in
+                                        viewModel.applyCustomTheme(theme)
+                                    },
+                                    onDelete: { theme in
+                                        viewModel.deleteCustomTheme(theme)
+                                    }
+                                )
+                            }
+                            
+                            // Color pickers
+                            ColorPicker("Text Color", selection: Binding(
+                                get: { viewModel.preferences.getTextColor() },
+                                set: { color in
+                                    viewModel.preferences.textColor = color.toHex() ?? "#000000"
+                                    // Reset selected custom theme when colors change
+                                    viewModel.selectedCustomThemeId = nil
+                                    viewModel.savePreferences()
+                                }
+                            ))
+                            
+                            ColorPicker("Background Color", selection: Binding(
+                                get: { viewModel.preferences.getBackgroundColor() },
+                                set: { color in
+                                    viewModel.preferences.backgroundColor = color.toHex() ?? "#FFFFFF"
+                                    // Reset selected custom theme when colors change
+                                    viewModel.selectedCustomThemeId = nil
+                                    viewModel.savePreferences()
+                                }
+                            ))
+                            
+                            // Save current theme button
+                            Button(action: {
+                                showSaveThemePopup = true
+                            }) {
+                                HStack {
+                                    Spacer()
+                                    Label("Save Current Theme", systemImage: "square.and.arrow.down")
+                                    Spacer()
+                                }
+                            }
+                        }
+                    }
+                    
+                    // MARK: - Text Section
+                    Section(header: Text("Text")) {
+                        // Font family picker
+                        Picker("Font", selection: Binding(
+                            get: { viewModel.preferences.fontFamily },
+                            set: { viewModel.updateFontFamily($0) }
+                        )) {
+                            ForEach(fontFamilies, id: \.self) { family in
+                                Text(family).tag(family)
+                            }
+                        }
+                        
+                        // Font size slider
+                        HStack {
+                            Text("Font Size")
+                            Spacer()
+                            Text("A").font(.system(size: 12))
+                            Slider(
+                                value: Binding(
+                                    get: { viewModel.preferences.fontSize },
+                                    set: { viewModel.updateFontSize($0) }
+                                ),
+                                in: fontSizeRange,
+                                step: fontSizeStep
+                            )
+                            .frame(width: 120)
+                            Text("A").font(.system(size: 24))
+                        }
+                    }
+                    
+                    // MARK: - Layout Section
+                    Section(header: Text("Layout")) {
+                        // Scroll mode toggle
+                        Toggle("Scroll Mode", isOn: Binding(
+                            get: { viewModel.preferences.isScrollMode },
+                            set: { _ in viewModel.toggleScrollMode() }
+                        ))
+                    }
+                    
+                    // MARK: - Reset Section
+                    Section {
+                        Button(action: {
+                            viewModel.resetToDefaults()
+                        }) {
+                            HStack {
+                                Spacer()
+                                Text("Reset to Defaults")
+                                    .foregroundColor(.red)
+                                Spacer()
+                            }
+                        }
+                    }
+                    
+                    // MARK: - Info Section
+                    Section {
+                        Text("These settings apply to all new books you open. You can also set different appearance preferences for each individual book when reading.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
                 }
-                .pickerStyle(SegmentedPickerStyle())
+                .listStyle(InsetGroupedListStyle())
+                .navigationBarTitle("Reader Appearance", displayMode: .inline)
                 
-                // Color pickers are only enabled when "custom" theme is selected
-                ColorPicker("Text Color", selection: Binding(
-                    get: { viewModel.preferences.getTextColor() },
-                    set: { color in
-                        viewModel.preferences.textColor = color.toHex() ?? "#000000"
-                        // Set theme to custom when manually changing colors
-                        viewModel.preferences.theme = "custom"
-                        viewModel.savePreferences()
-                    }
-                ))
-                .disabled(viewModel.preferences.theme != "custom")
-                .foregroundColor(viewModel.preferences.theme == "custom" ? .primary : .gray)
-                
-                ColorPicker("Background Color", selection: Binding(
-                    get: { viewModel.preferences.getBackgroundColor() },
-                    set: { color in
-                        viewModel.preferences.backgroundColor = color.toHex() ?? "#FFFFFF"
-                        // Set theme to custom when manually changing colors
-                        viewModel.preferences.theme = "custom"
-                        viewModel.savePreferences()
-                    }
-                ))
-                .disabled(viewModel.preferences.theme != "custom")
-                .foregroundColor(viewModel.preferences.theme == "custom" ? .primary : .gray)
-            }
-            
-            // MARK: - Text Section
-            Section(header: Text("Text")) {
-                // Font family picker
-                Picker("Font", selection: Binding(
-                    get: { viewModel.preferences.fontFamily },
-                    set: { viewModel.updateFontFamily($0) }
-                )) {
-                    ForEach(fontFamilies, id: \.self) { family in
-                        Text(family).tag(family)
-                    }
-                }
-                
-                // Font size slider
-                HStack {
-                    Text("Font Size")
-                    Spacer()
-                    Text("A").font(.system(size: 12))
-                    Slider(
-                        value: Binding(
-                            get: { viewModel.preferences.fontSize },
-                            set: { viewModel.updateFontSize($0) }
-                        ),
-                        in: fontSizeRange,
-                        step: fontSizeStep
+                // Save theme popup
+                if showSaveThemePopup {
+                    Color.black.opacity(0.3)
+                        .edgesIgnoringSafeArea(.all)
+                        .onTapGesture {
+                            showSaveThemePopup = false
+                        }
+                    
+                    SaveThemeView(
+                        isPresented: $showSaveThemePopup,
+                        onSave: { name in
+                            viewModel.saveCurrentThemeAs(name: name)
+                        }
                     )
-                    .frame(width: 120)
-                    Text("A").font(.system(size: 24))
                 }
-            }
-            
-            // MARK: - Layout Section
-            Section(header: Text("Layout")) {
-                // Holding off on applying reading direction and vertical text until Readium implementation is more stable
-//                // Reading direction
-//                Picker("Reading Direction", selection: Binding(
-//                    get: { viewModel.preferences.readingDirection },
-//                    set: { viewModel.updateReadingDirection($0) }
-//                )) {
-//                    Text("Left to Right").tag("ltr")
-//                    Text("Right to Left").tag("rtl")
-//                }
-//                
-//                // Vertical text toggle
-//                Toggle("Vertical Text", isOn: Binding(
-//                    get: { viewModel.preferences.isVerticalText },
-//                    set: { _ in viewModel.toggleVerticalText() }
-//                ))
-                
-                // Scroll mode toggle
-                Toggle("Scroll Mode", isOn: Binding(
-                    get: { viewModel.preferences.isScrollMode },
-                    set: { _ in viewModel.toggleScrollMode() }
-                ))
-            }
-            
-            // MARK: - Reset Section
-            Section {
-                Button(action: {
-                    viewModel.resetToDefaults()
-                }) {
-                    HStack {
-                        Spacer()
-                        Text("Reset to Defaults")
-                            .foregroundColor(.red)
-                        Spacer()
-                    }
-                }
-            }
-            
-            // MARK: - Info Section
-            Section {
-                Text("These settings apply to all new books you open. You can also set different appearance preferences for each individual book when reading.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
             }
         }
-        .listStyle(InsetGroupedListStyle())
-        .navigationTitle("Reader Appearance")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-#Preview {
-    NavigationView {
-        DefaultAppearanceSettingsView()
     }
 }

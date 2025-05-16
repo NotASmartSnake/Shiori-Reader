@@ -54,6 +54,12 @@
         <attribute name="theme" optional="YES" attributeType="String"/>
         <relationship name="book" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="BookEntity" inverseName="preferences" inverseEntity="BookEntity"/>
     </entity>
+    <entity name="CustomThemeEntity" representedClassName=".CustomThemeEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="backgroundColor" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="textColor" optional="YES" attributeType="String"/>
+    </entity>
     <entity name="DefaultAppearanceSettingsEntity" representedClassName="DefaultAppearanceSettingsEntity" syncable="YES" codeGenerationType="class">
         <attribute name="backgroundColor" optional="YES" attributeType="String" defaultValueString="#FFFFFF"/>
         <attribute name="fontFamily" optional="YES" attributeType="String" defaultValueString="Default"/>

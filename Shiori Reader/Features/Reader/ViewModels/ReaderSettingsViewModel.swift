@@ -13,11 +13,16 @@ import ReadiumNavigator
 
 class ReaderSettingsViewModel: ObservableObject {
     @Published var preferences: BookPreference
+    @Published var customThemes: [CustomTheme] = []
+    @Published var selectedCustomThemeId: UUID? = nil
     private let settingsRepository: SettingsRepository
     private var cancellables = Set<AnyCancellable>()
     
     init(bookId: UUID, settingsRepository: SettingsRepository = SettingsRepository()) {
         self.settingsRepository = settingsRepository
+        
+        // Load custom themes
+        self.customThemes = settingsRepository.getAllCustomThemes()
         
         // Try to load book preferences, use default appearance settings if none exist
         if let bookPrefs = settingsRepository.getBookPreferences(bookId: bookId) {
@@ -95,6 +100,9 @@ class ReaderSettingsViewModel: ObservableObject {
             default:
                 break // Don't change colors for custom theme
             }
+            
+            // Reset selected custom theme when choosing a predefined theme
+            selectedCustomThemeId = nil
         }
         
         // Save the preferences
@@ -175,5 +183,41 @@ class ReaderSettingsViewModel: ObservableObject {
             theme: "light",
             bookId: preferences.bookId
         )
+        
+        // Reset selected custom theme
+        selectedCustomThemeId = nil
+    }
+    
+    // Save current theme as a custom theme
+    func saveCurrentThemeAs(name: String) {
+        let theme = CustomTheme(
+            name: name,
+            textColor: preferences.textColor,
+            backgroundColor: preferences.backgroundColor
+        )
+        
+        settingsRepository.saveCustomTheme(theme)
+        customThemes = settingsRepository.getAllCustomThemes()
+        selectedCustomThemeId = theme.id
+    }
+    
+    // Apply a custom theme
+    func applyCustomTheme(_ theme: CustomTheme) {
+        preferences.textColor = theme.textColor
+        preferences.backgroundColor = theme.backgroundColor
+        preferences.theme = "custom" // Set to custom theme mode
+        selectedCustomThemeId = theme.id
+        savePreferences()
+    }
+    
+    // Delete a custom theme
+    func deleteCustomTheme(_ theme: CustomTheme) {
+        settingsRepository.deleteCustomTheme(theme)
+        customThemes = settingsRepository.getAllCustomThemes()
+        
+        // Reset selected theme if it's the one that was deleted
+        if selectedCustomThemeId == theme.id {
+            selectedCustomThemeId = nil
+        }
     }
 }

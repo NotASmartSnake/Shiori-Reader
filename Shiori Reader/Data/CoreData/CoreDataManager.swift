@@ -331,6 +331,61 @@ class CoreDataManager {
         }
     }
     
+    // MARK: - CustomTheme Operations
+    
+    func getAllCustomThemes() -> [CustomThemeEntity]? {
+        let request: NSFetchRequest<CustomThemeEntity> = CustomThemeEntity.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
+        
+        do {
+            return try viewContext.fetch(request)
+        } catch {
+            Logger.debug(category: "CoreData", "Error fetching custom themes: \(error)")
+            return nil
+        }
+    }
+    
+    func getCustomTheme(by id: UUID) -> CustomThemeEntity? {
+        let request: NSFetchRequest<CustomThemeEntity> = CustomThemeEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        
+        do {
+            let results = try viewContext.fetch(request)
+            return results.first
+        } catch {
+            Logger.debug(category: "CoreData", "Error fetching custom theme: \(error)")
+            return nil
+        }
+    }
+    
+    func createOrUpdateCustomTheme(id: UUID, name: String, textColor: String, backgroundColor: String) -> CustomThemeEntity {
+        // Check if theme already exists
+        if let existingTheme = getCustomTheme(by: id) {
+            // Update existing theme
+            existingTheme.name = name
+            existingTheme.textColor = textColor
+            existingTheme.backgroundColor = backgroundColor
+            saveContext()
+            return existingTheme
+        } else {
+            // Create new theme
+            let theme = CustomThemeEntity(context: viewContext)
+            theme.id = id
+            theme.name = name
+            theme.textColor = textColor
+            theme.backgroundColor = backgroundColor
+            saveContext()
+            return theme
+        }
+    }
+    
+    func deleteCustomTheme(with id: UUID) {
+        guard let theme = getCustomTheme(by: id) else { return }
+        viewContext.delete(theme)
+        saveContext()
+    }
+    
     // MARK: - Additional Field Operations
     
     func createAdditionalField(type: String, fieldName: String,

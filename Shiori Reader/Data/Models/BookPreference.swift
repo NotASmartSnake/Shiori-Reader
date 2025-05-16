@@ -211,4 +211,28 @@ extension Color {
             opacity: alpha
         )
     }
+    
+    func toHex() -> String? {
+        let uiColor = UIColor(self)
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
+        
+        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        
+        // Clamp values between 0 and 1 to ensure valid hex output
+        r = max(0, min(1, r))
+        g = max(0, min(1, g))
+        b = max(0, min(1, b))
+        
+        let hex = String(
+            format: "#%02X%02X%02X",
+            Int(r * 255),
+            Int(g * 255),
+            Int(b * 255)
+        )
+        
+        return hex
+    }
 }

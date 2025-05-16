@@ -10,6 +10,32 @@ import Foundation
 class SettingsRepository {
     private let coreDataManager = CoreDataManager.shared
     
+    // MARK: - Custom Themes
+    
+    // Get all custom themes
+    func getAllCustomThemes() -> [CustomTheme] {
+        if let entities = coreDataManager.getAllCustomThemes() {
+            return entities.map { CustomTheme(entity: $0) }
+        } else {
+            return []
+        }
+    }
+    
+    // Save a custom theme
+    func saveCustomTheme(_ theme: CustomTheme) {
+        _ = coreDataManager.createOrUpdateCustomTheme(
+            id: theme.id,
+            name: theme.name,
+            textColor: theme.textColor,
+            backgroundColor: theme.backgroundColor
+        )
+    }
+    
+    // Delete a custom theme
+    func deleteCustomTheme(_ theme: CustomTheme) {
+        coreDataManager.deleteCustomTheme(with: theme.id)
+    }
+    
     // MARK: - Default Appearance Settings
     
     // Get or create default appearance settings
