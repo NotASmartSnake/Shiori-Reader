@@ -20,7 +20,7 @@ struct CustomThemePickerView: View {
                     .foregroundColor(.secondary)
             } else {
                 ForEach(customThemes) { theme in
-                    Button(action: {
+                Button(action: {
                         onThemeSelected(theme)
                     }) {
                         HStack {
@@ -43,15 +43,6 @@ struct CustomThemePickerView: View {
                                 )
                             
                             Spacer()
-                        }
-                    }
-                    
-                    if customThemes.count > 1 {
-                        // Add delete button
-                        Button(role: .destructive, action: {
-                            onDelete(theme)
-                        }) {
-                            Label("Delete \(theme.name)", systemImage: "trash")
                         }
                     }
                 }

@@ -52,9 +52,7 @@ struct DefaultAppearanceSettingsView: View {
                                     onThemeSelected: { theme in
                                         viewModel.applyCustomTheme(theme)
                                     },
-                                    onDelete: { theme in
-                                        viewModel.deleteCustomTheme(theme)
-                                    }
+                                    onDelete: { _ in } // We'll handle delete separately
                                 )
                             }
                             
@@ -84,10 +82,17 @@ struct DefaultAppearanceSettingsView: View {
                                 newThemeName = ""
                                 showSaveThemeAlert = true
                             }) {
-                                HStack {
-                                    Spacer()
-                                    Label("Save Current Theme", systemImage: "square.and.arrow.down")
-                                    Spacer()
+                                Text("Save Current Theme")
+                            }
+                            
+                            // Delete theme button - only show when a theme is selected
+                            if let selectedThemeId = viewModel.selectedCustomThemeId,
+                               let selectedTheme = viewModel.customThemes.first(where: { $0.id == selectedThemeId }) {
+                                Button(action: {
+                                    viewModel.deleteCustomTheme(selectedTheme)
+                                }) {
+                                    Text("Delete \(selectedTheme.name)")
+                                        .foregroundColor(.red)
                                 }
                             }
                         }
