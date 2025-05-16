@@ -11,7 +11,8 @@ struct ReaderSettingsView: View {
     @ObservedObject var viewModel: ReaderSettingsViewModel
     @Binding var isPresented: Bool
     @Environment(\.colorScheme) private var colorScheme
-    @State private var showSaveThemePopup = false
+    @State private var showSaveThemeAlert = false
+    @State private var newThemeName = ""
     
     // Font families available
     private let fontFamilies = ["Default", "Sans Serif", "Serif", "Monospace"]
@@ -24,11 +25,11 @@ struct ReaderSettingsView: View {
     private let fontSizeStep: Float = 0.1
     
     var body: some View {
-            NavigationView {
-                ZStack {
-                    List {
-                        // MARK: - Theme Section
-                        Section(header: Text("Theme")) {
+        NavigationView {
+            ZStack {
+                List {
+                    // MARK: - Theme Section
+                    Section(header: Text("Theme")) {
                         Picker("Theme", selection: Binding(
                             get: { viewModel.preferences.theme },
                             set: { viewModel.setTheme($0) }
@@ -62,30 +63,31 @@ struct ReaderSettingsView: View {
                             ColorPicker("Text Color", selection: Binding(
                                 get: { viewModel.preferences.getTextColor() },
                                 set: { color in
-                                // Convert color to hex
-                                let hexColor = color.toHex() ?? "#000000"
-                                viewModel.preferences.textColor = hexColor
-                                // Reset selected custom theme when colors change
-                                viewModel.selectedCustomThemeId = nil
-                                viewModel.savePreferences()
+                                    // Convert color to hex
+                                    let hexColor = color.toHex() ?? "#000000"
+                                    viewModel.preferences.textColor = hexColor
+                                    // Reset selected custom theme when colors change
+                                    viewModel.selectedCustomThemeId = nil
+                                    viewModel.savePreferences()
                                 }
                             ))
                             
                             ColorPicker("Background Color", selection: Binding(
                                 get: { viewModel.preferences.getBackgroundColor() },
                                 set: { color in
-                                // Convert color to hex
-                                let hexColor = color.toHex() ?? "#FFFFFF"
-                                viewModel.preferences.backgroundColor = hexColor
-                                // Reset selected custom theme when colors change
-                                viewModel.selectedCustomThemeId = nil
-                                viewModel.savePreferences()
+                                    // Convert color to hex
+                                    let hexColor = color.toHex() ?? "#FFFFFF"
+                                    viewModel.preferences.backgroundColor = hexColor
+                                    // Reset selected custom theme when colors change
+                                    viewModel.selectedCustomThemeId = nil
+                                    viewModel.savePreferences()
                                 }
                             ))
                             
                             // Save current theme button
                             Button(action: {
-                                showSaveThemePopup = true
+                                newThemeName = ""
+                                showSaveThemeAlert = true
                             }) {
                                 HStack {
                                     Spacer()
@@ -155,23 +157,18 @@ struct ReaderSettingsView: View {
                     viewModel.savePreferences()
                     isPresented = false
                 })
-                
-                // Save theme popup
-                if showSaveThemePopup {
-                    Color.black.opacity(0.3)
-                        .edgesIgnoringSafeArea(.all)
-                        .onTapGesture {
-                            showSaveThemePopup = false
-                        }
-                    
-                    SaveThemeView(
-                        isPresented: $showSaveThemePopup,
-                        onSave: { name in
-                            viewModel.saveCurrentThemeAs(name: name)
-                        }
-                    )
-                }
             }
+            .alert("Save Current Theme", isPresented: $showSaveThemeAlert, actions: {
+                TextField("Theme Name", text: $newThemeName)
+                Button("Cancel", role: .cancel) { }
+                Button("Save") {
+                    if !newThemeName.isEmpty {
+                        viewModel.saveCurrentThemeAs(name: newThemeName)
+                    }
+                }
+            }, message: {
+                Text("Enter a name for this theme.")
+            })
         }
     }
 }

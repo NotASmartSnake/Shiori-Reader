@@ -10,7 +10,8 @@ import SwiftUI
 struct DefaultAppearanceSettingsView: View {
     @StateObject var viewModel = DefaultAppearanceSettingsViewModel()
     @Environment(\.colorScheme) private var colorScheme
-    @State private var showSaveThemePopup = false
+    @State private var showSaveThemeAlert = false
+    @State private var newThemeName = ""
     
     // Font families available
     private let fontFamilies = ["Default", "Sans Serif", "Serif", "Monospace"]
@@ -80,7 +81,8 @@ struct DefaultAppearanceSettingsView: View {
                             
                             // Save current theme button
                             Button(action: {
-                                showSaveThemePopup = true
+                                newThemeName = ""
+                                showSaveThemeAlert = true
                             }) {
                                 HStack {
                                     Spacer()
@@ -154,22 +156,19 @@ struct DefaultAppearanceSettingsView: View {
                 .listStyle(InsetGroupedListStyle())
                 .navigationBarTitle("Reader Appearance", displayMode: .inline)
                 
-                // Save theme popup
-                if showSaveThemePopup {
-                    Color.black.opacity(0.3)
-                        .edgesIgnoringSafeArea(.all)
-                        .onTapGesture {
-                            showSaveThemePopup = false
-                        }
-                    
-                    SaveThemeView(
-                        isPresented: $showSaveThemePopup,
-                        onSave: { name in
-                            viewModel.saveCurrentThemeAs(name: name)
-                        }
-                    )
-                }
             }
+            .alert("Save Current Theme", isPresented: $showSaveThemeAlert, actions: {
+                TextField("Theme Name", text: $newThemeName)
+                Button("Cancel", role: .cancel) { }
+                Button("Save") {
+                    if !newThemeName.isEmpty {
+                        viewModel.saveCurrentThemeAs(name: newThemeName)
+                    }
+                }
+            }, message: {
+                Text("Enter a name for this theme.")
+            })
+
         }
     }
 }
