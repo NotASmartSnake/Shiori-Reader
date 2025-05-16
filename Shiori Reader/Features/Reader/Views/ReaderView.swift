@@ -51,6 +51,17 @@ struct ReaderView: View {
             
             Group {
                 if viewModel.showDictionary {
+                    // Background overlay that dismisses the popup when tapped
+                    Color.black.opacity(0.001) // Nearly transparent overlay
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .onTapGesture {
+                            withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                                viewModel.showDictionary = false
+                            }
+                        }
+                        .zIndex(1) // Make sure this is below the popup but above other content
+                        .transition(.opacity)
+                    
                     dictionaryPopup
                 }
             }
@@ -300,8 +311,8 @@ struct ReaderView: View {
             )
             .environmentObject(savedWordsManager)
         }
-        .transition(.move(edge: .bottom))
-        .zIndex(2)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .zIndex(2) // Ensure popup is above the overlay
         .ignoresSafeArea(edges: .bottom)
     }
 
