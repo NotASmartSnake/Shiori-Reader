@@ -307,7 +307,12 @@ struct ReaderView: View {
                     }
                 },
                 sentenceContext: viewModel.currentSentenceContext,
-                bookTitle: viewModel.book.title
+                bookTitle: viewModel.book.title,
+                fullText: viewModel.fullTextForSelection,
+                currentOffset: viewModel.currentTextOffset,
+                onCharacterSelected: { offset in
+                    viewModel.handleCharacterSelection(offset: offset)
+                }
             )
             .environmentObject(savedWordsManager)
         }

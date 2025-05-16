@@ -110,7 +110,8 @@ documentClickListener = function(event) {
             // Send to Swift
             sendWordToSwift(contextText, {
                 absoluteOffset: offset,
-                surroundingText: surroundingText
+                surroundingText: surroundingText,
+                fullText: text // Add the full text string to the options
             });
         } else {
             dismissDictionary();
@@ -252,6 +253,7 @@ function processTappedRubyText(baseText, reading, rubyElement) {
     sendWordToSwift(extendedText, {
         reading: reading,
         surroundingText: surroundingText,
+        fullText: baseText + textAfterRuby,
         isRuby: true,
         isPartialCompound: false
     });
@@ -288,6 +290,7 @@ function processTappedExplicitRubyText(clickedRb, rubyElement) {
         fullReading: fullReading,
         textFromClickedKanji: textFromClickedKanji,
         surroundingText: textFromClickedKanji,
+        fullText: textFromClickedKanji,
         isRuby: true,
         isPartialCompound: true,
         selectedIndex: selectedIndex
@@ -316,6 +319,7 @@ function handleFullRubySelection(rubyElement) {
         textFromClickedKanji: extendedText,  // Include text after ruby
         surroundingText: surroundingText,
         textAfterRuby: textAfterRuby,
+        fullText: extendedText,
         isRuby: true
     });
 }

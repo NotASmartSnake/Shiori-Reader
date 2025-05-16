@@ -13,13 +13,17 @@ struct DictionaryPopupView: View {
     let onDismiss: () -> Void
     let sentenceContext: String
     let bookTitle: String
+    let fullText: String
+    let currentOffset: Int // Track current offset
+    let onCharacterSelected: (Int) -> Void
+    
     @State private var showAnkiSuccess = false
     @State private var showSaveSuccess = false
     @State private var showingAnkiSettings = false
     @EnvironmentObject private var wordsManager: SavedWordsManager
     
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Dictionary")
                     .font(.headline)
@@ -36,74 +40,91 @@ struct DictionaryPopupView: View {
             }
             .padding(0)
             
-            if matches.isEmpty {
-                Text("No definitions found.")
-                    .foregroundColor(.secondary)
-            } else {
-                ScrollView {
-                    // Flatten all entries from all matches into a single list
-                    ForEach(matches.flatMap { $0.entries }, id: \.id) { entry in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(alignment: .center) {
-                                // Term with furigana reading above it
-                                VStack(alignment: .leading, spacing: 0) {
-                                    if !entry.reading.isEmpty && entry.reading != entry.term {
-                                        // Furigana reading
-                                        Text(entry.reading)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                            .padding(.bottom, 1)
+            // Character picker view
+            if !fullText.isEmpty {
+                CharacterPickerView(
+                    currentText: fullText,
+                    selectedOffset: currentOffset,
+                    onCharacterSelected: { _, offset in
+                        onCharacterSelected(offset)
+                    }
+                )
+                .padding(.top, 8)
+            }
+            
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading) {
+                    if matches.isEmpty {
+                        Text("No definitions found.")
+                            .foregroundColor(.secondary)
+                            .padding(.top, 16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        // Flatten all entries from all matches into a single list
+                        ForEach(matches.flatMap { $0.entries }, id: \.id) { entry in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(alignment: .center) {
+                                    // Term with furigana reading above it
+                                    VStack(alignment: .leading, spacing: 0) {
+                                        if !entry.reading.isEmpty && entry.reading != entry.term {
+                                            // Furigana reading
+                                            Text(entry.reading)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                                .padding(.bottom, 1)
+                                        }
+                                        
+                                        // Main term
+                                        Text(entry.term)
+                                            .font(.headline)
+                                            .foregroundColor(.blue)
                                     }
                                     
-                                    // Main term
-                                    Text(entry.term)
-                                        .font(.headline)
-                                        .foregroundColor(.blue)
-                                }
-                                
-                                Spacer()
-                                
-                                // Action buttons
-                                HStack(spacing: 10) {
-                                    // Save to Vocabulary button
-                                    Button(action: {
-                                        saveWordToVocabulary(entry)
-                                    }) {
-                                        Image(systemName: "bookmark")
-                                            .foregroundColor(.blue)
-                                            .padding(8)
-                                            .background(Color.blue.opacity(0.1))
-                                            .cornerRadius(8)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
+                                    Spacer()
                                     
-                                    // Add to Anki button
-                                    Button(action: {
-                                        exportToAnki(entry)
-                                    }) {
-                                        Image(systemName: "plus.rectangle.on.rectangle")
-                                            .foregroundColor(.blue)
-                                            .padding(8)
-                                            .background(Color.blue.opacity(0.1))
-                                            .cornerRadius(8)
+                                    // Action buttons
+                                    HStack(spacing: 10) {
+                                        // Save to Vocabulary button
+                                        Button(action: {
+                                            saveWordToVocabulary(entry)
+                                        }) {
+                                            Image(systemName: "bookmark")
+                                                .foregroundColor(.blue)
+                                                .padding(8)
+                                                .background(Color.blue.opacity(0.1))
+                                                .cornerRadius(8)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        
+                                        // Add to Anki button
+                                        Button(action: {
+                                            exportToAnki(entry)
+                                        }) {
+                                            Image(systemName: "plus.rectangle.on.rectangle")
+                                                .foregroundColor(.blue)
+                                                .padding(8)
+                                                .background(Color.blue.opacity(0.1))
+                                                .cornerRadius(8)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
                                     }
-                                    .buttonStyle(PlainButtonStyle())
                                 }
-                            }
-                            .padding(.vertical, 4)
-                            
-                            // Display meaning entries
-                            ForEach(entry.meanings.indices, id: \.self) { index in
-                                Text(entry.meanings[index])
-                                    .font(.body)
-                                    .padding(.leading, 8)
-                            }
-                            
-                            Divider()
                                 .padding(.vertical, 4)
+                                
+                                // Display meaning entries
+                                ForEach(entry.meanings.indices, id: \.self) { index in
+                                    Text(entry.meanings[index])
+                                        .font(.body)
+                                        .padding(.leading, 8)
+                                }
+                                
+                                Divider()
+                                    .padding(.vertical, 4)
+                            }
                         }
                     }
                 }
+                .padding(.top, 8)
             }
         }
         .padding(20)
@@ -234,7 +255,3 @@ struct DictionaryPopupView: View {
         }
     }
 }
-
-
-
-

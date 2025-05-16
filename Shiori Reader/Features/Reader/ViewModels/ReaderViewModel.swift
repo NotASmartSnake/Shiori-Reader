@@ -42,6 +42,9 @@ class ReaderViewModel: ObservableObject {
     // Dictionary related properties
     @Published var showDictionary = false
     @Published var selectedWord = ""
+    @Published var fullTextForSelection = ""
+    @Published var currentTextOffset = 0  // Track the current text offset
+    @Published var clickedTextOffset = 0 // Tracks where in text the user clicked
     
     // Track both current chapter and total book progression
     @Published var currentChapterProgression: Double = 0.0
@@ -444,6 +447,40 @@ class ReaderViewModel: ObservableObject {
 
     // MARK: - Dictionary Lookups
     
+    func handleCharacterSelection(offset: Int) {
+        guard !fullTextForSelection.isEmpty else { return }
+        
+        // Update the current offset
+        self.currentTextOffset = offset
+        
+        print("🔍 handleCharacterSelection - New offset: \(offset)")
+        print("🔍 handleCharacterSelection - Full text: \(fullTextForSelection.prefix(20))...")
+        
+        if offset < 0 || offset >= fullTextForSelection.count {
+            print("⚠️ Invalid offset for text selection: \(offset) for text of length \(fullTextForSelection.count)")
+            return
+        }
+        
+        // Get the new text to search - slice from offset to end
+        let newStartIndex = fullTextForSelection.index(fullTextForSelection.startIndex, offsetBy: offset)
+        let newSelectedText = String(fullTextForSelection[newStartIndex...])
+        
+        // Clean debug log - just show what we're searching
+        print("💬 SEARCHING FROM PICKER: \(newSelectedText.prefix(20))...")
+        
+        // Update selected word
+        self.selectedWord = String(fullTextForSelection[newStartIndex])
+        
+        // Lookup with the new text
+        getDictionaryMatches(text: newSelectedText) { matches in
+            DispatchQueue.main.async {
+                self.dictionaryMatches = matches
+                // Always show the dictionary even if no matches found
+                self.showDictionary = true
+            }
+        }
+    }
+    
     func handleWordSelection(text: String, options: [String: Any]) {
         Logger.debug(category: "ReaderViewModel", "Word tapped - \(text) with options: \(options)")
         
@@ -451,6 +488,29 @@ class ReaderViewModel: ObservableObject {
         if let type = options["type"] as? String, type == "initialization" {
             Logger.debug(category: "ReaderViewModel", "Received initialization message, not showing dictionary")
             return
+        }
+        
+        // Store the full text for selection and character picker
+        if let fullText = options["fullText"] as? String {
+            self.fullTextForSelection = fullText
+            print("📚 RECEIVED - Text: \(text.prefix(10))... from fullText of length \(fullText.count)")
+            
+            // Get the absoluteOffset if available
+            if let offset = options["absoluteOffset"] as? Int {
+                self.clickedTextOffset = offset
+                self.currentTextOffset = offset
+                print("📚 CLICKED - At offset: \(offset) in text")
+            } else {
+                // Default to start of text
+                self.clickedTextOffset = 0
+                self.currentTextOffset = 0
+            }
+        } else {
+            // If fullText is not available, use a larger context or just the current word
+            self.fullTextForSelection = text
+            self.clickedTextOffset = 0
+            self.currentTextOffset = 0
+            print("📚 NO FULLTEXT - Using just: \(text)")
         }
         
         // Extract sentence context if available
@@ -481,19 +541,19 @@ class ReaderViewModel: ObservableObject {
         
         // Lookup words in the dictionary
         getDictionaryMatches(text: text) { matches in
-            if !matches.isEmpty {
-                withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
-                    self.dictionaryMatches = matches
-                    self.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
-                    self.showDictionary = true
-                }
-            } else {
-                Logger.debug(category: "ReaderViewModel", "No dictionary matches found for \(text)")
+            withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                self.dictionaryMatches = matches
+                self.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Always show the dictionary even if no matches found
+                self.showDictionary = true
             }
+            
+            // Simple log for search
+            print("💬 TEXT TAPPED - SEARCHING: \(text)")
         }
     }
     
-    private func getDictionaryMatches(text: String, completion: @escaping ([DictionaryMatch]) -> Void) {
+    func getDictionaryMatches(text: String, completion: @escaping ([DictionaryMatch]) -> Void) {
         let lookupQueue = DispatchQueue(label: "com.shiori.dictionaryLookup", qos: .userInitiated)
         
         lookupQueue.async {
