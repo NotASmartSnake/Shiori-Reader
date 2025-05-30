@@ -45,6 +45,20 @@ struct BookCell: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
             .layoutPriority(1)
+            .contextMenu {
+                Button(action: {
+                    showingRenameDialog = true
+                    newTitle = book.title
+                }) {
+                    Label("Rename", systemImage: "pencil")
+                }
+                
+                Button(role: .destructive, action: {
+                    showingDeleteConfirmation = true
+                }) {
+                    Label("Remove", systemImage: "trash")
+                }
+            }
 
             HStack {
                 // Progress indicator with integer percentage (matching ReaderView)
