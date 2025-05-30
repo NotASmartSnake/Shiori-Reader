@@ -75,6 +75,30 @@ class SavedWordsManager: ObservableObject {
         savedWords.removeAll()
     }
     
+    // MARK: - Word Checking
+    
+    /// Check if a word is already saved in the vocabulary list
+    /// - Parameters:
+    ///   - word: The word (kanji) to check
+    ///   - reading: The reading (hiragana/katakana) to check
+    /// - Returns: True if the word with this specific reading is already saved, false otherwise
+    func isWordSaved(_ word: String, reading: String = "") -> Bool {
+        return savedWords.contains { savedWord in
+            savedWord.word == word && savedWord.reading == reading
+        }
+    }
+    
+    /// Check if a word is already saved and return the saved word if found
+    /// - Parameters:
+    ///   - word: The word (kanji) to check
+    ///   - reading: The reading (hiragana/katakana) to check
+    /// - Returns: The SavedWord if found, nil otherwise
+    func getSavedWord(for word: String, reading: String = "") -> SavedWord? {
+        return savedWords.first { savedWord in
+            savedWord.word == word && savedWord.reading == reading
+        }
+    }
+    
     // MARK: - CSV Export
     
     /// Exports all saved words to a CSV file and returns the file URL

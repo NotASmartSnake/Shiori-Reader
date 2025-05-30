@@ -20,6 +20,8 @@ struct DictionaryPopupView: View {
     @State private var showAnkiSuccess = false
     @State private var showSaveSuccess = false
     @State private var showingAnkiSettings = false
+    @State private var showDuplicateAlert = false
+    @State private var pendingEntryToSave: DictionaryEntry? = nil
     @EnvironmentObject private var wordsManager: SavedWordsManager
     
     var body: some View {
@@ -86,9 +88,11 @@ struct DictionaryPopupView: View {
                                     HStack(spacing: 10) {
                                         // Save to Vocabulary button
                                         Button(action: {
-                                            saveWordToVocabulary(entry)
+                                            handleSaveWordToVocabulary(entry)
                                         }) {
-                                            Image(systemName: "bookmark")
+                                            // Show filled bookmark if word AND reading are already saved
+                                            let isWordSaved = wordsManager.isWordSaved(entry.term, reading: entry.reading)
+                                            Image(systemName: isWordSaved ? "bookmark.fill" : "bookmark")
                                                 .foregroundColor(.blue)
                                                 .padding(8)
                                                 .background(Color.blue.opacity(0.1))
@@ -183,6 +187,19 @@ struct DictionaryPopupView: View {
                 }
             }
         )
+        .alert("Word Already Saved", isPresented: $showDuplicateAlert) {
+            Button("Yes") {
+                if let entry = pendingEntryToSave {
+                    saveWordToVocabulary(entry)
+                }
+                pendingEntryToSave = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingEntryToSave = nil
+            }
+        } message: {
+            Text("This word is already in your Saved Words. Would you still like to save it?")
+        }
         .sheet(isPresented: $showingAnkiSettings) {
             NavigationView {
                 AnkiSettingsView()
@@ -226,6 +243,18 @@ struct DictionaryPopupView: View {
                 }
             }
         )
+    }
+    
+    private func handleSaveWordToVocabulary(_ entry: DictionaryEntry) {
+        // Check if the word with this specific reading is already saved
+        if wordsManager.isWordSaved(entry.term, reading: entry.reading) {
+            // Show confirmation alert
+            pendingEntryToSave = entry
+            showDuplicateAlert = true
+        } else {
+            // Word with this reading is not saved yet, save it directly
+            saveWordToVocabulary(entry)
+        }
     }
     
     private func saveWordToVocabulary(_ entry: DictionaryEntry) {
