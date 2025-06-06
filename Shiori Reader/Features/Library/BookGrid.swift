@@ -25,9 +25,14 @@ extension UIDevice {
 }
 
 struct BookGrid: View {
-    let books: [Book]
     @ObservedObject var isReadingBook: IsReadingBook
     @Binding var lastViewedBookPath: String?
+    @EnvironmentObject private var libraryManager: LibraryManager
+    
+    // Access books directly from libraryManager instead of as parameter
+    private var books: [Book] {
+        libraryManager.books
+    }
 
     // Define layout properties locally
     private let iPhoneIdealCellWidth: CGFloat = 150 // Minimum width for iPhone (2 columns)
@@ -75,6 +80,7 @@ struct BookGrid: View {
             ForEach(books) { book in
                 BookCell(book: book, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
                     .frame(maxWidth: .infinity) // Ensure cell fills column width
+                    .id("\(book.id)-\(libraryManager.refreshTrigger)") // Force refresh when trigger changes
             }
         }
         .padding(.horizontal, deviceType == .iPad ? 24 : 30) // Reduced padding on iPad to fit more columns

@@ -413,36 +413,136 @@ class ReaderViewModel: ObservableObject {
     
     private func getFileURL(for storedPath: String) -> URL? {
         let fileManager = FileManager.default
-        Logger.debug(category: "getFileURL", "Checking path: \(storedPath)")
-
-        if storedPath.starts(with: "/") && fileManager.fileExists(atPath: storedPath) {
-            Logger.debug(category: "getFileURL", "Found as absolute path.")
-            return URL(fileURLWithPath: storedPath)
+        Logger.debug(category: "getFileURL", "Resolving path: \(storedPath)")
+        
+        // Get current Documents directory
+        guard let documentsDirectory = try? fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else {
+            Logger.error(category: "getFileURL", "Could not access Documents directory")
+            return nil
         }
-        do {
-            let documentsDirectory = try fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-            let booksDirectory = documentsDirectory.appendingPathComponent("Books")
-            let fileURLInBooks = booksDirectory.appendingPathComponent(storedPath)
-            Logger.debug(category: "getFileURL", "Checking Documents/Books path: \(fileURLInBooks.path)")
-            if fileManager.fileExists(atPath: fileURLInBooks.path) {
-                Logger.debug(category: "getFileURL", "Found in Documents/Books.")
-                return fileURLInBooks
+        
+        // Case 1: Relative path (new format) - try direct resolution
+        if !storedPath.starts(with: "/") {
+            let fullURL = documentsDirectory.appendingPathComponent(storedPath)
+            Logger.debug(category: "getFileURL", "Trying relative path: \(fullURL.path)")
+            if fileManager.fileExists(atPath: fullURL.path) {
+                Logger.debug(category: "getFileURL", "Found via relative path")
+                return fullURL
             }
-        } catch { Logger.error(category: "getFileURL", "Couldn't access Documents directory: \(error)") }
-
+        }
+        
+        // Case 2: Absolute path (legacy format) - try direct access first
+        if storedPath.starts(with: "/") {
+            Logger.debug(category: "getFileURL", "Trying absolute path: \(storedPath)")
+            if fileManager.fileExists(atPath: storedPath) {
+                Logger.debug(category: "getFileURL", "Found via absolute path (container unchanged)")
+                return URL(fileURLWithPath: storedPath)
+            }
+            
+            // Case 3: Absolute path migration - extract relative path and update database
+            Logger.debug(category: "getFileURL", "Absolute path not found, attempting migration")
+            if let migratedURL = migrateAbsolutePath(storedPath, documentsDirectory: documentsDirectory) {
+                Logger.debug(category: "getFileURL", "Successfully migrated absolute path")
+                return migratedURL
+            }
+        }
+        
+        // Case 4: Fallback - try bundle resources
         let filename = URL(fileURLWithPath: storedPath).lastPathComponent
         Logger.debug(category: "getFileURL", "Checking Bundle for filename: \(filename)")
         if let bundleURL = Bundle.main.url(forResource: filename, withExtension: nil, subdirectory: "Books") ?? Bundle.main.url(forResource: filename, withExtension: nil) {
-             Logger.debug(category: "getFileURL", "Found potential bundle URL: \(bundleURL.path)")
-             if fileManager.fileExists(atPath: bundleURL.path) {
-                 Logger.debug(category: "getFileURL", "Found in Bundle.")
-                 return bundleURL
-             } else {
-                  Logger.debug(category: "getFileURL", "Bundle URL exists but file not present at path.")
-             }
+            if fileManager.fileExists(atPath: bundleURL.path) {
+                Logger.debug(category: "getFileURL", "Found in Bundle")
+                return bundleURL
+            }
         }
-        Logger.warning(category: "getFileURL", "File not found for path: \(storedPath)")
+        
+        Logger.error(category: "getFileURL", "File not found for path: \(storedPath)")
         return nil
+    }
+    
+    /// Attempts to migrate an absolute path to the current container
+    private func migrateAbsolutePath(_ absolutePath: String, documentsDirectory: URL) -> URL? {
+        let fileManager = FileManager.default
+        
+        // Extract the relative path from the old absolute path
+        // Look for "/Documents/" in the path and extract everything after it
+        if let documentsRange = absolutePath.range(of: "/Documents/") {
+            let relativePath = String(absolutePath[documentsRange.upperBound...])
+            let newURL = documentsDirectory.appendingPathComponent(relativePath)
+            
+            Logger.debug(category: "migrateAbsolutePath", "Extracted relative path: \(relativePath)")
+            Logger.debug(category: "migrateAbsolutePath", "Testing new URL: \(newURL.path)")
+            
+            if fileManager.fileExists(atPath: newURL.path) {
+                Logger.debug(category: "migrateAbsolutePath", "File found at migrated path, updating database")
+                
+                // Update the database with the relative path
+                Task { @MainActor in
+                    self.updateBookPathInDatabase(relativePath: relativePath)
+                }
+                
+                return newURL
+            }
+        }
+        
+        // If that doesn't work, try looking for just the filename in common locations
+        let filename = URL(fileURLWithPath: absolutePath).lastPathComponent
+        let possiblePaths = [
+            "Books/\(filename)",
+            "BookCovers/\(filename)",
+            filename
+        ]
+        
+        for relativePath in possiblePaths {
+            let testURL = documentsDirectory.appendingPathComponent(relativePath)
+            if fileManager.fileExists(atPath: testURL.path) {
+                Logger.debug(category: "migrateAbsolutePath", "File found via filename search: \(testURL.path)")
+                
+                // Update the database with the relative path
+                Task { @MainActor in
+                    self.updateBookPathInDatabase(relativePath: relativePath)
+                }
+                
+                return testURL
+            }
+        }
+        
+        Logger.warning(category: "migrateAbsolutePath", "Could not migrate path: \(absolutePath)")
+        return nil
+    }
+    
+    /// Updates the book's file path in the database with a relative path
+    @MainActor
+    private func updateBookPathInDatabase(relativePath: String) {
+        Logger.debug(category: "updateBookPathInDatabase", "Updating book \(book.id) with relative path: \(relativePath)")
+        
+        // Update the database through Core Data
+        if let entity = CoreDataManager.shared.getBook(by: book.id) {
+            entity.filePath = relativePath
+            CoreDataManager.shared.saveContext()
+            Logger.debug(category: "updateBookPathInDatabase", "Successfully updated database")
+            
+            // Create a new Book object with the updated path
+            let updatedBook = Book(
+                id: book.id,
+                title: book.title,
+                author: book.author,
+                filePath: relativePath,
+                coverImagePath: book.coverImagePath,
+                isLocalCover: book.isLocalCover,
+                addedDate: book.addedDate,
+                lastOpenedDate: book.lastOpenedDate,
+                readingProgress: book.readingProgress,
+                currentLocatorData: book.currentLocatorData
+            )
+            
+            // Update our local book reference
+            book = updatedBook
+            Logger.debug(category: "updateBookPathInDatabase", "Updated local book object")
+        } else {
+            Logger.error(category: "updateBookPathInDatabase", "Could not find book entity in database")
+        }
     }
 
     // MARK: - Dictionary Lookups

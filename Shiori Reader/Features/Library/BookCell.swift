@@ -47,6 +47,7 @@ struct BookCell: View {
             .layoutPriority(1)
             .contextMenu {
                 Button(action: {
+                    print("BookCell: Opening rename dialog from context menu for book '\(book.title)'")
                     showingRenameDialog = true
                     newTitle = book.title
                 }) {
@@ -69,6 +70,7 @@ struct BookCell: View {
                 
                 Menu {
                     Button(action: {
+                        print("BookCell: Opening rename dialog for book '\(book.title)'")
                         showingRenameDialog = true
                         newTitle = book.title
                     }) {
@@ -93,7 +95,10 @@ struct BookCell: View {
             Button("Cancel", role: .cancel) { }
             Button("Save") {
                 if !newTitle.isEmpty {
+                    print("BookCell: Saving new title '\(newTitle)' for book '\(book.title)'")
                     libraryManager.renameBook(book, newTitle: newTitle)
+                } else {
+                    print("BookCell: New title is empty, not saving")
                 }
             }
         }

@@ -48,8 +48,11 @@ class DocumentPickerCoordinator: NSObject, UIDocumentPickerDelegate {
             
             try FileManager.default.copyItem(at: url, to: destinationURL)
             
-            // Store the FULL PATH in the Book object
-            parent.processImportedBook(at: destinationURL, fullPath: destinationURL.path)
+            // Store the RELATIVE PATH from Documents directory
+            let documentsDirectory = try getOrCreateDocumentsDirectory()
+            let relativePath = destinationURL.path.replacingOccurrences(of: documentsDirectory.path + "/", with: "")
+            
+            parent.processImportedBook(at: destinationURL, fullPath: relativePath)
             
             parent.status = .success(destinationURL)
         } catch {
@@ -59,6 +62,17 @@ class DocumentPickerCoordinator: NSObject, UIDocumentPickerDelegate {
     
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
         parent.status = .cancelled
+    }
+    
+    // Helper to create or get the Documents directory
+    private func getOrCreateDocumentsDirectory() throws -> URL {
+        let fileManager = FileManager.default
+        return try fileManager.url(
+            for: .documentDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
     }
     
     // Helper to create or get the Books directory

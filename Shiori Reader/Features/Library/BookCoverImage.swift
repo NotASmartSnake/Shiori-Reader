@@ -114,31 +114,55 @@ struct BookCoverImage: View {
         }
     }
 
-    // Updated function to return UIImage?
+    // Updated function to handle both relative paths and legacy filename stems
     private func loadLocalUIImage(filenameStem: String) -> UIImage? {
         let fileManager = FileManager.default
-        do {
-            let documentsDirectory = try fileManager.url(
-                for: .documentDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: false
-            )
-            let coverURL = documentsDirectory
-                .appendingPathComponent("BookCovers")
-                .appendingPathComponent("\(filenameStem).png")
-
-            if fileManager.fileExists(atPath: coverURL.path) {
-                let imageData = try Data(contentsOf: coverURL)
-                return UIImage(data: imageData) // Return UIImage directly
-            } else {
-                print("WARN [BookCoverImage]: Local cover file not found at \(coverURL.path)")
-                return nil
-            }
-        } catch {
-            print("ERROR [BookCoverImage]: Failed to get documents directory or load image data: \(error)")
+        
+        guard let documentsDirectory = try? fileManager.url(
+            for: .documentDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: false
+        ) else {
+            print("ERROR [BookCoverImage]: Could not access Documents directory")
             return nil
         }
+        
+        // Try loading as relative path first (new format)
+        if filenameStem.contains("/") {
+            let coverURL = documentsDirectory.appendingPathComponent(filenameStem)
+            print("DEBUG [BookCoverImage]: Trying relative path: \(coverURL.path)")
+            
+            if fileManager.fileExists(atPath: coverURL.path) {
+                do {
+                    let imageData = try Data(contentsOf: coverURL)
+                    print("DEBUG [BookCoverImage]: Successfully loaded via relative path")
+                    return UIImage(data: imageData)
+                } catch {
+                    print("ERROR [BookCoverImage]: Failed to load image data from \(coverURL.path): \(error)")
+                }
+            }
+        }
+        
+        // Fallback: try legacy format (filename stem in BookCovers directory)
+        let legacyCoverURL = documentsDirectory
+            .appendingPathComponent("BookCovers")
+            .appendingPathComponent("\(filenameStem).png")
+        
+        print("DEBUG [BookCoverImage]: Trying legacy path: \(legacyCoverURL.path)")
+        
+        if fileManager.fileExists(atPath: legacyCoverURL.path) {
+            do {
+                let imageData = try Data(contentsOf: legacyCoverURL)
+                print("DEBUG [BookCoverImage]: Successfully loaded via legacy path")
+                return UIImage(data: imageData)
+            } catch {
+                print("ERROR [BookCoverImage]: Failed to load image data from \(legacyCoverURL.path): \(error)")
+            }
+        }
+        
+        print("WARN [BookCoverImage]: Local cover file not found for: \(filenameStem)")
+        return nil
     }
 }
 

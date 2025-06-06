@@ -30,7 +30,6 @@ struct LibraryView: View {
                     ScrollView {
                         VStack {
                             BookGrid(
-                                books: libraryManager.books,
                                 isReadingBook: isReadingBook,
                                 lastViewedBookPath: $lastViewedBookPath
                             )

@@ -136,15 +136,15 @@ class EPUBImportProcessor {
         )
     }
     
-    // Helper function to save the cover image and return its filename stem
+    // Helper function to save the cover image and return its relative path
     private func saveCoverImage(_ image: UIImage) throws -> String {
         guard let imageData = image.pngData() else {
-            throw ImportError.coverExtractionFailed("Failed to convert UIImage to JPEG data")
+            throw ImportError.coverExtractionFailed("Failed to convert UIImage to PNG data")
         }
 
         let fileManager = FileManager.default
 
-        // Get the Covers directory URL
+        // Get the Documents directory URL
         let documentsDirectory = try fileManager.url(
             for: .documentDirectory,
             in: .userDomainMask,
@@ -159,16 +159,18 @@ class EPUBImportProcessor {
             Logger.debug(category: "EPUBImportProcessor", "Created BookCovers directory at \(coversDirectory.path)")
         }
 
-        // Generate a unique filename (stem only)
-        let filenameStem = "cover_\(UUID().uuidString)"
-        let coverURL = coversDirectory.appendingPathComponent("\(filenameStem).png") // Append extension
+        // Generate a unique filename
+        let filename = "cover_\(UUID().uuidString).png"
+        let coverURL = coversDirectory.appendingPathComponent(filename)
 
         // Write the image data
         try imageData.write(to: coverURL)
         Logger.debug(category: "EPUBImportProcessor", "Saved cover as PNG: \(coverURL.path)")
 
-        // Return just the unique filename stem
-        return filenameStem
+        // Return the relative path from Documents directory
+        let relativePath = "BookCovers/\(filename)"
+        Logger.debug(category: "EPUBImportProcessor", "Returning relative cover path: \(relativePath)")
+        return relativePath
     }
     
     enum ImportError: Error {

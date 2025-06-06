@@ -38,10 +38,23 @@ class BookRepository {
     }
     
     // Update book title
-    func updateBookTitle(id: UUID, newTitle: String) {
-        guard let entity = coreDataManager.getBook(by: id) else { return }
+    func updateBookTitle(id: UUID, newTitle: String) -> Bool {
+        guard let entity = coreDataManager.getBook(by: id) else { 
+            print("BookRepository: Could not find book with id \(id)")
+            return false 
+        }
+        
+        print("BookRepository: Updating book title from '\(entity.title ?? "nil")' to '\(newTitle)'")
         entity.title = newTitle
-        coreDataManager.saveContext()
+        
+        do {
+            try coreDataManager.viewContext.save()
+            print("BookRepository: Successfully saved title update")
+            return true
+        } catch {
+            print("BookRepository: Error saving title update: \(error)")
+            return false
+        }
     }
     
     // Delete a book
