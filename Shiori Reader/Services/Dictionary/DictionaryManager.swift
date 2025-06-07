@@ -116,7 +116,7 @@ class DictionaryManager {
         let directEntries = lookup(word: word)
         allEntries.append(contentsOf: directEntries)
         
-        // Then try deinflections if we have them and didn't find enough matches
+        // Then try deinflections if we have them and didn't find matches
         if allEntries.isEmpty, let deinflector = self.deinflector {
             let deinflections = deinflector.deinflect(word)
             
@@ -128,14 +128,21 @@ class DictionaryManager {
                 
                 let entries = lookup(word: result.term)
                 
-                // For each entry found, add information about how it was deinflected
-                for var entry in entries {
-                    entry.transformed = word
-                    
-                    // Optionally, add the deinflection reasons to help explain the conjugation
-                    // entry.transformationNotes = result.reasons.joined(separator: ", ")
-                    
-                    allEntries.append(entry)
+                // Add entries found through deinflection
+                for entry in entries {
+                    let enhancedEntry = DictionaryEntry(
+                        id: entry.id,
+                        term: entry.term,
+                        reading: entry.reading,
+                        meanings: entry.meanings,
+                        meaningTags: entry.meaningTags,
+                        termTags: entry.termTags,
+                        score: entry.score,
+                        transformed: word,
+                        transformationNotes: result.reasons.joined(separator: " ← "),
+                        popularity: entry.popularity
+                    )
+                    allEntries.append(enhancedEntry)
                 }
             }
         }

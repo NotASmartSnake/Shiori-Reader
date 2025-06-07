@@ -17,6 +17,7 @@ struct DictionaryEntry: Identifiable, Equatable {
     let termTags: [String]
     let score: String?
     var transformed: String? = nil
+    var transformationNotes: String? = nil
     let popularity: Double?
     
     static func == (lhs: DictionaryEntry, rhs: DictionaryEntry) -> Bool {

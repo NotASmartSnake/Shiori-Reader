@@ -672,7 +672,7 @@ class ReaderViewModel: ObservableObject {
                 let endIndex = text.index(text.startIndex, offsetBy: length)
                 let candidateWord = String(text[..<endIndex])
                 
-                // Look up this word in the dictionary
+                // Look up this word in the dictionary with improved deinflection
                 let entries = DictionaryManager.shared.lookupWithDeinflection(word: candidateWord)
                 
                 // If we found matches, add this as a valid match
