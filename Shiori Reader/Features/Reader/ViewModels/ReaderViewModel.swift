@@ -662,6 +662,7 @@ class ReaderViewModel: ObservableObject {
             
             // Store all valid matches
             var matches: [DictionaryMatch] = []
+            var foundWords: Set<String> = [] // Track words we've already found
             
             // Try words of decreasing length, starting from the longest
             for length in stride(from: maxLength, through: 1, by: -1) {
@@ -677,8 +678,19 @@ class ReaderViewModel: ObservableObject {
                 
                 // If we found matches, add this as a valid match
                 if !entries.isEmpty {
-                    let match = DictionaryMatch(word: candidateWord, entries: entries)
-                    matches.append(match)
+                    // Group entries by their base term to avoid duplicates
+                    let groupedEntries = Dictionary(grouping: entries) { entry in
+                        entry.term
+                    }
+                    
+                    for (baseTerm, termEntries) in groupedEntries {
+                        // Only add if we haven't found this base term already
+                        if !foundWords.contains(baseTerm) {
+                            let match = DictionaryMatch(word: candidateWord, entries: termEntries)
+                            matches.append(match)
+                            foundWords.insert(baseTerm)
+                        }
+                    }
                     
                     // Limit to a reasonable number of matches
                     if matches.count >= 5 {
@@ -687,9 +699,23 @@ class ReaderViewModel: ObservableObject {
                 }
             }
             
-            // Return all matches found, ordered by length (longest first)
+            // Sort matches to prioritize base forms over conjugated forms
+            let sortedMatches = matches.sorted { first, second in
+                let firstHasTransform = first.entries.first?.transformed != nil
+                let secondHasTransform = second.entries.first?.transformed != nil
+                
+                // Prefer entries that are transformations (base forms)
+                if firstHasTransform != secondHasTransform {
+                    return firstHasTransform
+                }
+                
+                // Then by length (longer matches first)
+                return first.word.count > second.word.count
+            }
+            
+            // Return all matches found
             DispatchQueue.main.async {
-                completion(matches)
+                completion(sortedMatches)
             }
         }
     }

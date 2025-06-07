@@ -116,8 +116,20 @@ class DictionaryManager {
         let directEntries = lookup(word: word)
         allEntries.append(contentsOf: directEntries)
         
-        // Then try deinflections if we have them and didn't find matches
-        if allEntries.isEmpty, let deinflector = self.deinflector {
+        // Add debug logging for problematic words
+        let debugWords = ["防ぎ", "防ぎきれない"]
+        let shouldDebug = debugWords.contains(word)
+        
+        if shouldDebug {
+            print("🔍 [DEBUG] Looking up '\(word)': found \(directEntries.count) direct entries")
+        }
+        
+        // Always try deinflections if we have them (not just when no direct entries)
+        if let deinflector = self.deinflector {
+            if shouldDebug {
+                print("🔍 [DEBUG] Also trying deinflection for '\(word)'...")
+            }
+            
             let deinflections = deinflector.deinflect(word)
             
             for result in deinflections {
@@ -127,6 +139,10 @@ class DictionaryManager {
                 }
                 
                 let entries = lookup(word: result.term)
+                
+                if shouldDebug && !entries.isEmpty {
+                    print("🔍 [DEBUG] Deinflection '\(result.term)' found \(entries.count) entries via: \(result.reasons.joined(separator: " ← "))")
+                }
                 
                 // Add entries found through deinflection
                 for entry in entries {
