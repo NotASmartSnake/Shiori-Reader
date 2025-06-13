@@ -188,9 +188,16 @@ struct DictionaryPopupView: View {
             }
         )
         .alert("Word Already Saved", isPresented: $showDuplicateAlert) {
-            Button("Yes") {
+            Button("Save Anyway") {
                 if let entry = pendingEntryToSave {
                     saveWordToVocabulary(entry)
+                }
+                pendingEntryToSave = nil
+            }
+            Button("Delete", role: .destructive) {
+                if let entry = pendingEntryToSave,
+                   let existingWord = wordsManager.getSavedWord(for: entry.term, reading: entry.reading) {
+                    wordsManager.deleteWord(with: existingWord.id)
                 }
                 pendingEntryToSave = nil
             }
@@ -198,7 +205,7 @@ struct DictionaryPopupView: View {
                 pendingEntryToSave = nil
             }
         } message: {
-            Text("This word is already in your Saved Words. Would you still like to save it?")
+            Text("This word is already in your Saved Words. What would you like to do?")
         }
         .sheet(isPresented: $showingAnkiSettings) {
             NavigationView {
