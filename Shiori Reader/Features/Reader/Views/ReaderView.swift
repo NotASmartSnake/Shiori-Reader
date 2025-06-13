@@ -181,7 +181,9 @@ struct ReaderView: View {
 
                 // Right Buttons
                 // Search Button
-                searchButton()
+                // The search button functionality is not functioning properly, so hiding for now
+                // To do: fix search button functionality
+//                searchButton()
 
                 // Bookmark Button
                 Button {
