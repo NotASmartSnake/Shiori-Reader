@@ -751,18 +751,63 @@ class ReaderViewModel: ObservableObject {
                 }
             }
             
-            // Sort matches to prioritize base forms over conjugated forms
+            // Sort matches using multi-criteria comparison (based on _sortDefinitionsForTermSearch)
             let sortedMatches = matches.sorted { first, second in
-                let firstHasTransform = first.entries.first?.transformed != nil
-                let secondHasTransform = second.entries.first?.transformed != nil
+                // Multi-criteria comparators in order of priority
+                let comparators: [(DictionaryMatch, DictionaryMatch) -> ComparisonResult] = [
+                    // 1. Max transformed text length (longer matches first)
+                    { match1, match2 in
+                        let firstLength = match1.word.count
+                        let secondLength = match2.word.count
+                        return firstLength.compare(to: secondLength)
+                    },
+                    
+                    // 2. Source term exact match count (higher is better)
+                    { match1, match2 in
+                        let firstExactCount = self.getExactMatchCount(match: match1)
+                        let secondExactCount = self.getExactMatchCount(match: match2)
+                        return firstExactCount.compare(to: secondExactCount)
+                    },
+                    
+                    // 3. Popularity (higher is better)
+                    { match1, match2 in
+                        let firstPop = match1.entries.first?.popularity ?? 0.0
+                        let secondPop = match2.entries.first?.popularity ?? 0.0
+                        return firstPop.compare(to: secondPop)
+                    },
+                    
+                    // 4. Has popular tag (entries with popular tags first)
+                    { match1, match2 in
+                        let firstHasPopularTag = self.hasPopularTag(entry: match1.entries.first!)
+                        let secondHasPopularTag = self.hasPopularTag(entry: match2.entries.first!)
+                        return firstHasPopularTag.compare(to: secondHasPopularTag)
+                    },
+                    
+                    // 5. Fewer transformation rules (direct matches preferred)
+                    { match1, match2 in
+                        let firstRulesCount = match1.entries.first?.transformed != nil ? 1 : 0
+                        let secondRulesCount = match2.entries.first?.transformed != nil ? 1 : 0
+                        return (-firstRulesCount).compare(to: -secondRulesCount)
+                    },
+                    
+                    // 6. Alphabetical by expression/term
+                    { match1, match2 in
+                        let firstTerm = match1.entries.first?.term ?? ""
+                        let secondTerm = match2.entries.first?.term ?? ""
+                        return firstTerm < secondTerm ? .orderedAscending : (firstTerm > secondTerm ? .orderedDescending : .orderedSame)
+                    }
+                ]
                 
-                // Prefer entries that are transformations (base forms)
-                if firstHasTransform != secondHasTransform {
-                    return firstHasTransform
+                // Apply comparators in order until we find a non-equal result
+                for comparator in comparators {
+                    let result = comparator(first, second)
+                    if result != .orderedSame {
+                        // Reverse the result to match Dart's .reversed.toList() behavior
+                        return result == .orderedDescending
+                    }
                 }
                 
-                // Then by length (longer matches first)
-                return first.word.count > second.word.count
+                return false // Equal
             }
             
             // Return all matches found
@@ -781,7 +826,38 @@ class ReaderViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Navigator Interface Methods
+    // MARK: - Helper Methods for Dictionary Sorting
+    
+    private func getExactMatchCount(match: DictionaryMatch) -> Int {
+        let candidateWord = match.word
+        var count = 0
+        
+        // Count exact term matches
+        if match.entries.contains(where: { $0.term == candidateWord }) {
+            count += 1
+        }
+        
+        // Count exact reading matches
+        if match.entries.contains(where: { $0.reading == candidateWord }) {
+            count += 1
+        }
+        
+        return count
+    }
+    
+    private func hasPopularTag(entry: DictionaryEntry) -> Bool {
+        // Check if the entry has popular indicators
+        // This could be based on popularity score, frequency tags, etc.
+        // For now, we'll use a popularity threshold
+        if let popularity = entry.popularity, popularity > 0.5 {
+            return true
+        }
+        
+        // You might also check for specific tags if your DictionaryEntry has a tags field
+        // For example: return entry.tags?.contains("P") ?? false
+        
+        return false
+    }
     
     func setNavigatorController(_ navigator: EPUBNavigatorViewController) {
         self.navigatorController = navigator
@@ -886,5 +962,29 @@ extension URL {
         } else {
             return HTTPURL(string: self.absoluteString)
         }
+    }
+}
+
+// Extensions for numeric comparison
+extension Int {
+    func compare(to other: Int) -> ComparisonResult {
+        if self < other { return .orderedAscending }
+        if self > other { return .orderedDescending }
+        return .orderedSame
+    }
+}
+
+extension Double {
+    func compare(to other: Double) -> ComparisonResult {
+        if self < other { return .orderedAscending }
+        if self > other { return .orderedDescending }
+        return .orderedSame
+    }
+}
+
+extension Bool {
+    func compare(to other: Bool) -> ComparisonResult {
+        if self == other { return .orderedSame }
+        return self ? .orderedDescending : .orderedAscending
     }
 }

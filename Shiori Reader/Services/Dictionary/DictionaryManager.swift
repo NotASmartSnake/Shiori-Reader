@@ -136,7 +136,7 @@ class DictionaryManager {
             print("Error looking up word: \(error)")
         }
         
-        return sortEntriesByPopularity(entries)
+        return sortEntriesByPopularity(entries, searchTerm: word)
     }
     
     func lookupWithDeinflection(word: String) -> [DictionaryEntry] {
@@ -221,8 +221,8 @@ class DictionaryManager {
             }
         }
         
-        // IMPORTANT: Sort the final combined results
-        let finalSortedEntries = sortEntriesByPopularity(filteredEntries)
+        // IMPORTANT: Sort the final combined results with the original search term
+        let finalSortedEntries = sortEntriesByPopularity(filteredEntries, searchTerm: word)
         
         if shouldDebug {
             print("🔍 [DEBUG] Final sorted results for UI:")
@@ -273,7 +273,7 @@ class DictionaryManager {
         for groupKey in orderedKeys {
             if let groupEntries = groupedEntries[groupKey] {
                 // Sort group entries and take the first (best) one
-                let sortedGroup = sortEntriesByPopularity(groupEntries)
+                let sortedGroup = sortEntriesByPopularity(groupEntries, searchTerm: originalWord)
                 if let bestEntry = sortedGroup.first {
                     filteredResults.append(bestEntry)
                 }
@@ -281,7 +281,7 @@ class DictionaryManager {
         }
         
         // Final sort of the filtered results
-        let finalFilteredResults = sortEntriesByPopularity(filteredResults)
+        let finalFilteredResults = sortEntriesByPopularity(filteredResults, searchTerm: originalWord)
         
         // Only apply part-of-speech filtering for deinflected entries to avoid breaking direct lookups
         let conservativeFiltered = finalFilteredResults.filter { entry in
@@ -539,21 +539,49 @@ class DictionaryManager {
     }
     
     func sortEntriesByPopularity(_ entries: [DictionaryEntry]) -> [DictionaryEntry] {
+        return sortEntriesByPopularity(entries, searchTerm: nil)
+    }
+    
+    func sortEntriesByPopularity(_ entries: [DictionaryEntry], searchTerm: String?) -> [DictionaryEntry] {
         // Debug logging for problematic words
         let debugWords = ["こと", "事", "殊", "言"]
         let shouldDebug = entries.contains { entry in debugWords.contains(entry.term) }
         
         if shouldDebug {
-            print("🔀 [SORT DEBUG] Sorting \(entries.count) entries:")
+            print("🔀 [SORT DEBUG] Sorting \(entries.count) entries" + (searchTerm != nil ? " for search term '\(searchTerm!)'" : "") + ":")
             for (index, entry) in entries.enumerated() {
                 let pop = entry.popularity ?? 0.0
                 let score = getScoreValue(from: entry.score)
                 let scoreTag = entry.score ?? "no-score"
-                print("   Before[\(index)]: \(entry.term) (\(entry.reading)) - pop=\(pop), score=\(score), scoreTag='\(scoreTag)'")
+                var exactMatch = ""
+                if let searchTerm = searchTerm {
+                    if entry.term == searchTerm {
+                        exactMatch = " [EXACT-TERM]"
+                    } else if entry.reading == searchTerm {
+                        exactMatch = " [EXACT-READING]"
+                    }
+                }
+                print("   Before[\(index)]: \(entry.term) (\(entry.reading)) - pop=\(pop), score=\(score), scoreTag='\(scoreTag)'\(exactMatch)")
             }
         }
         
         let sortedEntries = entries.sorted { first, second in
+            // 0. HIGHEST PRIORITY: Exact term matches (term exactly matches search term)
+            if let searchTerm = searchTerm {
+                let firstExactTermMatch = (first.term == searchTerm)
+                let secondExactTermMatch = (second.term == searchTerm)
+                if firstExactTermMatch != secondExactTermMatch {
+                    return firstExactTermMatch
+                }
+                
+                // 0.5. Second priority: Exact reading matches (reading exactly matches search term)
+                let firstExactReadingMatch = (first.reading == searchTerm)
+                let secondExactReadingMatch = (second.reading == searchTerm)
+                if firstExactReadingMatch != secondExactReadingMatch {
+                    return firstExactReadingMatch
+                }
+            }
+            
             // 1. Direct matches (no transformation) first
             let firstIsDirect = first.transformed == nil
             let secondIsDirect = second.transformed == nil
@@ -613,7 +641,15 @@ class DictionaryManager {
                 let pop = entry.popularity ?? 0.0
                 let score = getScoreValue(from: entry.score)
                 let scoreTag = entry.score ?? "no-score"
-                print("   After[\(index)]: \(entry.term) (\(entry.reading)) - pop=\(pop), score=\(score), scoreTag='\(scoreTag)'")
+                var exactMatch = ""
+                if let searchTerm = searchTerm {
+                    if entry.term == searchTerm {
+                        exactMatch = " [EXACT-TERM]"
+                    } else if entry.reading == searchTerm {
+                        exactMatch = " [EXACT-READING]"
+                    }
+                }
+                print("   After[\(index)]: \(entry.term) (\(entry.reading)) - pop=\(pop), score=\(score), scoreTag='\(scoreTag)'\(exactMatch)")
             }
         }
         
