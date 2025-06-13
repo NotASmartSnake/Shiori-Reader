@@ -152,13 +152,81 @@ documentClickListener = function(event) {
             // Get surrounding sentence for better context
             const surroundingText = getExtendedSurroundingText(node.parentNode, contextText, 250);
             
-            // Send to Swift
+            // Always provide paragraph-level context for character picker consistency
+            let paragraph = node.parentNode;
+            let searchDepth = 0;
+            const maxDepth = 10;
+            
+            // Find the paragraph or chapter container
+            while (paragraph && searchDepth < maxDepth && 
+                   paragraph.tagName !== 'P' && 
+                   !paragraph.classList.contains('chapter-content') && 
+                   !paragraph.classList.contains('chapter')) {
+                paragraph = paragraph.parentNode;
+                searchDepth++;
+                if (paragraph === document.body || !paragraph) {
+                    paragraph = node.parentNode;
+                    break;
+                }
+            }
+            
+            // Get clean paragraph text (without furigana)
+            const cleanParagraphText = getTextWithoutFurigana(paragraph);
+            
+            // Calculate the offset of the clicked text within the clean paragraph
+            let absoluteOffset = 0;
+            try {
+                // Add debug logging to see what's happening
+                shioriLog(`🔍 DEBUG: About to calculate offset for clicked text`);
+                shioriLog(`🔍 DEBUG: Node textContent: "${node.textContent.substring(0, 30)}..."`);
+                shioriLog(`🔍 DEBUG: Click offset within node: ${offset}`);
+                shioriLog(`🔍 DEBUG: Clean paragraph text: "${cleanParagraphText.substring(0, 50)}..."`);
+                
+                // Calculate base offset of the text node within the paragraph
+                const baseOffset = calculateCleanOffsetOfElement(node, paragraph);
+                absoluteOffset = baseOffset + offset;
+                
+                shioriLog(`🔍 DEBUG: Base offset of text node: ${baseOffset}`);
+                shioriLog(`🔍 DEBUG: Final absolute offset: ${absoluteOffset}`);
+                
+                // Verify the offset makes sense
+                if (absoluteOffset >= 0 && absoluteOffset < cleanParagraphText.length) {
+                    const charAtOffset = cleanParagraphText[absoluteOffset];
+                    shioriLog(`🔍 DEBUG: Character at calculated offset: "${charAtOffset}"`);
+                    shioriLog(`🔍 DEBUG: Expected character from click: "${contextText[0]}"`);
+                    
+                    if (charAtOffset !== contextText[0]) {
+                        shioriLog(`⚠️ WARNING: Offset mismatch! Expected "${contextText[0]}" but got "${charAtOffset}"`);
+                        
+                        // Try to find the correct offset by searching
+                        const expectedChar = contextText[0];
+                        for (let i = Math.max(0, absoluteOffset - 10); i < Math.min(cleanParagraphText.length, absoluteOffset + 10); i++) {
+                            if (cleanParagraphText[i] === expectedChar) {
+                                shioriLog(`🔍 Found expected character "${expectedChar}" at offset ${i} instead of ${absoluteOffset}`);
+                                absoluteOffset = i;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    shioriLog(`⚠️ WARNING: Calculated offset ${absoluteOffset} is out of bounds for text length ${cleanParagraphText.length}`);
+                }
+            } catch (error) {
+                shioriLog(`Error calculating offset, using simple offset: ${error}`);
+                absoluteOffset = offset;
+            }
+            
+            shioriLog(`Paragraph context: cleanText length=${cleanParagraphText.length}, absoluteOffset=${absoluteOffset}`);
+            
+            // Send to Swift with paragraph context
             sendWordToSwift(contextText, {
-                absoluteOffset: offset,
+                absoluteOffset: absoluteOffset,
                 surroundingText: surroundingText,
-                fullText: text // Add the full text string to the options
+                fullText: cleanParagraphText, // Always use paragraph context
+                rawFullText: paragraph.textContent
             });
         } else {
+            shioriLog("No Japanese text found in: " + contextText);
             dismissDictionary();
         }
     } else {
@@ -169,7 +237,7 @@ documentClickListener = function(event) {
 // Register the click event listener
 document.addEventListener('click', documentClickListener, false);
 
-// Ruby handling functions with improved handling
+// Ruby handling functions with improved unified context handling
 function handleRubyClick(event, rubyElement) {
     // Get all rb elements within this ruby element
     const rbElements = rubyElement.querySelectorAll('rb');
@@ -207,16 +275,17 @@ function handleRubyClick(event, rubyElement) {
             // For explicit rb elements
             const correspondingRb = rbElements[clickedRtIndex];
             
-            // Now use the corresponding base text for lookup
-            processTappedRubyText(
+            // Now use the corresponding base text for lookup with unified context
+            processTappedRubyTextUnified(
                 correspondingRb.textContent,
                 rtElements[clickedRtIndex].textContent,
-                rubyElement
+                rubyElement,
+                0 // Start of the ruby element
             );
             return;
         } else {
             // For implicit ruby, it's harder to determine
-            handleFullRubySelection(rubyElement);
+            handleFullRubySelectionUnified(rubyElement);
             return;
         }
     }
@@ -230,18 +299,13 @@ function handleRubyClick(event, rubyElement) {
         const clickedRb = determineClickedElement(event, [...rbElements]);
         
         if (clickedRb) {
-            processTappedExplicitRubyText(clickedRb, rubyElement);
+            processTappedExplicitRubyTextUnified(clickedRb, rubyElement);
             return;
         }
     } else {
         // Implicit ruby without rb elements
         
-        // Collect all text nodes and non-RT/RP elements from ruby
-        const baseTextParts = [];
-        getBaseTextParts(rubyElement, baseTextParts);
-        
         // Map click position to character position visually
-        // Calculate bounding client rect of ruby element
         const rubyRect = rubyElement.getBoundingClientRect();
         const relativeX = event.clientX - rubyRect.left;
         
@@ -250,35 +314,331 @@ function handleRubyClick(event, rubyElement) {
         const charPosition = Math.floor(clickRatio * baseText.length);
         const adjustedPosition = Math.min(Math.max(0, charPosition), baseText.length - 1);
         
-        // Extract text from clicked position
-        const textFromPosition = baseText.substring(adjustedPosition);
-        
-        // Get text after ruby
-        const textAfterRuby = getTextAfterElement(rubyElement, 30);
-        
-        // Get reading
-        const reading = getFullRubyReading(rubyElement);
-        
-        // Combine
-        const completeContext = textFromPosition + textAfterRuby;
-        
-        // Get the surrounding sentence for better context
-        const surroundingText = getExtendedSurroundingText(rubyElement, baseText, 250);
-        
-        sendWordToSwift(completeContext, {
-            reading: reading,
-            fullCompound: baseText,
-            surroundingText: surroundingText,
-            textAfterRuby: textAfterRuby,
-            isRuby: true,
-            isPartialCompound: false
-        });
+        // Use unified processing
+        processTappedRubyTextUnified(
+            baseText,
+            getFullRubyReading(rubyElement),
+            rubyElement,
+            adjustedPosition
+        );
         
         return;
     }
     
     // Fallback to using the full ruby content
-    handleFullRubySelection(rubyElement);
+    handleFullRubySelectionUnified(rubyElement);
+}
+
+// UNIFIED RUBY PROCESSING FUNCTIONS
+// These functions provide consistent context and offset calculation for all ruby interactions
+
+// Get the paragraph containing an element and calculate consistent offsets
+function getUnifiedContextForElement(element) {
+    // Find the containing paragraph
+    let paragraph = element;
+    while (paragraph && paragraph.tagName !== 'P' && !paragraph.classList.contains('chapter-content') && !paragraph.classList.contains('chapter')) {
+        paragraph = paragraph.parentNode;
+        if (paragraph === document.body || !paragraph) {
+            // Fallback: use a parent that contains text
+            paragraph = element.closest('div, p, section, article') || element.parentNode;
+            break;
+        }
+    }
+    
+    if (!paragraph) {
+        paragraph = element.parentNode || element;
+    }
+    
+    // Get the clean text of the entire paragraph (without furigana)
+    const cleanParagraphText = getTextWithoutFurigana(paragraph);
+    
+    // Calculate the offset of the element within the clean paragraph text
+    const elementOffset = calculateCleanOffsetOfElement(element, paragraph);
+    
+    return {
+        cleanParagraphText: cleanParagraphText,
+        elementOffset: elementOffset,
+        paragraph: paragraph
+    };
+}
+
+// FIXED: Calculate the offset of an element within the cleaned text of its container
+function calculateCleanOffsetOfElement(targetElement, containerElement) {
+    let offset = 0;
+    
+    // Safety check to prevent infinite recursion
+    if (!targetElement || !containerElement || targetElement === containerElement) {
+        shioriLog(`Safety check failed: targetElement=${!!targetElement}, containerElement=${!!containerElement}, same=${targetElement === containerElement}`);
+        return 0;
+    }
+    
+    shioriLog(`🔧 OFFSET CALC START: Target=${targetElement.tagName || 'TEXT'}, Container=${containerElement.tagName}`);
+    
+    // First, let's try a different approach - manually walk through nodes
+    // and build the clean text while tracking our target
+    function walkAndCount(node, target) {
+        let currentOffset = 0;
+        let found = false;
+        
+        shioriLog(`🔍 Starting walkAndCount for target in container`);
+        
+        function processNode(currentNode, depth = 0) {
+            // If we found our target, stop
+            if (found) return;
+            
+            const indent = '  '.repeat(depth);
+            shioriLog(`${indent}Processing node: ${currentNode.nodeType === Node.TEXT_NODE ? 'TEXT' : currentNode.tagName || 'UNKNOWN'} - offset: ${currentOffset}`);
+            
+            // Check if this is our target
+            if (currentNode === target) {
+                found = true;
+                shioriLog(`${indent}🎯 FOUND TARGET at offset ${currentOffset}`);
+                return;
+            }
+            
+            // Process based on node type
+            if (currentNode.nodeType === Node.TEXT_NODE) {
+                // For text nodes, check if they contain our target
+                if (target.nodeType === Node.TEXT_NODE && currentNode === target) {
+                    found = true;
+                    shioriLog(`${indent}🎯 FOUND TARGET TEXT NODE at offset ${currentOffset}`);
+                    return;
+                }
+                
+                // Add text length if this isn't inside RT/RP
+                let parent = currentNode.parentNode;
+                let insideRubyReading = false;
+                while (parent && parent !== containerElement) {
+                    if (parent.tagName === 'RT' || parent.tagName === 'RP') {
+                        insideRubyReading = true;
+                        break;
+                    }
+                    parent = parent.parentNode;
+                }
+                
+                if (!insideRubyReading) {
+                    const textLength = currentNode.textContent.length;
+                    currentOffset += textLength;
+                    shioriLog(`${indent}📝 Added text node (length=${textLength}): "${currentNode.textContent.substring(0, 20)}..." -> offset=${currentOffset}`);
+                } else {
+                    shioriLog(`${indent}⏭️ Skipping text node inside RT/RP: "${currentNode.textContent.substring(0, 20)}..."`);
+                }
+            }
+            else if (currentNode.nodeType === Node.ELEMENT_NODE) {
+                if (currentNode.tagName === 'RT' || currentNode.tagName === 'RP') {
+                    // Skip RT and RP elements entirely
+                    shioriLog(`${indent}⏭️ Skipping ${currentNode.tagName} element`);
+                    return;
+                }
+                else if (currentNode.tagName && currentNode.tagName.toUpperCase() === 'RUBY') {
+                    shioriLog(`${indent}💎 Processing RUBY element`);
+                    
+                    // Check if our target is inside this ruby
+                    if (currentNode.contains(target)) {
+                        shioriLog(`${indent}💎 This RUBY contains our target`);
+                        
+                        // We need to count characters within this ruby up to our target
+                        // Get the base text without furigana
+                        const rubyBaseText = getFullRubyBaseText(currentNode);
+                        shioriLog(`${indent}💎 Ruby base text: "${rubyBaseText}"`);
+                        
+                        // Check if we have explicit rb elements
+                        const rbElements = currentNode.querySelectorAll('rb');
+                        
+                        if (rbElements.length > 0) {
+                            shioriLog(`${indent}💎 Found ${rbElements.length} RB elements`);
+                            // Explicit rb structure - count rb elements until we find our target
+                            for (let i = 0; i < rbElements.length; i++) {
+                                const rb = rbElements[i];
+                                const rbText = cleanRubyText(rb.textContent);
+                                shioriLog(`${indent}💎 Processing RB[${i}]: "${rbText}"`);
+                                
+                                if (rb.contains(target) || rb === target) {
+                                    shioriLog(`${indent}💎 Target found in RB[${i}]`);
+                                    
+                                    if (target.nodeType === Node.TEXT_NODE && rb.contains(target)) {
+                                        // Target is a text node within this rb
+                                        // We need to find the offset within this rb
+                                        let rbOffset = 0;
+                                        for (const child of rb.childNodes) {
+                                            if (child === target) {
+                                                currentOffset += rbOffset;
+                                                found = true;
+                                                shioriLog(`${indent}🎯 FOUND TARGET within RB at offset ${currentOffset}`);
+                                                return;
+                                            }
+                                            if (child.nodeType === Node.TEXT_NODE) {
+                                                rbOffset += child.textContent.length;
+                                            }
+                                        }
+                                    } else {
+                                        // Target is the rb element itself or direct text
+                                        currentOffset += rbText.length;
+                                        found = true;
+                                        shioriLog(`${indent}🎯 FOUND TARGET RB at offset ${currentOffset}`);
+                                        return;
+                                    }
+                                    break;
+                                } else {
+                                    // This rb comes before our target, count its characters
+                                    currentOffset += rbText.length;
+                                    shioriLog(`${indent}💎 Added previous RB[${i}] (length=${rbText.length}): "${rbText}" -> offset=${currentOffset}`);
+                                }
+                            }
+                        } else {
+                            shioriLog(`${indent}💎 Implicit ruby structure, processing text nodes`);
+                            // Implicit ruby structure - need to process text nodes directly
+                            for (const child of currentNode.childNodes) {
+                                if (child.nodeType === Node.ELEMENT_NODE && 
+                                    (child.tagName === 'RT' || child.tagName === 'RP')) {
+                                    // Skip RT and RP elements
+                                    shioriLog(`${indent}💎 Skipping ${child.tagName} in implicit ruby`);
+                                    continue;
+                                }
+                                
+                                if (child === target) {
+                                    found = true;
+                                    shioriLog(`${indent}🎯 FOUND TARGET in implicit ruby at offset ${currentOffset}`);
+                                    return;
+                                }
+                                
+                                if (child.nodeType === Node.TEXT_NODE) {
+                                    if (child === target) {
+                                        found = true;
+                                        shioriLog(`${indent}🎯 FOUND TARGET TEXT in implicit ruby at offset ${currentOffset}`);
+                                        return;
+                                    }
+                                    currentOffset += child.textContent.length;
+                                    shioriLog(`${indent}💎 Added implicit ruby text (length=${child.textContent.length}): "${child.textContent}" -> offset=${currentOffset}`);
+                                }
+                            }
+                        }
+                        
+                        if (!found) {
+                            shioriLog(`${indent}⚠️ Target not found within ruby, this shouldn't happen`);
+                        }
+                        return; // Don't process children again
+                    } else {
+                        // This ruby doesn't contain our target, so just add its base text length
+                        const rubyBaseText = getFullRubyBaseText(currentNode);
+                        const rubyLength = rubyBaseText.length;
+                        currentOffset += rubyLength;
+                        shioriLog(`${indent}💎 Added complete ruby element (length=${rubyLength}): "${rubyBaseText}" -> offset=${currentOffset}`);
+                        return; // CRITICAL: Don't process children - we've already counted the base text
+                    }
+                }
+                
+                // For other elements, process children
+                shioriLog(`${indent}Processing children of ${currentNode.tagName}`);
+                for (const child of currentNode.childNodes) {
+                    processNode(child, depth + 1);
+                    if (found) return;
+                }
+            }
+        }
+        
+        // Start processing from container's children
+        for (const child of node.childNodes) {
+            processNode(child);
+            if (found) break;
+        }
+        
+        return currentOffset;
+    }
+    
+    const result = walkAndCount(containerElement, targetElement);
+    shioriLog(`🏁 FINAL OFFSET: ${result}`);
+    return result;
+}
+
+// Unified function to process tapped ruby text
+function processTappedRubyTextUnified(baseText, reading, rubyElement, rubyInternalOffset) {
+    // Clean base text to ensure no furigana
+    baseText = cleanRubyText(baseText);
+    
+    // Get paragraph context the same way as regular text
+    let paragraph = rubyElement.parentNode;
+    let searchDepth = 0;
+    const maxDepth = 10;
+    
+    // Find the paragraph or chapter container
+    while (paragraph && searchDepth < maxDepth && 
+           paragraph.tagName !== 'P' && 
+           !paragraph.classList.contains('chapter-content') && 
+           !paragraph.classList.contains('chapter')) {
+        paragraph = paragraph.parentNode;
+        searchDepth++;
+        if (paragraph === document.body || !paragraph) {
+            paragraph = rubyElement.parentNode;
+            break;
+        }
+    }
+    
+    // Get clean paragraph text (without furigana)
+    const cleanParagraphText = getTextWithoutFurigana(paragraph);
+    
+    // Calculate the absolute offset within the paragraph
+    let absoluteOffset = 0;
+    try {
+        absoluteOffset = calculateCleanOffsetOfElement(rubyElement, paragraph) + rubyInternalOffset;
+    } catch (error) {
+        shioriLog(`Error calculating ruby offset: ${error}`);
+        absoluteOffset = rubyInternalOffset;
+    }
+    
+    // Get extended surrounding text for better context
+    const surroundingText = getExtendedSurroundingText(rubyElement, baseText, 250);
+    
+    // Get the text to search from the clicked position for dictionary lookup
+    const searchText = cleanParagraphText.substring(absoluteOffset);
+    
+    shioriLog(`Ruby context: baseText='${baseText}', cleanText length=${cleanParagraphText.length}, absoluteOffset=${absoluteOffset}`);
+    
+    // Send the search text for dictionary lookup, but provide paragraph context for character picker
+    sendWordToSwift(searchText, {
+        reading: reading,
+        surroundingText: surroundingText,
+        fullText: cleanParagraphText, // Same paragraph context as regular text
+        absoluteOffset: absoluteOffset, // Absolute position in paragraph
+        rawFullText: paragraph.textContent,
+        isRuby: true,
+        isPartialCompound: false
+    });
+}
+
+// Unified function to process explicit ruby text with rb elements
+function processTappedExplicitRubyTextUnified(clickedRb, rubyElement) {
+    // Get the clicked kanji (clean it to ensure no furigana)
+    const kanji = cleanRubyText(clickedRb.textContent);
+    
+    // Find the corresponding rt element (reading)
+    let reading = '';
+    const rbElements = rubyElement.querySelectorAll('rb');
+    const rbIndex = [...rbElements].indexOf(clickedRb);
+    const rtElements = rubyElement.querySelectorAll('rt');
+    
+    if (rtElements.length > rbIndex) {
+        reading = rtElements[rbIndex].textContent.trim();
+    }
+    
+    // Calculate the character offset within the ruby compound
+    let rubyInternalOffset = 0;
+    for (let i = 0; i < rbIndex; i++) {
+        rubyInternalOffset += cleanRubyText(rbElements[i].textContent).length;
+    }
+    
+    // Use the unified processing
+    processTappedRubyTextUnified(kanji, reading, rubyElement, rubyInternalOffset);
+}
+
+// Unified function to handle full ruby selection
+function handleFullRubySelectionUnified(rubyElement) {
+    // Get the full ruby content (properly cleaned)
+    const fullBaseText = getFullRubyBaseText(rubyElement);
+    const fullReading = getFullRubyReading(rubyElement);
+    
+    // Use unified processing starting from the beginning of the ruby
+    processTappedRubyTextUnified(fullBaseText, fullReading, rubyElement, 0);
 }
 
 // Function to process tapped ruby text
@@ -298,7 +658,8 @@ function processTappedRubyText(baseText, reading, rubyElement) {
     sendWordToSwift(extendedText, {
         reading: reading,
         surroundingText: surroundingText,
-        fullText: baseText + textAfterRuby,
+        fullText: extendedText, // Full context for character picker
+        absoluteOffset: 0, // Start from beginning of ruby text
         isRuby: true,
         isPartialCompound: false
     });
@@ -320,25 +681,34 @@ function processTappedExplicitRubyText(clickedRb, rubyElement) {
     }
     
     // Get the full compound for context (clean all rb elements)
-    const fullText = [...rbElements].map(rb => cleanRubyText(rb.textContent)).join('');
+    const fullRubyText = [...rbElements].map(rb => cleanRubyText(rb.textContent)).join('');
     const fullReading = [...rtElements].map(rt => rt.textContent).join('');
     
-    // Find the selected index within the full compound
-    const selectedIndex = [...rbElements].indexOf(clickedRb);
+    // Find the character offset within the full compound
+    let charOffset = 0;
+    for (let i = 0; i < rbIndex; i++) {
+        charOffset += cleanRubyText(rbElements[i].textContent).length;
+    }
     
-    // Get text from this point onwards
-    const textFromClickedKanji = fullText.substring(selectedIndex) + getTextAfterElement(rubyElement, 30);
+    // Get text after ruby element
+    const textAfterRuby = getTextAfterElement(rubyElement, 30);
     
-    sendWordToSwift(textFromClickedKanji, {
+    // Build the context for navigation - text from clicked character onwards
+    const fullContextText = fullRubyText + textAfterRuby;
+    
+    // Get the surrounding paragraph context
+    const surroundingText = getExtendedSurroundingText(rubyElement, fullRubyText, 250);
+    
+    sendWordToSwift(fullContextText, {
         reading: reading,
-        fullCompound: fullText,
+        fullCompound: fullRubyText,
         fullReading: fullReading,
-        textFromClickedKanji: textFromClickedKanji,
-        surroundingText: textFromClickedKanji,
-        fullText: textFromClickedKanji,
+        surroundingText: surroundingText,
+        fullText: fullContextText, // Full context for character picker navigation
+        absoluteOffset: charOffset, // Offset of clicked character within the ruby compound
         isRuby: true,
         isPartialCompound: true,
-        selectedIndex: selectedIndex
+        selectedIndex: rbIndex
     });
 }
 
@@ -364,7 +734,8 @@ function handleFullRubySelection(rubyElement) {
         textFromClickedKanji: extendedText,  // Include text after ruby
         surroundingText: surroundingText,
         textAfterRuby: textAfterRuby,
-        fullText: extendedText,
+        fullText: extendedText, // Full context for character picker
+        absoluteOffset: 0, // Start from beginning since full ruby selected
         isRuby: true
     });
 }
@@ -664,6 +1035,83 @@ function sendWordToSwift(text, options = {}) {
         shioriLog("Error sending word to Swift: " + e);
         return false;
     }
+}
+
+// Function to get full context with proper furigana handling
+function getFullContextWithFuriganaHandling(textNode, clickOffset) {
+    // Get the paragraph containing this text node
+    let paragraph = textNode.parentNode;
+    while (paragraph && paragraph.tagName !== 'P' && !paragraph.classList.contains('chapter-content')) {
+        paragraph = paragraph.parentNode;
+        if (paragraph === document.body) {
+            paragraph = textNode.parentNode; // Fallback
+            break;
+        }
+    }
+    
+    if (!paragraph) {
+        // Simple fallback
+        return {
+            fullText: textNode.textContent,
+            cleanFullText: textNode.textContent,
+            adjustedOffset: clickOffset
+        };
+    }
+    
+    // Get both the raw text (with furigana) and clean text (without furigana)
+    const rawText = paragraph.textContent;
+    const cleanText = getTextWithoutFurigana(paragraph);
+    
+    // Calculate the position in the clean text that corresponds to the clicked position
+    let adjustedOffset = 0;
+    
+    // Walk through the paragraph's DOM structure to map the clicked position
+    // to the correct position in the cleaned text
+    const walker = document.createTreeWalker(
+        paragraph,
+        NodeFilter.SHOW_TEXT,
+        {
+            acceptNode: function(node) {
+                // Skip text nodes inside RT (furigana) elements
+                let parent = node.parentNode;
+                while (parent && parent !== paragraph) {
+                    if (parent.tagName === 'RT' || parent.tagName === 'RP') {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    parent = parent.parentNode;
+                }
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        }
+    );
+    
+    let currentNode;
+    let cumulativeOffset = 0;
+    let found = false;
+    
+    while (currentNode = walker.nextNode()) {
+        if (currentNode === textNode) {
+            // Found our target node
+            adjustedOffset = cumulativeOffset + clickOffset;
+            found = true;
+            break;
+        }
+        cumulativeOffset += currentNode.textContent.length;
+    }
+    
+    if (!found) {
+        // Fallback: use the click offset as-is
+        adjustedOffset = clickOffset;
+    }
+    
+    // Ensure offset is within bounds
+    adjustedOffset = Math.min(Math.max(0, adjustedOffset), cleanText.length - 1);
+    
+    return {
+        fullText: rawText,
+        cleanFullText: cleanText,
+        adjustedOffset: adjustedOffset
+    };
 }
 
 // Send a ready notification

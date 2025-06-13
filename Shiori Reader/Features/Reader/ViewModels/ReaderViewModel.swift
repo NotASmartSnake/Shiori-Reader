@@ -550,26 +550,27 @@ class ReaderViewModel: ObservableObject {
     func handleCharacterSelection(offset: Int) {
         guard !fullTextForSelection.isEmpty else { return }
         
+        // Ensure offset is within bounds
+        let safeOffset = max(0, min(offset, fullTextForSelection.count - 1))
+        
         // Update the current offset
-        self.currentTextOffset = offset
+        self.currentTextOffset = safeOffset
         
-        print("🔍 handleCharacterSelection - New offset: \(offset)")
-        print("🔍 handleCharacterSelection - Full text: \(fullTextForSelection.prefix(20))...")
+        print("🔍 handleCharacterSelection - New offset: \(offset) -> safe: \(safeOffset)")
+        print("🔍 handleCharacterSelection - Full text: \(fullTextForSelection.prefix(20))... (length: \(fullTextForSelection.count))")
         
-        if offset < 0 || offset >= fullTextForSelection.count {
-            print("⚠️ Invalid offset for text selection: \(offset) for text of length \(fullTextForSelection.count)")
-            return
-        }
-        
-        // Get the new text to search - slice from offset to end
-        let newStartIndex = fullTextForSelection.index(fullTextForSelection.startIndex, offsetBy: offset)
+        // Get the new text to search - slice from safe offset to end
+        let newStartIndex = fullTextForSelection.index(fullTextForSelection.startIndex, offsetBy: safeOffset)
         let newSelectedText = String(fullTextForSelection[newStartIndex...])
         
         // Clean debug log - just show what we're searching
         print("💬 SEARCHING FROM PICKER: \(newSelectedText.prefix(20))...")
         
-        // Update selected word
-        self.selectedWord = String(fullTextForSelection[newStartIndex])
+        // Update selected word (single character at the new position)
+        if safeOffset < fullTextForSelection.count {
+            let charIndex = fullTextForSelection.index(fullTextForSelection.startIndex, offsetBy: safeOffset)
+            self.selectedWord = String(fullTextForSelection[charIndex])
+        }
         
         // Lookup with the new text
         getDictionaryMatches(text: newSelectedText) { matches in
@@ -597,13 +598,16 @@ class ReaderViewModel: ObservableObject {
             
             // Get the absoluteOffset if available
             if let offset = options["absoluteOffset"] as? Int {
-                self.clickedTextOffset = offset
-                self.currentTextOffset = offset
-                print("📚 CLICKED - At offset: \(offset) in text")
+                // Ensure offset is within bounds of the full text
+                let safeOffset = max(0, min(offset, fullText.count - 1))
+                self.clickedTextOffset = safeOffset
+                self.currentTextOffset = safeOffset
+                print("📚 CLICKED - At offset: \(safeOffset) in text (original: \(offset))")
             } else {
                 // Default to start of text
                 self.clickedTextOffset = 0
                 self.currentTextOffset = 0
+                print("📚 NO OFFSET - Starting from beginning")
             }
         } else {
             // If fullText is not available, use a larger context or just the current word
