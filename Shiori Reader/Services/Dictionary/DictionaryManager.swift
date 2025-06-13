@@ -61,6 +61,16 @@ class DictionaryManager {
                     ORDER BY t.id, d.id
                     """, arguments: [word, word])
                 
+                // Debug: Check what columns are actually available and their values
+                if word == "こと" && !rows.isEmpty {
+                    print("🔍 [DB DEBUG] First row columns for 'こと':")
+                    let firstRow = rows[0]
+                    for columnName in firstRow.columnNames {
+                        let value = firstRow[columnName]
+                        print("   Column '\(columnName)': \(value ?? "NULL") (type: \(type(of: value)))")
+                    }
+                }
+                
                 var currentTermId: Int64?
                 var currentEntry: DictionaryEntry?
                 
@@ -72,7 +82,20 @@ class DictionaryManager {
                     let score = row["score"] as? String
                     let rules = row["rules"] as? String
                     let definitionText = row["definition"] as? String ?? ""
-                    let popularity = row["popularity"] as? Double ?? 0.0
+                    // Handle popularity stored as string in database
+                    let popularity: Double
+                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
+                        popularity = popDouble
+                        if word == "こと" {
+                            print("🔍 [POP DEBUG] Successfully converted string '\(popString)' -> \(popularity)")
+                        }
+                    } else {
+                        popularity = 0.0
+                        if word == "こと" {
+                            let rawValue = row["popularity"]
+                            print("🔍 [POP DEBUG] Failed to convert popularity: \(rawValue ?? "NULL") (type: \(type(of: rawValue)))")
+                        }
+                    }
                     
                     // If we're still working with the same term
                     if currentTermId == termId {
@@ -95,6 +118,11 @@ class DictionaryManager {
                             rules: rules,
                             popularity: popularity
                         )
+                        
+                        if word == "こと" {
+                            print("🔍 [ENTRY DEBUG] Created entry: \(expression) with popularity=\(popularity)")
+                        }
+                        
                         currentTermId = termId
                     }
                 }
@@ -193,7 +221,19 @@ class DictionaryManager {
             }
         }
         
-        return sortEntriesByPopularity(filteredEntries)
+        // IMPORTANT: Sort the final combined results
+        let finalSortedEntries = sortEntriesByPopularity(filteredEntries)
+        
+        if shouldDebug {
+            print("🔍 [DEBUG] Final sorted results for UI:")
+            for (index, entry) in finalSortedEntries.enumerated() {
+                let pop = entry.popularity ?? 0.0
+                let transformInfo = entry.transformed != nil ? " [transformed]" : " [direct]"
+                print("   UI[\(index)]: \(entry.term) (\(entry.reading))\(transformInfo) - pop=\(pop)")
+            }
+        }
+        
+        return finalSortedEntries
     }
     
     /// Apply conservative filtering to reduce obvious false positives while preserving legitimate results
@@ -216,17 +256,35 @@ class DictionaryManager {
         
         var filteredResults: [DictionaryEntry] = []
         
-        // Take the best entry from each group
-        for (_, groupEntries) in groupedEntries {
-            // Sort group entries and take the first (best) one
-            let sortedGroup = sortEntriesByPopularity(groupEntries)
-            if let bestEntry = sortedGroup.first {
-                filteredResults.append(bestEntry)
+        // Take the best entry from each group - preserve order!
+        // First, get all unique keys in the order they appear in the original entries
+        var seenKeys: Set<String> = []
+        var orderedKeys: [String] = []
+        
+        for entry in entries {
+            let groupKey = "\(entry.term)-\(entry.reading)"
+            if !seenKeys.contains(groupKey) {
+                seenKeys.insert(groupKey)
+                orderedKeys.append(groupKey)
             }
         }
         
+        // Now process groups in the order they first appeared
+        for groupKey in orderedKeys {
+            if let groupEntries = groupedEntries[groupKey] {
+                // Sort group entries and take the first (best) one
+                let sortedGroup = sortEntriesByPopularity(groupEntries)
+                if let bestEntry = sortedGroup.first {
+                    filteredResults.append(bestEntry)
+                }
+            }
+        }
+        
+        // Final sort of the filtered results
+        let finalFilteredResults = sortEntriesByPopularity(filteredResults)
+        
         // Only apply part-of-speech filtering for deinflected entries to avoid breaking direct lookups
-        let conservativeFiltered = filteredResults.filter { entry in
+        let conservativeFiltered = finalFilteredResults.filter { entry in
             // Always keep direct matches (no transformation)
             if entry.transformed == nil {
                 return true
@@ -352,7 +410,13 @@ class DictionaryManager {
                     let tags = row["term_tags"] as? String ?? ""
                     let score = row["score"] as? String
                     let rules = row["rules"] as? String
-                    let popularity = row["popularity"] as? Double ?? 0.0
+                    // Handle popularity stored as string in database
+                    let popularity: Double
+                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
+                        popularity = popDouble
+                    } else {
+                        popularity = 0.0
+                    }
                     
                     // Fetch definitions for this term
                     let definitions = try String.fetchAll(db, sql: """
@@ -416,7 +480,13 @@ class DictionaryManager {
                     let tags = row["term_tags"] as? String ?? ""
                     let score = row["score"] as? String
                     let rules = row["rules"] as? String
-                    let popularity = row["popularity"] as? Double ?? 0.0
+                    // Handle popularity stored as string in database
+                    let popularity: Double
+                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
+                        popularity = popDouble
+                    } else {
+                        popularity = 0.0
+                    }
                     
                     // Fetch all definitions for this term
                     let definitions = try String.fetchAll(db, sql: """
@@ -469,7 +539,21 @@ class DictionaryManager {
     }
     
     func sortEntriesByPopularity(_ entries: [DictionaryEntry]) -> [DictionaryEntry] {
-        return entries.sorted { first, second in
+        // Debug logging for problematic words
+        let debugWords = ["こと", "事", "殊", "言"]
+        let shouldDebug = entries.contains { entry in debugWords.contains(entry.term) }
+        
+        if shouldDebug {
+            print("🔀 [SORT DEBUG] Sorting \(entries.count) entries:")
+            for (index, entry) in entries.enumerated() {
+                let pop = entry.popularity ?? 0.0
+                let score = getScoreValue(from: entry.score)
+                let scoreTag = entry.score ?? "no-score"
+                print("   Before[\(index)]: \(entry.term) (\(entry.reading)) - pop=\(pop), score=\(score), scoreTag='\(scoreTag)'")
+            }
+        }
+        
+        let sortedEntries = entries.sorted { first, second in
             // 1. Direct matches (no transformation) first
             let firstIsDirect = first.transformed == nil
             let secondIsDirect = second.transformed == nil
@@ -515,8 +599,25 @@ class DictionaryManager {
             }
             
             // 7. Shorter terms preferred
-            return first.term.count < second.term.count
+            if first.term.count != second.term.count {
+                return first.term.count < second.term.count
+            }
+            
+            // 8. Stable sort by term name as final tiebreaker
+            return first.term < second.term
         }
+        
+        if shouldDebug {
+            print("🔀 [SORT DEBUG] After sorting:")
+            for (index, entry) in sortedEntries.enumerated() {
+                let pop = entry.popularity ?? 0.0
+                let score = getScoreValue(from: entry.score)
+                let scoreTag = entry.score ?? "no-score"
+                print("   After[\(index)]: \(entry.term) (\(entry.reading)) - pop=\(pop), score=\(score), scoreTag='\(scoreTag)'")
+            }
+        }
+        
+        return sortedEntries
     }
 
     // Helper function to interpret score value

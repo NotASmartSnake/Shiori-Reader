@@ -705,12 +705,20 @@ class ReaderViewModel: ObservableObject {
                 // If we found matches, add this as a valid match
                 if !entries.isEmpty {
                     // Group entries by their base term to avoid duplicates
-                    let groupedEntries = Dictionary(grouping: entries) { entry in
-                        entry.term
+                    // Use order-preserving approach instead of Dictionary(grouping:)
+                    var seenBaseTerms: Set<String> = []
+                    var orderedGroups: [(String, [DictionaryEntry])] = []
+                    
+                    for entry in entries {
+                        if !seenBaseTerms.contains(entry.term) {
+                            seenBaseTerms.insert(entry.term)
+                            let termEntries = entries.filter { $0.term == entry.term }
+                            orderedGroups.append((entry.term, termEntries))
+                        }
                     }
                     
                     var addedFromThisLength = 0
-                    for (baseTerm, termEntries) in groupedEntries {
+                    for (baseTerm, termEntries) in orderedGroups {
                         // Only add if we haven't found this base term already
                         if !foundWords.contains(baseTerm) {
                             let match = DictionaryMatch(word: candidateWord, entries: termEntries)
@@ -759,6 +767,15 @@ class ReaderViewModel: ObservableObject {
             
             // Return all matches found
             DispatchQueue.main.async {
+                // Log all final matches being sent to UI in display order
+                print("📋 [UI MATCHES] Sending \(sortedMatches.count) matches to UI for '\(text.prefix(20))...'")
+                for (index, match) in sortedMatches.enumerated() {
+                    let primaryEntry = match.entries.first!
+                    let transformInfo = primaryEntry.transformed != nil ? " [←\(primaryEntry.transformed!)]" : " [direct]"
+                    let readingInfo = primaryEntry.reading.isEmpty ? "" : " (\(primaryEntry.reading))"
+                    let meaning = primaryEntry.meanings.first ?? "no meaning"
+                    print("  [\(index + 1)] \(primaryEntry.term)\(readingInfo)\(transformInfo) - \(meaning)")
+                }
                 completion(sortedMatches)
             }
         }
