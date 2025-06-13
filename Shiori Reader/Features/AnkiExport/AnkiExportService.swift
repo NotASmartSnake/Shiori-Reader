@@ -139,6 +139,9 @@ class AnkiExportService {
         if !settings.sentenceField.isEmpty {
             queryItems.append(URLQueryItem(name: "fld\(settings.sentenceField)", value: sentence))
         }
+        if !settings.wordWithReadingField.isEmpty {
+            queryItems.append(URLQueryItem(name: "fld\(settings.wordWithReadingField)", value: wordWithReading))
+        }
         
         // Add additional fields
         for additionalField in settings.additionalFields {
