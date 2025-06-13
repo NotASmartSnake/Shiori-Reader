@@ -1,4 +1,4 @@
-// wordSelection.js - Enhanced version with proper ruby handling
+// wordSelection.js - Enhanced version with proper ruby handling and improved tap reliability
 
 // Store references to our event listeners for later cleanup
 let documentClickListener = null;
@@ -51,6 +51,51 @@ function dismissDictionary() {
     }
 }
 
+// Helper function to check if point is within bounding box
+function bboxIncludesPoint(bbox, point, margin = 0) {
+    return point.x >= bbox.left - margin &&
+           point.x <= bbox.right + margin &&
+           point.y >= bbox.top - margin &&
+           point.y <= bbox.bottom + margin;
+}
+
+// Improved caretRangeFromPoint that checks previous character bbox
+function getImprovedCaretPosition(point) {
+    let range = document.caretRangeFromPoint(point.x, point.y);
+    if (!range) {
+        return null;
+    }
+    
+    // Apply the fix for character selection precision
+    // If the cursor is more than half way across a character,
+    // caretRangeFromPoint will choose the *next* character since that's where
+    // the cursor would be placed if you clicked there and started editing the
+    // text.
+    //
+    // For *looking up* text, however, it's more intuitive if we look up starting
+    // from the character you're pointing at.
+    //
+    // Below we see if the point is within the bounding box of the *previous*
+    // character in the inline direction and, if it is, start from there instead.
+    
+    const { startContainer, startOffset } = range;
+    if (startContainer.nodeType === Node.TEXT_NODE && startOffset > 0) {
+        const previousCharRange = new Range();
+        previousCharRange.setStart(startContainer, startOffset - 1);
+        previousCharRange.setEnd(startContainer, startOffset);
+        
+        const previousCharacterBbox = previousCharRange.getBoundingClientRect();
+        if (bboxIncludesPoint(previousCharacterBbox, point)) {
+            // The click was actually on the previous character
+            range = new Range();
+            range.setStart(startContainer, startOffset - 1);
+            range.setEnd(startContainer, startOffset - 1);
+        }
+    }
+    
+    return range;
+}
+
 // Define the click handler function
 documentClickListener = function(event) {
     shioriLog("Click detected at " + event.clientX + "," + event.clientY);
@@ -77,8 +122,8 @@ documentClickListener = function(event) {
         return;
     }
     
-    // Standard text node handling for non-ruby elements
-    let range = document.caretRangeFromPoint(event.clientX, event.clientY);
+    // Standard text node handling for non-ruby elements using improved caret position
+    let range = getImprovedCaretPosition({x: event.clientX, y: event.clientY});
     if (!range) {
         shioriLog("No text range found at click point");
         dismissDictionary();
@@ -132,8 +177,8 @@ function handleRubyClick(event, rubyElement) {
     // Get all RT elements for readings
     const rtElements = rubyElement.querySelectorAll('rt');
     
-    // First, try to determine what was actually clicked
-    const range = document.caretRangeFromPoint(event.clientX, event.clientY);
+    // First, try to determine what was actually clicked using improved caret position
+    const range = getImprovedCaretPosition({x: event.clientX, y: event.clientY});
     if (!range) {
         handleFullRubySelection(rubyElement);
         return;
