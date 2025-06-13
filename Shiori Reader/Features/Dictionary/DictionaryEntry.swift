@@ -16,6 +16,7 @@ struct DictionaryEntry: Identifiable, Equatable {
     let meaningTags: [String]
     let termTags: [String]
     let score: String?
+    let rules: String?  // Part-of-speech information from database
     var transformed: String? = nil
     var transformationNotes: String? = nil
     let popularity: Double?

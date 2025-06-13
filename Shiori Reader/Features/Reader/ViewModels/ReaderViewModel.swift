@@ -664,6 +664,13 @@ class ReaderViewModel: ObservableObject {
             var matches: [DictionaryMatch] = []
             var foundWords: Set<String> = [] // Track words we've already found
             
+            // Debug logging for the search process
+            let isDebugWord = text.hasPrefix("よって")
+            if isDebugWord {
+                print("🔍 [WORD SEARCH DEBUG] Starting search for text: '\(text.prefix(20))...'")
+                print("🔍 [WORD SEARCH DEBUG] Will try lengths from \(maxLength) down to 1")
+            }
+            
             // Try words of decreasing length, starting from the longest
             for length in stride(from: maxLength, through: 1, by: -1) {
                 // Make sure we don't exceed the text length
@@ -673,8 +680,27 @@ class ReaderViewModel: ObservableObject {
                 let endIndex = text.index(text.startIndex, offsetBy: length)
                 let candidateWord = String(text[..<endIndex])
                 
+                // Debug logging for each candidate
+                if isDebugWord && (length <= 4 || candidateWord == "よ") {
+                    print("🔍 [WORD SEARCH DEBUG] Trying length \(length): '\(candidateWord)'")
+                }
+                
                 // Look up this word in the dictionary with improved deinflection
                 let entries = DictionaryManager.shared.lookupWithDeinflection(word: candidateWord)
+                
+                // Debug logging for results
+                if isDebugWord && (length <= 4 || candidateWord == "よ") {
+                    print("🔍 [WORD SEARCH DEBUG] Found \(entries.count) entries for '\(candidateWord)'")
+                    if !entries.isEmpty {
+                        for (index, entry) in entries.prefix(3).enumerated() {
+                            let transformInfo = entry.transformed != nil ? " [transformed from \(entry.transformed!)]" : " [direct]"
+                            print("   Entry[\(index)]: \(entry.term) (\(entry.reading))\(transformInfo) - \(entry.meanings.first ?? "no meaning")")
+                        }
+                        if entries.count > 3 {
+                            print("   ... and \(entries.count - 3) more entries")
+                        }
+                    }
+                }
                 
                 // If we found matches, add this as a valid match
                 if !entries.isEmpty {
@@ -683,19 +709,37 @@ class ReaderViewModel: ObservableObject {
                         entry.term
                     }
                     
+                    var addedFromThisLength = 0
                     for (baseTerm, termEntries) in groupedEntries {
                         // Only add if we haven't found this base term already
                         if !foundWords.contains(baseTerm) {
                             let match = DictionaryMatch(word: candidateWord, entries: termEntries)
                             matches.append(match)
                             foundWords.insert(baseTerm)
+                            addedFromThisLength += 1
+                            
+                            if isDebugWord && (length <= 4 || candidateWord == "よ") {
+                                print("🔍 [WORD SEARCH DEBUG] Added match for '\(candidateWord)' -> '\(baseTerm)'")
+                            }
+                        } else {
+                            if isDebugWord && (length <= 4 || candidateWord == "よ") {
+                                print("🔍 [WORD SEARCH DEBUG] Skipped duplicate baseTerm '\(baseTerm)' for '\(candidateWord)'")
+                            }
                         }
                     }
                     
-                    // Limit to a reasonable number of matches
-                    if matches.count >= 5 {
-                        break
+                    if isDebugWord && (length <= 4 || candidateWord == "よ") {
+                        print("🔍 [WORD SEARCH DEBUG] Added \(addedFromThisLength) new matches from '\(candidateWord)'")
                     }
+                    
+                    // No match limit - try all possible lengths
+                }
+            }
+            
+            if isDebugWord {
+                print("🔍 [WORD SEARCH DEBUG] Final results: \(matches.count) matches")
+                for (index, match) in matches.enumerated() {
+                    print("   Match[\(index)]: '\(match.word)' with \(match.entries.count) entries")
                 }
             }
             
