@@ -6,6 +6,7 @@ class DictionaryManager {
     
     private var dbQueue: DatabaseQueue?
     private var deinflector: Deinflector?
+    private let pitchAccentManager = PitchAccentManager.shared
     
     private init() {
         setupDatabase()
@@ -45,6 +46,57 @@ class DictionaryManager {
         }
     }
     
+    /// Enhanced entry creation with pitch accent lookup
+    private func createDictionaryEntry(
+        id: String,
+        term: String,
+        reading: String,
+        meanings: [String],
+        meaningTags: [String],
+        termTags: [String],
+        score: String?,
+        rules: String?,
+        transformed: String? = nil,
+        transformationNotes: String? = nil,
+        popularity: Double?
+    ) -> DictionaryEntry {
+        var entry = DictionaryEntry(
+            id: id,
+            term: term,
+            reading: reading,
+            meanings: meanings,
+            meaningTags: meaningTags,
+            termTags: termTags,
+            score: score,
+            rules: rules,
+            transformed: transformed,
+            transformationNotes: transformationNotes,
+            popularity: popularity
+        )
+        
+        // Look up pitch accents for this entry
+        entry.pitchAccents = lookupPitchAccentsForEntry(term: term, reading: reading)
+        
+        return entry
+    }
+    
+    /// Look up pitch accents for a dictionary entry
+    private func lookupPitchAccentsForEntry(term: String, reading: String) -> PitchAccentData {
+        // Try lookup with both term and reading
+        let termAccents = pitchAccentManager.lookupPitchAccents(for: term)
+        let readingAccents = pitchAccentManager.lookupPitchAccents(for: reading)
+        
+        // Combine and deduplicate
+        var allAccents = termAccents.accents
+        for accent in readingAccents.accents {
+            if !allAccents.contains(accent) {
+                allAccents.append(accent)
+            }
+        }
+        
+        return PitchAccentData(accents: allAccents)
+    }
+    
     func lookup(word: String) -> [DictionaryEntry] {
         guard let db = dbQueue else { return [] }
         
@@ -61,16 +113,6 @@ class DictionaryManager {
                     ORDER BY t.id, d.id
                     """, arguments: [word, word])
                 
-                // Debug: Check what columns are actually available and their values
-                if word == "こと" && !rows.isEmpty {
-                    print("🔍 [DB DEBUG] First row columns for 'こと':")
-                    let firstRow = rows[0]
-                    for columnName in firstRow.columnNames {
-                        let value = firstRow[columnName]
-                        print("   Column '\(columnName)': \(value ?? "NULL") (type: \(type(of: value)))")
-                    }
-                }
-                
                 var currentTermId: Int64?
                 var currentEntry: DictionaryEntry?
                 
@@ -86,15 +128,8 @@ class DictionaryManager {
                     let popularity: Double
                     if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
                         popularity = popDouble
-                        if word == "こと" {
-                            print("🔍 [POP DEBUG] Successfully converted string '\(popString)' -> \(popularity)")
-                        }
                     } else {
                         popularity = 0.0
-                        if word == "こと" {
-                            let rawValue = row["popularity"]
-                            print("🔍 [POP DEBUG] Failed to convert popularity: \(rawValue ?? "NULL") (type: \(type(of: rawValue)))")
-                        }
                     }
                     
                     // If we're still working with the same term
@@ -106,8 +141,8 @@ class DictionaryManager {
                             entries.append(entry)
                         }
                         
-                        // Create a new entry
-                        currentEntry = DictionaryEntry(
+                        // Create a new entry with pitch accent lookup
+                        currentEntry = createDictionaryEntry(
                             id: "\(termId)",
                             term: expression,
                             reading: reading,
@@ -118,10 +153,6 @@ class DictionaryManager {
                             rules: rules,
                             popularity: popularity
                         )
-                        
-                        if word == "こと" {
-                            print("🔍 [ENTRY DEBUG] Created entry: \(expression) with popularity=\(popularity)")
-                        }
                         
                         currentTermId = termId
                     }
@@ -146,26 +177,8 @@ class DictionaryManager {
         let directEntries = lookup(word: word)
         allEntries.append(contentsOf: directEntries)
         
-        // Enhanced debug logging for problematic words
-        let debugWords = ["よ", "よって", "陽", "杳", "防ぎ", "防ぎきれない"]
-        let shouldDebug = debugWords.contains(word)
-        
-        if shouldDebug {
-            print("🔍 [DEBUG] Enhanced lookup for '\(word)': found \(directEntries.count) direct entries")
-            for (index, entry) in directEntries.enumerated() {
-                print("   Direct[\(index)]: \(entry.term) (\(entry.reading)) - \(entry.meanings.first ?? "no meaning")")
-                if let rules = entry.rules {
-                    print("      Rules: \(rules)")
-                }
-            }
-        }
-        
-        // Always try deinflections if we have them (not just when no direct entries)
+        // Always try deinflections if we have them
         if let deinflector = self.deinflector {
-            if shouldDebug {
-                print("🔍 [DEBUG] Also trying deinflection for '\(word)'...")
-            }
-            
             let deinflections = deinflector.deinflect(word)
             
             for result in deinflections {
@@ -176,19 +189,9 @@ class DictionaryManager {
                 
                 let entries = lookup(word: result.term)
                 
-                if shouldDebug && !entries.isEmpty {
-                    print("🔍 [DEBUG] Deinflection '\(result.term)' found \(entries.count) entries via: \(result.reasons.joined(separator: " ← "))")
-                    for entry in entries {
-                        let verbCheck = isVerbEntry(entry) ? "[VERB]" : ""
-                        let adjCheck = isAdjectiveEntry(entry) ? "[ADJ-I]" : ""
-                        let posInfo = !verbCheck.isEmpty || !adjCheck.isEmpty ? " \(verbCheck)\(adjCheck)" : ""
-                        print("      \(entry.term) (\(entry.reading))\(posInfo) - \(entry.meanings.first ?? "no meaning")")
-                    }
-                }
-                
                 // Add entries found through deinflection
                 for entry in entries {
-                    let enhancedEntry = DictionaryEntry(
+                    let enhancedEntry = createDictionaryEntry(
                         id: entry.id,
                         term: entry.term,
                         reading: entry.reading,
@@ -209,29 +212,8 @@ class DictionaryManager {
         // Apply conservative filtering to reduce false positives
         let filteredEntries = applyConservativeFiltering(allEntries, originalWord: word)
         
-        if shouldDebug {
-            print("🔍 [DEBUG] After filtering: \(filteredEntries.count) entries (from \(allEntries.count))")
-            print("🔍 [DEBUG] Filtering details:")
-            for (index, entry) in filteredEntries.enumerated() {
-                let transformInfo = entry.transformed != nil ? " [\(entry.transformationNotes ?? "transformed")]" : " [direct]"
-                let rules = entry.rules ?? "no-rules"
-                let tags = entry.termTags.joined(separator: ",")
-                print("   Final[\(index)]: \(entry.term) (\(entry.reading))\(transformInfo)")
-                print("      Rules: \(rules), Tags: \(tags)")
-            }
-        }
-        
-        // IMPORTANT: Sort the final combined results with the original search term
+        // Sort the final combined results
         let finalSortedEntries = sortEntriesByPopularity(filteredEntries, searchTerm: word)
-        
-        if shouldDebug {
-            print("🔍 [DEBUG] Final sorted results for UI:")
-            for (index, entry) in finalSortedEntries.enumerated() {
-                let pop = entry.popularity ?? 0.0
-                let transformInfo = entry.transformed != nil ? " [transformed]" : " [direct]"
-                print("   UI[\(index)]: \(entry.term) (\(entry.reading))\(transformInfo) - pop=\(pop)")
-            }
-        }
         
         return finalSortedEntries
     }
@@ -257,7 +239,6 @@ class DictionaryManager {
         var filteredResults: [DictionaryEntry] = []
         
         // Take the best entry from each group - preserve order!
-        // First, get all unique keys in the order they appear in the original entries
         var seenKeys: Set<String> = []
         var orderedKeys: [String] = []
         
@@ -291,16 +272,8 @@ class DictionaryManager {
             }
             
             // For transformed entries, check if the deinflected form matches the original search term
-            // If it does, it means we're showing results for a direct search (e.g., searching "よ" directly)
-            // In this case, we should show all results including nouns
             if entry.term == originalWord {
                 return true
-            }
-            
-            // Debug logging for specific problematic entries
-            let isProblematic = ["幼", "用", "四つ", "要", "益", "洋", "癰", "容", "俑", "４つ"].contains(entry.term)
-            if isProblematic {
-                print("🔍 [FILTER DEBUG] Checking \(entry.term): rules='\(entry.rules ?? "nil")', tags='\(entry.termTags.joined(separator: " "))', originalWord='\(originalWord)'")
             }
             
             // For transformed entries that are NOT the original search term (true deinflections),
@@ -312,81 +285,52 @@ class DictionaryManager {
                 // If it has conjugatable rules, keep it
                 if lowerRules.contains("v1") || lowerRules.contains("v5") || lowerRules.contains("vs") ||
                    lowerRules.contains("vk") || lowerRules.contains("vz") || lowerRules.contains("adj-i") {
-                    if isProblematic {
-                        print("   → KEPT: Has conjugatable rules")
-                    }
                     return true
                 }
             }
             
-            // Parse termTags properly (they're space-separated and may have quotes)
+            // Parse termTags properly
             let tagString = entry.termTags.joined(separator: " ")
-            // Remove quotes and split by whitespace
             let cleanedTagString = tagString.replacingOccurrences(of: "\"", with: "")
             let individualTags = cleanedTagString.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-            
-            if isProblematic {
-                print("   → Individual tags: \(individualTags)")
-            }
             
             // Check for conjugatable tags
             let hasConjugatableTags = individualTags.contains { tag in
                 let lowerTag = tag.lowercased()
                 return lowerTag == "v1" || lowerTag == "v5" || lowerTag == "vs" ||
                        lowerTag == "vk" || lowerTag == "vz" || lowerTag == "vi" ||
-                       lowerTag == "vt" || lowerTag == "adj-i" ||  // Only i-adjectives are conjugatable
-                       lowerTag.hasPrefix("v5") || lowerTag.hasPrefix("v1") // v5r, v5u, etc.
+                       lowerTag == "vt" || lowerTag == "adj-i" ||
+                       lowerTag.hasPrefix("v5") || lowerTag.hasPrefix("v1")
             }
             
             if hasConjugatableTags {
-                if isProblematic {
-                    print("   → KEPT: Has conjugatable tags")
-                }
                 return true
             }
             
             // Filter out entries that are clearly non-conjugatable
             let hasNonConjugatableTags = individualTags.contains { tag in
                 let lowerTag = tag.lowercased()
-                return lowerTag == "n" ||           // noun
-                       lowerTag == "pn" ||          // proper noun
-                       lowerTag == "num" ||         // number
-                       lowerTag == "ctr" ||         // counter
-                       lowerTag == "exp" ||         // expression
-                       lowerTag == "int" ||         // interjection
-                       lowerTag == "conj" ||        // conjunction
-                       lowerTag == "part" ||        // particle
-                       lowerTag == "pref" ||        // prefix
-                       lowerTag == "suf" ||         // suffix
-                       lowerTag == "n-suf" ||       // noun suffix
-                       lowerTag == "adv" ||         // adverb
-                       lowerTag == "aux-v" ||       // auxiliary verb (usually not conjugatable in the same way)
-                       lowerTag == "adj-t" ||       // adjectival noun (na-adjective) - not conjugatable like i-adjectives
-                       lowerTag == "adj-no" ||      // noun taking 'no' - not conjugatable
-                       lowerTag == "adj-na" ||      // na-adjective - not conjugatable like i-adjectives
-                       lowerTag == "adj-pn" ||      // pre-noun adjective - not conjugatable
-                       lowerTag == "adj-f" ||       // noun taking genitive case - not conjugatable
-                       lowerTag.hasPrefix("adj-") && lowerTag != "adj-i" // Any other adjective type except i-adjectives
+                return lowerTag == "n" || lowerTag == "pn" || lowerTag == "num" ||
+                       lowerTag == "ctr" || lowerTag == "exp" || lowerTag == "int" ||
+                       lowerTag == "conj" || lowerTag == "part" || lowerTag == "pref" ||
+                       lowerTag == "suf" || lowerTag == "n-suf" || lowerTag == "adv" ||
+                       lowerTag == "aux-v" || lowerTag == "adj-t" || lowerTag == "adj-no" ||
+                       lowerTag == "adj-na" || lowerTag == "adj-pn" || lowerTag == "adj-f" ||
+                       (lowerTag.hasPrefix("adj-") && lowerTag != "adj-i")
             }
             
             // If it has non-conjugatable tags and no conjugatable ones, filter it out
             if hasNonConjugatableTags {
-                if isProblematic {
-                    print("   → FILTERED OUT: Has non-conjugatable tags (not original search term)")
-                }
                 return false
             }
             
             // If we can't determine, err on the side of caution and keep it
-            // This handles cases where entries might not have clear tagging
-            if isProblematic {
-                print("   → KEPT: Unclear tagging, erring on side of caution")
-            }
             return true
         }
         
         return conservativeFiltered
     }
+    
     // Advanced lookup with prefix matching
     func searchByPrefix(prefix: String, limit: Int = 10) -> [DictionaryEntry] {
         guard let db = dbQueue else { return [] }
@@ -410,7 +354,6 @@ class DictionaryManager {
                     let tags = row["term_tags"] as? String ?? ""
                     let score = row["score"] as? String
                     let rules = row["rules"] as? String
-                    // Handle popularity stored as string in database
                     let popularity: Double
                     if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
                         popularity = popDouble
@@ -425,7 +368,7 @@ class DictionaryManager {
                         ORDER BY id
                         """, arguments: [termId])
                     
-                    let entry = DictionaryEntry(
+                    let entry = createDictionaryEntry(
                         id: "\(termId)",
                         term: expression,
                         reading: reading,
@@ -456,7 +399,6 @@ class DictionaryManager {
         
         do {
             try db.read { db in
-                // Build query that prioritizes exact word matches
                 let sql = """
                     SELECT DISTINCT t.id, t.expression, t.reading, t.term_tags, t.score, t.rules, t.popularity,
                         (CASE
@@ -480,7 +422,6 @@ class DictionaryManager {
                     let tags = row["term_tags"] as? String ?? ""
                     let score = row["score"] as? String
                     let rules = row["rules"] as? String
-                    // Handle popularity stored as string in database
                     let popularity: Double
                     if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
                         popularity = popDouble
@@ -515,7 +456,7 @@ class DictionaryManager {
                     // Only add entries where the search term appears as a complete word
                     // or include partial matches if we have very few results
                     if containsExactMatch || entries.count < 5 {
-                        let entry = DictionaryEntry(
+                        let entry = createDictionaryEntry(
                             id: "\(termId)",
                             term: expression,
                             reading: reading,
@@ -543,28 +484,6 @@ class DictionaryManager {
     }
     
     func sortEntriesByPopularity(_ entries: [DictionaryEntry], searchTerm: String?) -> [DictionaryEntry] {
-        // Debug logging for problematic words
-        let debugWords = ["こと", "事", "殊", "言"]
-        let shouldDebug = entries.contains { entry in debugWords.contains(entry.term) }
-        
-        if shouldDebug {
-            print("🔀 [SORT DEBUG] Sorting \(entries.count) entries" + (searchTerm != nil ? " for search term '\(searchTerm!)'" : "") + ":")
-            for (index, entry) in entries.enumerated() {
-                let pop = entry.popularity ?? 0.0
-                let score = getScoreValue(from: entry.score)
-                let scoreTag = entry.score ?? "no-score"
-                var exactMatch = ""
-                if let searchTerm = searchTerm {
-                    if entry.term == searchTerm {
-                        exactMatch = " [EXACT-TERM]"
-                    } else if entry.reading == searchTerm {
-                        exactMatch = " [EXACT-READING]"
-                    }
-                }
-                print("   Before[\(index)]: \(entry.term) (\(entry.reading)) - pop=\(pop), score=\(score), scoreTag='\(scoreTag)'\(exactMatch)")
-            }
-        }
-        
         let sortedEntries = entries.sorted { first, second in
             // 0. HIGHEST PRIORITY: Exact term matches (term exactly matches search term)
             if let searchTerm = searchTerm {
@@ -633,24 +552,6 @@ class DictionaryManager {
             
             // 8. Stable sort by term name as final tiebreaker
             return first.term < second.term
-        }
-        
-        if shouldDebug {
-            print("🔀 [SORT DEBUG] After sorting:")
-            for (index, entry) in sortedEntries.enumerated() {
-                let pop = entry.popularity ?? 0.0
-                let score = getScoreValue(from: entry.score)
-                let scoreTag = entry.score ?? "no-score"
-                var exactMatch = ""
-                if let searchTerm = searchTerm {
-                    if entry.term == searchTerm {
-                        exactMatch = " [EXACT-TERM]"
-                    } else if entry.reading == searchTerm {
-                        exactMatch = " [EXACT-READING]"
-                    }
-                }
-                print("   After[\(index)]: \(entry.term) (\(entry.reading)) - pop=\(pop), score=\(score), scoreTag='\(scoreTag)'\(exactMatch)")
-            }
         }
         
         return sortedEntries
@@ -737,4 +638,34 @@ class DictionaryManager {
         }
     }
     
+    // MARK: - Pitch Accent Testing
+    
+    /// Test the pitch accent functionality
+    func testPitchAccentIntegration() {
+        print("🧪 [DICTIONARY MANAGER] Testing pitch accent integration...")
+        
+        // Test with some common Japanese words
+        let testWords = ["こんにちは", "ありがとう", "日本", "にほん", "猫", "ねこ", "学校", "がっこう"]
+        
+        for word in testWords {
+            let entries = lookupWithDeinflection(word: word)
+            print("🧪 [DICTIONARY MANAGER] Word '\(word)': found \(entries.count) entries")
+            
+            for (index, entry) in entries.prefix(2).enumerated() {
+                let pitchInfo = entry.hasPitchAccent ? 
+                    "Pitch: \(entry.pitchAccentString ?? "none")" : 
+                    "No pitch accent data"
+                print("   [\(index)] \(entry.term) (\(entry.reading)) - \(pitchInfo)")
+                
+                if let pitchAccents = entry.pitchAccents {
+                    for accent in pitchAccents.accents {
+                        print("      Accent: [\(accent.pitchAccent)]")
+                    }
+                }
+            }
+        }
+        
+        // Also test the pitch accent manager directly
+        pitchAccentManager.testDatabase()
+    }
 }

@@ -53,6 +53,7 @@ struct SettingsView: View {
                         }
                         .listRowBackground(Color(.systemGray6))
                         
+                        // MARK: - Development/Testing Section                   
                         NavigationLink(destination: AttributionView()) {
                             HStack {
                                 Image(systemName: "info.circle")

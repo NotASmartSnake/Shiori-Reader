@@ -82,6 +82,35 @@ struct DictionaryPopupView: View {
                                             .foregroundColor(.blue)
                                     }
                                     
+                                    // Pitch accent graphs right after the word/reading (left-aligned)
+                                    if entry.hasPitchAccent, let pitchAccents = entry.pitchAccents {
+                                        let _ = print("🗓️ [POPUP DEBUG] Entry: \(entry.term) (\(entry.reading))")
+                                        let _ = print("🗓️ [POPUP DEBUG] All pitch accents: \(pitchAccents.accents.map { "\($0.term) (\($0.reading)) - [\($0.pitchAccent)]" })")
+                                        
+                                        // Filter to only show graphs that match both term AND reading
+                                        let matchingAccents = pitchAccents.accents.filter { accent in
+                                            accent.term == entry.term && accent.reading == entry.reading
+                                        }
+                                        
+                                        let _ = print("🗓️ [POPUP DEBUG] Matching accents: \(matchingAccents.map { "\($0.term) (\($0.reading)) - [\($0.pitchAccent)]" })")
+                                        
+                                        if !matchingAccents.isEmpty {
+                                            // Show matching graphs side by side
+                                            HStack(alignment: .top, spacing: 8) {
+                                                ForEach(Array(matchingAccents.prefix(3)), id: \.id) { accent in
+                                                    SimplePitchAccentGraphView(
+                                                        word: accent.term,
+                                                        reading: accent.reading,
+                                                        pitchValue: accent.pitchAccent
+                                                    )
+                                                }
+                                            }
+                                            .padding(.leading, 12) // Small gap from the word
+                                        } else {
+                                            let _ = print("⚠️ [POPUP DEBUG] No matching accents found after filtering!")
+                                        }
+                                    }
+                                    
                                     Spacer()
                                     
                                     // Action buttons
@@ -211,13 +240,12 @@ struct DictionaryPopupView: View {
             NavigationView {
                 AnkiSettingsView()
                     .navigationTitle("Anki Settings")
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") {
-                                showingAnkiSettings = false
-                            }
+                    .navigationBarTitleDisplayMode(.inline)
+                    .navigationBarItems(trailing: 
+                        Button("Done") {
+                            showingAnkiSettings = false
                         }
-                    }
+                    )
             }
         }
     }
