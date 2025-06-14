@@ -99,6 +99,12 @@ class PitchAccentManager {
                             print("      \(columnName): \(value ?? "NULL")")
                         }
                     }
+                    
+                    // If this is the pitch_accents table, show some stats
+                    if tableName == "pitch_accents" {
+                        let count = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pitch_accents") ?? 0
+                        print("📊 [PITCH ACCENT DB] Total entries in optimized table: \(count)")
+                    }
                 }
             }
         } catch {
@@ -116,13 +122,12 @@ class PitchAccentManager {
         
         do {
             try db.read { db in
-                // Single optimized query with LIMIT to prevent excessive results
+                // Optimized single-table query (no JOIN needed)
                 let query = """
-                    SELECT t.term, t.reading, p.position
-                    FROM terms t
-                    JOIN pitches p ON t.id = p.term_id
-                    WHERE t.term = ? OR t.reading = ?
-                    ORDER BY p.position
+                    SELECT term, reading, pitch_accent
+                    FROM pitch_accents
+                    WHERE term = ? OR reading = ?
+                    ORDER BY pitch_accent
                     LIMIT 5
                 """
                 
@@ -131,7 +136,7 @@ class PitchAccentManager {
                 for row in rows {
                     if let extractedTerm = row["term"] as? String,
                        let reading = row["reading"] as? String,
-                       let pitchValue = row["position"] as? Int64 {
+                       let pitchValue = row["pitch_accent"] as? Int64 {
                         
                         let accent = PitchAccent(
                             term: extractedTerm,
@@ -147,6 +152,57 @@ class PitchAccentManager {
         }
         
         return PitchAccentData(accents: accents)
+    }
+    
+
+    /// Look up pitch accents for a term and reading combination (used by lazy loading)
+    func lookupPitchAccents(for term: String, reading: String) -> PitchAccentData {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
+        guard let db = dbQueue else { 
+            return PitchAccentData(accents: []) 
+        }
+        
+        var accents: [PitchAccent] = []
+        
+        do {
+            try db.read { db in
+                // Optimized single-table query for both term and reading
+                let query = """
+                    SELECT DISTINCT term, reading, pitch_accent
+                    FROM pitch_accents
+                    WHERE term = ? OR reading = ? OR term = ? OR reading = ?
+                    ORDER BY pitch_accent
+                    LIMIT 5
+                """
+                
+                let rows = try Row.fetchAll(db, sql: query, arguments: [term, term, reading, reading])
+                
+                for row in rows {
+                    if let extractedTerm = row["term"] as? String,
+                       let readingValue = row["reading"] as? String,
+                       let pitchValue = row["pitch_accent"] as? Int64 {
+                        
+                        let accent = PitchAccent(
+                            term: extractedTerm,
+                            reading: readingValue,
+                            pitchAccent: Int(pitchValue)
+                        )
+                        accents.append(accent)
+                    }
+                }
+            }
+        } catch {
+            // Silent failure for performance
+        }
+        
+        // Remove duplicates and sort by accent value
+        let uniqueAccents = Array(Set(accents)).sorted { $0.pitchAccent < $1.pitchAccent }
+        
+        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+        Logger.debug(category: "Performance", "Pitch accent lookup for '\(term)'/\"\(reading)\" found \(uniqueAccents.count) accents in \(String(format: "%.3f", timeElapsed))s")
+        
+        return PitchAccentData(accents: uniqueAccents)
     }
     
 

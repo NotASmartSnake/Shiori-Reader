@@ -46,7 +46,7 @@ class DictionaryManager {
         }
     }
     
-    /// Enhanced entry creation with pitch accent lookup
+    /// Create dictionary entry with lazy-loaded pitch accents
     private func createDictionaryEntry(
         id: String,
         term: String,
@@ -60,7 +60,8 @@ class DictionaryManager {
         transformationNotes: String? = nil,
         popularity: Double?
     ) -> DictionaryEntry {
-        var entry = DictionaryEntry(
+        // Create entry without pitch accents - they will load lazily when accessed
+        let entry = DictionaryEntry(
             id: id,
             term: term,
             reading: reading,
@@ -74,28 +75,11 @@ class DictionaryManager {
             popularity: popularity
         )
         
-        // Look up pitch accents for this entry
-        entry.pitchAccents = lookupPitchAccentsForEntry(term: term, reading: reading)
-        
+        // Pitch accents will be loaded lazily via the computed property
         return entry
     }
     
-    /// Look up pitch accents for a dictionary entry
-    private func lookupPitchAccentsForEntry(term: String, reading: String) -> PitchAccentData {
-        // Try lookup with both term and reading
-        let termAccents = pitchAccentManager.lookupPitchAccents(for: term)
-        let readingAccents = pitchAccentManager.lookupPitchAccents(for: reading)
-        
-        // Combine and deduplicate
-        var allAccents = termAccents.accents
-        for accent in readingAccents.accents {
-            if !allAccents.contains(accent) {
-                allAccents.append(accent)
-            }
-        }
-        
-        return PitchAccentData(accents: allAccents)
-    }
+
     
     func lookup(word: String) -> [DictionaryEntry] {
         guard let db = dbQueue else { return [] }
@@ -171,6 +155,8 @@ class DictionaryManager {
     }
     
     func lookupWithDeinflection(word: String) -> [DictionaryEntry] {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
         var allEntries: [DictionaryEntry] = []
         
         // First try direct lookup
@@ -214,6 +200,9 @@ class DictionaryManager {
         
         // Sort the final combined results
         let finalSortedEntries = sortEntriesByPopularity(filteredEntries, searchTerm: word)
+        
+        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
+        Logger.debug(category: "Performance", "Dictionary lookup for '\(word)' completed in \(String(format: "%.3f", timeElapsed))s with \(finalSortedEntries.count) entries (lazy pitch accent loading)")
         
         return finalSortedEntries
     }
