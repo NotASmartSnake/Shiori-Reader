@@ -32,14 +32,13 @@ struct PitchAccentGraphView: View {
         let textToAnalyze = reading.isEmpty ? word : reading
         let mora = JapanesePitchAccentUtils.extractMora(from: textToAnalyze)
         let pattern = JapanesePitchAccentUtils.generatePitchPattern(moraCount: mora.count, pitchValue: pitchValue)
-        let graphWidth = max(CGFloat((mora.count - 1)) * stepWidth + marginLR * 2, 80)
+        
+        // Ensure width includes the last circle properly
+        let graphWidth = max(CGFloat(max(mora.count, pattern.count) - 1) * stepWidth + marginLR * 2, 80)
         
         return ZStack(alignment: .topLeading) {
             // Background canvas for lines and dots only (no text)
             Canvas { context, size in
-                // Debug: Print what we're about to draw
-                print("🎨 [CANVAS DEBUG] Drawing mora: \(mora) for word: \(textToAnalyze)")
-                
                 // Draw connecting lines and dots
                 var previousPoint: CGPoint?
                 
@@ -50,11 +49,32 @@ struct PitchAccentGraphView: View {
                     
                     // Draw connecting line from previous point
                     if let prevPoint = previousPoint {
-                        var path = Path()
-                        path.move(to: prevPoint)
-                        path.addLine(to: currentPoint)
+                        // Calculate line endpoints to stop at circle borders
+                        let dx = currentPoint.x - prevPoint.x
+                        let dy = currentPoint.y - prevPoint.y
+                        let distance = sqrt(dx * dx + dy * dy)
                         
-                        context.stroke(path, with: .color(.primary), lineWidth: lineWidth)
+                        if distance > 0 {
+                            // Normalize direction vector
+                            let unitX = dx / distance
+                            let unitY = dy / distance
+                            
+                            // Calculate start and end points at circle borders
+                            let startPoint = CGPoint(
+                                x: prevPoint.x + unitX * dotRadius,
+                                y: prevPoint.y + unitY * dotRadius
+                            )
+                            let endPoint = CGPoint(
+                                x: currentPoint.x - unitX * dotRadius,
+                                y: currentPoint.y - unitY * dotRadius
+                            )
+                            
+                            var path = Path()
+                            path.move(to: startPoint)
+                            path.addLine(to: endPoint)
+                            
+                            context.stroke(path, with: .color(.primary), lineWidth: lineWidth)
+                        }
                     }
                     
                     // Draw dot

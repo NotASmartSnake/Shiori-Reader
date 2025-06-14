@@ -75,6 +75,49 @@ struct EntryDetailView: View {
                     }
                     .padding(.top, 5)
                 }
+                
+                // Pitch accent section
+                if entry.hasPitchAccent, let pitchAccents = entry.pitchAccents {
+                    let matchingAccents = pitchAccents.accents.filter { accent in
+                        accent.term == entry.term && accent.reading == entry.reading
+                    }
+                    
+                    if !matchingAccents.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Pitch Accent")
+                                .font(.headline)
+                                .foregroundColor(.gray)
+                            
+                            // Show pitch accent graphs with pattern numbers
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(Array(matchingAccents.enumerated()), id: \.element.id) { index, accent in
+                                    HStack(alignment: .center, spacing: 12) {
+                                        // Pitch accent number badge
+                                        Text("[\(accent.pitchAccent)]")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(pitchAccentColor(for: accent.pitchAccent))
+                                            .cornerRadius(6)
+                                        
+                                        // Pitch accent graph
+                                        PitchAccentGraphView(
+                                            word: accent.term,
+                                            reading: accent.reading,
+                                            pitchValue: accent.pitchAccent
+                                        )
+                                        
+                                        Spacer()
+                                    }
+                                }
+                            }
+                            .padding(.leading, 4)
+                        }
+                        .padding(.top, 5)
+                    }
+                }
             }
             .padding(.horizontal)
             .padding(.top, 10)
@@ -211,6 +254,19 @@ struct EntryDetailView: View {
                             }
                         }
                     }
+            }
+        }
+        
+        // MARK: - Helper Functions
+        
+        private func pitchAccentColor(for pattern: Int) -> Color {
+            switch pattern {
+            case 0:
+                return .green  // Heiban (flat)
+            case 1:
+                return .orange // Atamadaka (head-high)
+            default:
+                return .blue   // Nakadaka (middle-high)
             }
         }
         
