@@ -27,30 +27,35 @@ struct JapanesePitchAccentUtils {
                 continue
             }
             
-            // Check if next character is a small kana
+            // Check if next character is a small kana (forms compound mora)
             let nextIndex = text.index(after: i)
             if nextIndex < text.endIndex {
                 let nextChar = String(text[nextIndex])
                 if isSmallKana(nextChar) {
-                    mora.append(char + nextChar)
+                    let compound = char + nextChar
+                    mora.append(compound)
                     i = text.index(after: nextIndex)
                     continue
                 }
             }
             
-            // Handle contracted sounds and special combinations
-            if nextIndex < text.endIndex {
-                let combination = char + String(text[nextIndex])
-                if isSpecialCombination(combination) {
-                    mora.append(combination)
-                    i = text.index(after: nextIndex)
+            // Handle geminate consonants (っ/ッ doubles the next consonant)
+            if char == "っ" || char == "ッ" {
+                if nextIndex < text.endIndex {
+                    // っ forms one mora, then the next character forms another
+                    mora.append(char)
+                    i = nextIndex
                     continue
                 }
             }
             
+            // Regular character - forms one mora
             mora.append(char)
             i = nextIndex
         }
+        
+        // Debug logging to help troubleshoot
+        print("🔤 [MORA DEBUG] Input: '\(text)' → Mora: \(mora)")
         
         return mora
     }

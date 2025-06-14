@@ -34,60 +34,63 @@ struct PitchAccentGraphView: View {
         let pattern = JapanesePitchAccentUtils.generatePitchPattern(moraCount: mora.count, pitchValue: pitchValue)
         let graphWidth = max(CGFloat((mora.count - 1)) * stepWidth + marginLR * 2, 80)
         
-        return Canvas { context, size in
-            // Draw mora text
-            for (index, moraChar) in mora.enumerated() {
-                let xCenter = marginLR + CGFloat(index) * stepWidth
-                let textRect = CGRect(x: xCenter - 10, y: lowY + 8, width: 20, height: 12)
+        return ZStack(alignment: .topLeading) {
+            // Background canvas for lines and dots only (no text)
+            Canvas { context, size in
+                // Debug: Print what we're about to draw
+                print("🎨 [CANVAS DEBUG] Drawing mora: \(mora) for word: \(textToAnalyze)")
                 
-                context.draw(
-                    Text(moraChar)
-                        .font(.caption2)
-                        .foregroundColor(.primary),
-                    in: textRect
-                )
+                // Draw connecting lines and dots
+                var previousPoint: CGPoint?
+                
+                for (index, accent) in pattern.enumerated() {
+                    let xCenter = marginLR + CGFloat(index) * stepWidth
+                    let yCenter: CGFloat = (accent == "H") ? highY : lowY
+                    let currentPoint = CGPoint(x: xCenter, y: yCenter)
+                    
+                    // Draw connecting line from previous point
+                    if let prevPoint = previousPoint {
+                        var path = Path()
+                        path.move(to: prevPoint)
+                        path.addLine(to: currentPoint)
+                        
+                        context.stroke(path, with: .color(.primary), lineWidth: lineWidth)
+                    }
+                    
+                    // Draw dot
+                    let dotRect = CGRect(
+                        x: currentPoint.x - dotRadius,
+                        y: currentPoint.y - dotRadius,
+                        width: dotRadius * 2,
+                        height: dotRadius * 2
+                    )
+                    
+                    // Use hollow circle for points beyond mora count
+                    if index >= mora.count {
+                        context.stroke(
+                            Circle().path(in: dotRect),
+                            with: .color(.primary),
+                            lineWidth: 1.5
+                        )
+                    } else {
+                        context.fill(
+                            Circle().path(in: dotRect),
+                            with: .color(.primary)
+                        )
+                    }
+                    
+                    previousPoint = currentPoint
+                }
             }
             
-            // Draw connecting lines and dots
-            var previousPoint: CGPoint?
-            
-            for (index, accent) in pattern.enumerated() {
+            // Overlay Text views for reliable Japanese character rendering
+            ForEach(Array(mora.enumerated()), id: \.offset) { index, moraChar in
                 let xCenter = marginLR + CGFloat(index) * stepWidth
-                let yCenter: CGFloat = (accent == "H") ? highY : lowY
-                let currentPoint = CGPoint(x: xCenter, y: yCenter)
                 
-                // Draw connecting line from previous point
-                if let prevPoint = previousPoint {
-                    var path = Path()
-                    path.move(to: prevPoint)
-                    path.addLine(to: currentPoint)
-                    
-                    context.stroke(path, with: .color(.primary), lineWidth: lineWidth)
-                }
-                
-                // Draw dot
-                let dotRect = CGRect(
-                    x: currentPoint.x - dotRadius,
-                    y: currentPoint.y - dotRadius,
-                    width: dotRadius * 2,
-                    height: dotRadius * 2
-                )
-                
-                // Use hollow circle for points beyond mora count
-                if index >= mora.count {
-                    context.stroke(
-                        Circle().path(in: dotRect),
-                        with: .color(.primary),
-                        lineWidth: 1.5
-                    )
-                } else {
-                    context.fill(
-                        Circle().path(in: dotRect),
-                        with: .color(.primary)
-                    )
-                }
-                
-                previousPoint = currentPoint
+                Text(moraChar)
+                    .font(.caption2)
+                    .foregroundColor(.primary)
+                    .position(x: xCenter, y: lowY + 15)
             }
         }
         .frame(width: graphWidth, height: 50)
@@ -157,6 +160,23 @@ struct PitchAccentGraphsView: View {
         
         PitchAccentGraphView(word: "がっこう", reading: "がっこう", pitchValue: 0) // Flat
         PitchAccentGraphView(word: "がっこう", reading: "がっこう", pitchValue: 3) // Drop after 3rd mora
+        
+        // FIXED: Test compound Japanese characters (yōon) - these should now display correctly
+        Group {
+            Text("Compound Characters Test (Fixed):")
+                .font(.headline)
+                .foregroundColor(.green)
+            
+            PitchAccentGraphView(word: "じゃあく", reading: "じゃあく", pitchValue: 0) // じゃあく - 'じゃ' should display
+            PitchAccentGraphView(word: "しゃしん", reading: "しゃしん", pitchValue: 1) // しゃしん - 'しゃ' should display
+            PitchAccentGraphView(word: "きょう", reading: "きょう", pitchValue: 2) // きょう - 'きょ' should display
+            PitchAccentGraphView(word: "ちゅうい", reading: "ちゅうい", pitchValue: 0) // ちゅうい - 'ちゅ' should display
+            PitchAccentGraphView(word: "にゃんこ", reading: "にゃんこ", pitchValue: 1) // にゃんこ - 'にゃ' should display
+            
+            // Katakana compound characters
+            PitchAccentGraphView(word: "シャワー", reading: "シャワー", pitchValue: 0) // シャワー - 'シャ' should display
+            PitchAccentGraphView(word: "ジュース", reading: "ジュース", pitchValue: 2) // ジュース - 'ジュ' should display
+        }
         
         // Test with PitchAccentData
         let testAccents = PitchAccentData(accents: [
