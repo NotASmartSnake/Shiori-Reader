@@ -24,7 +24,7 @@ class AnkiExportService {
     
     // Create a full vocabulary card in Anki using repository data
     func addVocabularyCard(word: String, reading: String, definition: String, sentence: String,
-                         sourceView: UIViewController? = nil, completion: ((Bool) -> Void)? = nil) {
+                         pitchAccents: PitchAccentData? = nil, sourceView: UIViewController? = nil, completion: ((Bool) -> Void)? = nil) {
         // Check if Anki is configured
         if !isConfigured() {
             // Show setup UI if needed
@@ -56,24 +56,29 @@ class AnkiExportService {
         
         // Get Anki settings from repository
         let settings = settingsRepository.getAnkiSettings()
-        guard let url = createAnkiExportURL(
-            word: word,
-            reading: reading,
-            definition: definition,
-            sentence: sentence,
-            settings: settings
-        ) else {
-            completion?(false)
-            return
-        }
         
-        if UIApplication.shared.canOpenURL(url) {
-            UIApplication.shared.open(url, options: [:]) { success in
-                completion?(success)
+        // Create URL asynchronously on main actor
+        Task { @MainActor in
+            guard let url = await createAnkiExportURL(
+                word: word,
+                reading: reading,
+                definition: definition,
+                sentence: sentence,
+                pitchAccents: pitchAccents,
+                settings: settings
+            ) else {
+                completion?(false)
+                return
             }
-        } else {
-            Logger.debug(category: "AnkiExport", "Cannot open Anki URL: \(url)")
-            completion?(false)
+            
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url, options: [:]) { success in
+                    completion?(success)
+                }
+            } else {
+                Logger.debug(category: "AnkiExport", "Cannot open Anki URL: \(url)")
+                completion?(false)
+            }
         }
     }
     
@@ -104,11 +109,15 @@ class AnkiExportService {
     }
     
     // Create the URL for AnkiMobile with all field mappings
+    @MainActor
     private func createAnkiExportURL(word: String, reading: String, definition: String,
-                                   sentence: String, settings: AnkiSettings) -> URL? {
+                                   sentence: String, pitchAccents: PitchAccentData? = nil, settings: AnkiSettings) async -> URL? {
         var components = URLComponents(string: "anki://x-callback-url/addnote")
         
         let wordWithReading = japaneseAnalyzer.formatWordWithReading(word: word, reading: reading)
+        
+        // Generate pitch accent HTML if available
+        let pitchAccentHTML = generatePitchAccentHTML(word: word, reading: reading, pitchAccents: pitchAccents, settings: settings)
         
         // Create base query items
         var queryItems = [
@@ -123,7 +132,8 @@ class AnkiExportService {
             "reading": reading,
             "definition": definition,
             "sentence": sentence,
-            "wordWithReading": wordWithReading
+            "wordWithReading": wordWithReading,
+            "pitchAccent": pitchAccentHTML ?? ""
         ]
         
         // Add primary fields
@@ -142,6 +152,9 @@ class AnkiExportService {
         if !settings.wordWithReadingField.isEmpty {
             queryItems.append(URLQueryItem(name: "fld\(settings.wordWithReadingField)", value: wordWithReading))
         }
+        if !settings.pitchAccentField.isEmpty && pitchAccentHTML != nil {
+            queryItems.append(URLQueryItem(name: "fld\(settings.pitchAccentField)", value: pitchAccentHTML))
+        }
         
         // Add additional fields
         for additionalField in settings.additionalFields {
@@ -156,6 +169,52 @@ class AnkiExportService {
         
         components?.queryItems = queryItems
         return components?.url
+    }
+    
+    // Generate HTML for pitch accent graphs
+    @MainActor
+    private func generatePitchAccentHTML(word: String, reading: String, pitchAccents: PitchAccentData?, settings: AnkiSettings) -> String? {
+        guard let pitchAccents = pitchAccents, !pitchAccents.isEmpty else {
+            return nil
+        }
+        
+        // Filter to only show graphs that match both term AND reading
+        let matchingAccents = pitchAccents.accents.filter { accent in
+            accent.term == word && accent.reading == reading
+        }
+        
+        guard !matchingAccents.isEmpty else {
+            return nil
+        }
+        
+        var htmlParts: [String] = []
+        
+        // Generate images for each pitch accent pattern
+        for accent in matchingAccents.prefix(3) { // Limit to 3 patterns to avoid URL length issues
+            if let image = ViewImageRenderer.renderPitchAccentGraph(
+                word: accent.term,
+                reading: accent.reading,
+                pitchValue: accent.pitchAccent,
+                graphColor: settings.pitchAccentGraphColor,
+                textColor: settings.pitchAccentTextColor
+            ) {
+                // Create HTML with just the image (no badge)
+                if let imageHTML = ViewImageRenderer.imageToHTMLTag(
+                    image: image,
+                    format: .png,
+                    altText: "Pitch accent pattern \(accent.pitchAccent)"
+                ) {
+                    htmlParts.append(imageHTML) // No div wrapper, just the image
+                }
+            }
+        }
+        
+        if htmlParts.isEmpty {
+            return nil
+        }
+        
+        // Wrap in a centered horizontal container div
+        return "<div style='display: flex; align-items: center; justify-content: center; gap: 3px; line-height: 1; margin: 0; padding: 0;'>\(htmlParts.joined())</div>"
     }
     
     // Test connection to AnkiMobile

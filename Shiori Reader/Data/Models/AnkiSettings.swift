@@ -18,6 +18,9 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
     var definitionField: String
     var sentenceField: String
     var wordWithReadingField: String
+    var pitchAccentField: String
+    var pitchAccentGraphColor: String
+    var pitchAccentTextColor: String
     var tags: String
     var additionalFields: [AdditionalField]
     
@@ -31,6 +34,9 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
          definitionField: String = "Definition",
          sentenceField: String = "Sentence",
          wordWithReadingField: String = "Word with Reading",
+         pitchAccentField: String = "Pitch Accent",
+         pitchAccentGraphColor: String = "black",
+         pitchAccentTextColor: String = "black",
          tags: String = "shiori-reader",
          additionalFields: [AdditionalField] = []) {
         self.id = id
@@ -41,6 +47,9 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         self.definitionField = definitionField
         self.sentenceField = sentenceField
         self.wordWithReadingField = wordWithReadingField
+        self.pitchAccentField = pitchAccentField
+        self.pitchAccentGraphColor = pitchAccentGraphColor
+        self.pitchAccentTextColor = pitchAccentTextColor
         self.tags = tags
         self.additionalFields = additionalFields
     }
@@ -55,6 +64,9 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         self.definitionField = entity.definitionField ?? "Definition"
         self.sentenceField = entity.sentenceField ?? "Sentence"
         self.wordWithReadingField = entity.wordWithReadingField ?? "Word with Reading"
+        self.pitchAccentField = entity.pitchAccentField ?? "Pitch Accent"
+        self.pitchAccentGraphColor = entity.pitchAccentGraphColor ?? "black"
+        self.pitchAccentTextColor = entity.pitchAccentTextColor ?? "black"
         self.tags = entity.tags ?? "shiori-reader"
         
         // Convert related AdditionalFieldEntity objects to AdditionalField structs
@@ -81,7 +93,10 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
             "reading": readingField,
             "definition": definitionField,
             "sentence": sentenceField,
-            "wordWithReading": wordWithReadingField
+            "wordWithReading": wordWithReadingField,
+            "pitchAccent": pitchAccentField,
+            "pitchAccentGraphColor": pitchAccentGraphColor,
+            "pitchAccentTextColor": pitchAccentTextColor
         ]
     }
     
@@ -121,6 +136,9 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
             lhs.definitionField == rhs.definitionField &&
             lhs.sentenceField == rhs.sentenceField &&
             lhs.wordWithReadingField == rhs.wordWithReadingField &&
+            lhs.pitchAccentField == rhs.pitchAccentField &&
+            lhs.pitchAccentGraphColor == rhs.pitchAccentGraphColor &&
+            lhs.pitchAccentTextColor == rhs.pitchAccentTextColor &&
             lhs.tags == rhs.tags &&
             lhs.additionalFields == rhs.additionalFields
     }
@@ -136,6 +154,9 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         entity.definitionField = definitionField
         entity.sentenceField = sentenceField
         entity.wordWithReadingField = wordWithReadingField
+        entity.pitchAccentField = pitchAccentField
+        entity.pitchAccentGraphColor = pitchAccentGraphColor
+        entity.pitchAccentTextColor = pitchAccentTextColor
         entity.tags = tags
         
         // Handle additional fields

@@ -88,6 +88,9 @@ class SettingsRepository {
                 definitionField: "Definition",
                 sentenceField: "Sentence",
                 wordWithReadingField: "Word with Reading",
+                pitchAccentField: "Pitch Accent",
+                pitchAccentGraphColor: "black",
+                pitchAccentTextColor: "black",
                 tags: "shiori-reader"
             )
             return AnkiSettings(entity: entity)
@@ -108,7 +111,10 @@ class SettingsRepository {
                 readingField: settings.readingField,
                 definitionField: settings.definitionField,
                 sentenceField: settings.sentenceField,
-                wordWithReadingField: settings.wordWithReadingField, // Added this field
+                wordWithReadingField: settings.wordWithReadingField,
+                pitchAccentField: settings.pitchAccentField,
+                pitchAccentGraphColor: settings.pitchAccentGraphColor,
+                pitchAccentTextColor: settings.pitchAccentTextColor,
                 tags: settings.tags
             )
             

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788" systemVersion="24D60" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788.4" systemVersion="24F74" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
     <entity name="AdditionalFieldEntity" representedClassName="AdditionalFieldEntity" syncable="YES" codeGenerationType="class">
         <attribute name="fieldName" optional="YES" attributeType="String"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
@@ -12,8 +12,6 @@
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="noteType" optional="YES" attributeType="String"/>
         <attribute name="pitchAccentField" optional="YES" attributeType="String"/>
-        <attribute name="pitchAccentGraphColor" optional="YES" attributeType="String"/>
-        <attribute name="pitchAccentTextColor" optional="YES" attributeType="String"/>
         <attribute name="readingField" optional="YES" attributeType="String"/>
         <attribute name="sentenceField" optional="YES" attributeType="String"/>
         <attribute name="tags" optional="YES" attributeType="String"/>

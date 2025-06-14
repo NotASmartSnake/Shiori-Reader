@@ -15,6 +15,9 @@ struct AnkiSettingsView: View {
                 // MARK: - Primary Field Mapping Section
                 primaryFieldMappingSection
                 
+                // MARK: - Pitch Accent Customization Section
+                pitchAccentCustomizationSection
+                
                 // MARK: - Additional Fields Section
                 if !viewModel.settings.additionalFields.isEmpty {
                     secondaryFieldMappingSection
@@ -202,6 +205,42 @@ struct AnkiSettingsView: View {
                 ),
                 fields: viewModel.selectedNoteTypeFields
             )
+            
+            // Pitch Accent Field
+            fieldPickerRow(
+                title: "Pitch Accent Field",
+                binding: Binding(
+                    get: { viewModel.settings.pitchAccentField },
+                    set: { viewModel.updateFieldMapping(fieldType: "pitchAccent", fieldName: $0) }
+                ),
+                fields: viewModel.selectedNoteTypeFields
+            )
+        }
+    }
+    
+    private var pitchAccentCustomizationSection: some View {
+        Section(header: Text("Pitch Accent Appearance"), footer: Text("Customize how pitch accent graphs appear in your Anki cards.")) {
+            // Graph Color Picker
+            HStack {
+                Text("Graph Color")
+                Spacer()
+                colorPickerMenu(
+                    title: "Graph Color",
+                    selectedColor: $viewModel.settings.pitchAccentGraphColor,
+                    colors: ["black", "white", "grey", "blue"]
+                )
+            }
+            
+            // Text Color Picker
+            HStack {
+                Text("Text Color")
+                Spacer()
+                colorPickerMenu(
+                    title: "Text Color",
+                    selectedColor: $viewModel.settings.pitchAccentTextColor,
+                    colors: ["white", "grey", "black", "blue"]
+                )
+            }
         }
     }
     
@@ -265,6 +304,9 @@ struct AnkiSettingsView: View {
                 }
                 Button("Word with Reading Field") {
                     viewModel.addEmptyField(type: "wordWithReading")
+                }
+                Button("Pitch Accent Field") {
+                    viewModel.addEmptyField(type: "pitchAccent")
                 }
                 Button("Cancel", role: .cancel) { }
             }
@@ -330,6 +372,55 @@ struct AnkiSettingsView: View {
                     .font(.caption)
                     .foregroundColor(.blue)
             }
+        }
+    }
+    
+    // Color picker for pitch accent customization
+    private func colorPickerMenu(title: String, selectedColor: Binding<String>, colors: [String]) -> some View {
+        Menu {
+            ForEach(colors, id: \.self) { color in
+                Button(action: {
+                    selectedColor.wrappedValue = color
+                }) {
+                    HStack {
+                        Circle()
+                            .fill(colorFromString(color))
+                            .frame(width: 16, height: 16)
+                        Text(color.capitalized)
+                        if color == selectedColor.wrappedValue {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack {
+                Circle()
+                    .fill(colorFromString(selectedColor.wrappedValue))
+                    .frame(width: 16, height: 16)
+                Text(selectedColor.wrappedValue.capitalized)
+                    .foregroundColor(.blue)
+                Image(systemName: "chevron.down")
+                    .font(.caption)
+                    .foregroundColor(.blue)
+            }
+        }
+    }
+    
+    // Helper to convert color string to Color
+    private func colorFromString(_ colorString: String) -> Color {
+        switch colorString.lowercased() {
+        case "black":
+            return .black
+        case "white":
+            return .white
+        case "grey", "gray":
+            return .gray
+        case "blue":
+            return .blue
+        default:
+            return .black
         }
     }
 }

@@ -305,11 +305,12 @@ struct EntryDetailView: View {
             
             // Export the word to Anki
             AnkiExportService.shared.addVocabularyCard(
-                word: entry.term,
-                reading: entry.reading,
-                definition: entry.meanings.joined(separator: "; "),
-                sentence: "", // No sentence from search results
-                completion: { success in
+            word: entry.term,
+            reading: entry.reading,
+            definition: entry.meanings.joined(separator: "; "),
+            sentence: "", // No sentence from search results
+            pitchAccents: entry.pitchAccents,
+            completion: { success in
                     if success {
                         withAnimation {
                             showAnkiSuccess = true

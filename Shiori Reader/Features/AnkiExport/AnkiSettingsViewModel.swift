@@ -162,6 +162,8 @@ class AnkiSettingsViewModel: ObservableObject {
             updatedSettings.sentenceField = fieldName
         case "wordWithReading":
             updatedSettings.wordWithReadingField = fieldName
+        case "pitchAccent":
+            updatedSettings.pitchAccentField = fieldName
         default:
             break
         }
@@ -185,6 +187,7 @@ class AnkiSettingsViewModel: ObservableObject {
         case "definition": return "Definition Field"
         case "sentence": return "Sentence Field"
         case "wordWithReading": return "Word with Reading Field"
+        case "pitchAccent": return "Pitch Accent Field"
         default: return "Field"
         }
     }

@@ -23,14 +23,24 @@ class CoreDataManager {
     lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "ShioriReader")
         
-        // Configure options
+        // Configure options for migration
         let description = container.persistentStoreDescriptions.first
         description?.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
         
+        // Enable automatic lightweight migration
+        description?.shouldMigrateStoreAutomatically = true
+        description?.shouldInferMappingModelAutomatically = true
+        
         container.loadPersistentStores { (storeDescription, error) in
             if let error = error as NSError? {
-                // Replace this implementation with code to handle the error appropriately.
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+                // Log migration details for debugging
+                Logger.debug(category: "CoreData", "Migration failed with error: \(error), \(error.userInfo)")
+                
+                // In production, you might want to handle this more gracefully
+                // For now, we'll still use fatalError but with better logging
+                fatalError("Unresolved Core Data error: \(error), \(error.userInfo)")
+            } else {
+                Logger.debug(category: "CoreData", "Core Data stack loaded successfully")
             }
         }
         
@@ -299,7 +309,9 @@ class CoreDataManager {
     
     func createOrUpdateAnkiSettings(deckName: String, noteType: String, wordField: String,
                                    readingField: String, definitionField: String,
-                                   sentenceField: String, wordWithReadingField: String, tags: String) -> AnkiSettingsEntity {
+                                   sentenceField: String, wordWithReadingField: String, 
+                                   pitchAccentField: String, pitchAccentGraphColor: String,
+                                   pitchAccentTextColor: String, tags: String) -> AnkiSettingsEntity {
         
         // Check if settings already exist
         if let existingSettings = getAnkiSettings() {
@@ -311,6 +323,9 @@ class CoreDataManager {
             existingSettings.definitionField = definitionField
             existingSettings.sentenceField = sentenceField
             existingSettings.wordWithReadingField = wordWithReadingField
+            existingSettings.pitchAccentField = pitchAccentField
+            existingSettings.pitchAccentGraphColor = pitchAccentGraphColor
+            existingSettings.pitchAccentTextColor = pitchAccentTextColor
             existingSettings.tags = tags
             saveContext()
             return existingSettings
@@ -325,6 +340,9 @@ class CoreDataManager {
             settings.definitionField = definitionField
             settings.sentenceField = sentenceField
             settings.wordWithReadingField = wordWithReadingField
+            settings.pitchAccentField = pitchAccentField
+            settings.pitchAccentGraphColor = pitchAccentGraphColor
+            settings.pitchAccentTextColor = pitchAccentTextColor
             settings.tags = tags
             saveContext()
             return settings

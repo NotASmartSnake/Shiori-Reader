@@ -263,6 +263,7 @@ struct DictionaryPopupView: View {
             reading: entry.reading,
             definition: entry.meanings.joined(separator: "; "),
             sentence: sentenceContext,
+            pitchAccents: entry.pitchAccents,
             completion: { success in
                 if success {
                     withAnimation {
