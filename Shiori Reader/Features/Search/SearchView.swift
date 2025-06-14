@@ -99,6 +99,12 @@ struct SearchView: View {
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
+                            
+                            // Add bottom spacer to prevent tab bar overlap
+                            Color.clear
+                                .frame(height: 80)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                         }
                         .listStyle(PlainListStyle())
                     }
