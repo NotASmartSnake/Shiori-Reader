@@ -13,15 +13,43 @@ struct DictionaryEntryRow: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(entry.term)
-                    .font(.headline)
-                    .foregroundColor(.primary)
+            HStack(alignment: .center) {
+                // Term with furigana reading above it
+                VStack(alignment: .leading, spacing: 0) {
+                    if !entry.reading.isEmpty && entry.reading != entry.term {
+                        // Furigana reading
+                        Text(entry.reading)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.bottom, 1)
+                    }
+                    
+                    // Main term
+                    Text(entry.term)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
                 
-                if !entry.reading.isEmpty && entry.reading != entry.term {
-                    Text("「\(entry.reading)」")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                // Pitch accent graphs right after the word/reading (left-aligned)
+                if entry.hasPitchAccent, let pitchAccents = entry.pitchAccents {
+                    // Filter to only show graphs that match both term AND reading
+                    let matchingAccents = pitchAccents.accents.filter { accent in
+                        accent.term == entry.term && accent.reading == entry.reading
+                    }
+                    
+                    if !matchingAccents.isEmpty {
+                        // Show matching graphs side by side
+                        HStack(alignment: .top, spacing: 6) {
+                            ForEach(Array(matchingAccents.prefix(2)), id: \.id) { accent in
+                                SimplePitchAccentGraphView(
+                                    word: accent.term,
+                                    reading: accent.reading,
+                                    pitchValue: accent.pitchAccent
+                                )
+                            }
+                        }
+                        .padding(.leading, 8) // Small gap from the word
+                    }
                 }
                 
                 Spacer()
