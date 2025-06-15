@@ -52,14 +52,14 @@ class SearchViewModel: ObservableObject {
                 let exactResults = DictionaryManager.shared.lookupWithDeinflection(word: query)
                 if !exactResults.isEmpty {
                     DispatchQueue.main.async {
-                        self?.searchResults = exactResults
+                        self?.searchResults = self?.groupAndMergeEntries(exactResults) ?? []
                         self?.isSearching = false
                     }
                 } else {
                     // Try prefix search if exact match fails
                     let prefixResults = DictionaryManager.shared.searchByPrefix(prefix: query, limit: 50)
                     DispatchQueue.main.async {
-                        self?.searchResults = prefixResults
+                        self?.searchResults = self?.groupAndMergeEntries(prefixResults) ?? []
                         self?.isSearching = false
                     }
                 }
@@ -67,7 +67,7 @@ class SearchViewModel: ObservableObject {
                 // Use meaning search for English
                 let meaningResults = DictionaryManager.shared.searchByMeaning(text: query, limit: 50)
                 DispatchQueue.main.async {
-                    self?.searchResults = meaningResults
+                    self?.searchResults = self?.groupAndMergeEntries(meaningResults) ?? []
                     self?.isSearching = false
                 }
             }
@@ -80,6 +80,53 @@ class SearchViewModel: ObservableObject {
     func clearSearch() {
         searchText = ""
         searchResults = []
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func groupAndMergeEntries(_ entries: [DictionaryEntry]) -> [DictionaryEntry] {
+        let groupedEntries = Dictionary(grouping: entries) { entry in
+            "\(entry.term)-\(entry.reading)"
+        }
+        
+        var processedKeys = Set<String>()
+        var mergedEntries: [DictionaryEntry] = []
+        
+        for entry in entries {
+            let groupKey = "\(entry.term)-\(entry.reading)"
+            
+            if !processedKeys.contains(groupKey) {
+                processedKeys.insert(groupKey)
+                
+                if let groupEntries = groupedEntries[groupKey], groupEntries.count > 1 {
+                    // Multiple entries with same term/reading - merge their meanings
+                    let allMeanings = groupEntries.flatMap { $0.meanings }
+                    let allSources = groupEntries.map { $0.source }
+                    let combinedSource = allSources.contains("jmdict") && allSources.contains("obunsha") ? "combined" : entry.source
+                    
+                    let mergedEntry = DictionaryEntry(
+                        id: "merged_\(groupKey)",
+                        term: entry.term,
+                        reading: entry.reading,
+                        meanings: allMeanings,
+                        meaningTags: entry.meaningTags,
+                        termTags: entry.termTags,
+                        score: entry.score,
+                        rules: entry.rules,
+                        transformed: entry.transformed,
+                        transformationNotes: entry.transformationNotes,
+                        popularity: entry.popularity,
+                        source: combinedSource
+                    )
+                    mergedEntries.append(mergedEntry)
+                } else {
+                    // Single entry - use as is
+                    mergedEntries.append(entry)
+                }
+            }
+        }
+        
+        return mergedEntries
     }
     
 }

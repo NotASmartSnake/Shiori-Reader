@@ -66,6 +66,47 @@ struct DictionaryEntryRow: View {
                 }
             }
             
+            // Dictionary source badges on their own line
+            HStack {
+                if entry.source == "obunsha" {
+                    Text("旺文社")
+                        .font(.caption2)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Color.orange.opacity(0.2))
+                        .foregroundColor(.orange)
+                        .cornerRadius(4)
+                } else if entry.source == "jmdict" {
+                    Text("JMdict")
+                        .font(.caption2)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Color.blue.opacity(0.2))
+                        .foregroundColor(.blue)
+                        .cornerRadius(4)
+                } else if entry.source == "combined" {
+                    HStack(spacing: 4) {
+                        Text("JMdict")
+                            .font(.caption2)
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 1)
+                            .background(Color.blue.opacity(0.2))
+                            .foregroundColor(.blue)
+                            .cornerRadius(3)
+                        Text("旺文社")
+                            .font(.caption2)
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 1)
+                            .background(Color.orange.opacity(0.2))
+                            .foregroundColor(.orange)
+                            .cornerRadius(3)
+                    }
+                }
+                
+                Spacer()
+            }
+            .padding(.bottom, 2)
+            
             // Show first meaning
             Text(entry.meanings.first ?? "")
                 .font(.subheadline)
