@@ -22,6 +22,7 @@ struct DictionaryPopupView: View {
     @State private var showingAnkiSettings = false
     @State private var showDuplicateAlert = false
     @State private var pendingEntryToSave: DictionaryEntry? = nil
+    @State private var expandedDefinitions: Set<String> = [] // Track which definitions are expanded
     @EnvironmentObject private var wordsManager: SavedWordsManager
     
     var body: some View {
@@ -144,11 +145,25 @@ struct DictionaryPopupView: View {
                                 }
                                 .padding(.vertical, 4)
                                 
-                                // Display meaning entries
+                                // Display meaning entries with expandable functionality
                                 ForEach(entry.meanings.indices, id: \.self) { index in
+                                    let definitionId = "\(entry.id)_\(index)" // Unique ID for each definition
+                                    let isExpanded = expandedDefinitions.contains(definitionId)
+                                    
                                     Text(entry.meanings[index])
                                         .font(.body)
+                                        .lineLimit(isExpanded ? nil : 1) // Show 1 line when collapsed, unlimited when expanded
                                         .padding(.leading, 8)
+                                        .contentShape(Rectangle()) // Make entire area tappable
+                                        .onTapGesture {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                if isExpanded {
+                                                    expandedDefinitions.remove(definitionId)
+                                                } else {
+                                                    expandedDefinitions.insert(definitionId)
+                                                }
+                                            }
+                                        }
                                 }
                                 
                                 Divider()
