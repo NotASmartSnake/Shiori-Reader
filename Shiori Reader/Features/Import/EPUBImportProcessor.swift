@@ -44,8 +44,6 @@ class EPUBImportProcessor {
             throw ImportError.invalidFileType
         }
 
-        Logger.debug(category: "EPUBImportProcessor", "Processing EPUB at \(url.path)")
-
         // Open the Publication using Readium
         guard let anyURL = url.anyURL else {
             Logger.error(category: "EPUBImportProcessor", "Could not create AnyURL from \(url)")
@@ -57,7 +55,6 @@ class EPUBImportProcessor {
         switch assetResult {
         case .success(let retrievedAsset):
             asset = retrievedAsset
-            Logger.debug(category: "EPUBImportProcessor", "Asset retrieved successfully. Format: \(asset.format)")
 
         case .failure(let assetError):
             let errorDescription = assetError.localizedDescription
@@ -70,7 +67,6 @@ class EPUBImportProcessor {
         switch pubResult {
         case .success(let openedPublication):
             publication = openedPublication
-            Logger.debug(category: "EPUBImportProcessor", "Publication opened successfully.")
 
         case .failure(let openError):
             let errorDescription = openError.localizedDescription
@@ -78,14 +74,10 @@ class EPUBImportProcessor {
             throw ImportError.metadataExtractionFailed("Failed to open EPUB: \(errorDescription)")
         }
 
-        Logger.debug(category: "EPUBImportProcessor", "Publication opened successfully.")
-
         // Extract Metadata using Readium
         let metadata = publication.metadata
         let title = metadata.title ?? url.deletingPathExtension().lastPathComponent // Fallback title
         let author = metadata.authors.first?.name // Get first author's name
-
-        Logger.debug(category: "EPUBImportProcessor", "Extracted Metadata - Title: \(title), Author: \(author ?? "N/A")")
 
         // Extract Cover Image using Readium
         var coverImageFilename: String? = nil
@@ -97,12 +89,10 @@ class EPUBImportProcessor {
         case .success(let optionalCoverImage):
             // Result was success, now check if the optional UIImage has a value
             if let coverUIImage = optionalCoverImage {
-                Logger.debug(category: "EPUBImportProcessor", "Extracted cover UIImage size: \(coverUIImage.size), scale: \(coverUIImage.scale)")
                 do {
                     // Pass the non-optional UIImage to saveCoverImage
                     coverImageFilename = try saveCoverImage(coverUIImage)
                     isLocalCover = true
-                    Logger.debug(category: "EPUBImportProcessor", "Saved cover image as \(coverImageFilename ?? "N/A")")
                 } catch {
                     Logger.error(category: "EPUBImportProcessor", "Failed to save extracted cover image: \(error). Falling back to default.")
                     // Fallback will be handled after this switch block
@@ -121,7 +111,6 @@ class EPUBImportProcessor {
         if coverImageFilename == nil {
             coverImageFilename = defaultCovers.randomElement() ?? "COTECover" // Use asset name
             isLocalCover = false // Indicate it's an asset
-            Logger.debug(category: "EPUBImportProcessor", "Using default asset cover: \(coverImageFilename ?? "N/A")")
         }
 
         // Create the Book object
@@ -156,7 +145,6 @@ class EPUBImportProcessor {
         // Create the Covers directory if it doesn't exist
         if !fileManager.fileExists(atPath: coversDirectory.path) {
             try fileManager.createDirectory(at: coversDirectory, withIntermediateDirectories: true, attributes: nil)
-            Logger.debug(category: "EPUBImportProcessor", "Created BookCovers directory at \(coversDirectory.path)")
         }
 
         // Generate a unique filename
@@ -165,11 +153,9 @@ class EPUBImportProcessor {
 
         // Write the image data
         try imageData.write(to: coverURL)
-        Logger.debug(category: "EPUBImportProcessor", "Saved cover as PNG: \(coverURL.path)")
 
         // Return the relative path from Documents directory
         let relativePath = "BookCovers/\(filename)"
-        Logger.debug(category: "EPUBImportProcessor", "Returning relative cover path: \(relativePath)")
         return relativePath
     }
     

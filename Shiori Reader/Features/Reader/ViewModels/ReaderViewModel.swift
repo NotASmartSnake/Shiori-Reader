@@ -76,7 +76,6 @@ class ReaderViewModel: ObservableObject {
             contentProtections: [] // No DRM
         )
 
-        Logger.debug(category: "ReadiumBookViewModel", "Initialized for book '\(book.title)'")
         loadPreferences()
         loadInitialLocation()
         
@@ -112,7 +111,6 @@ class ReaderViewModel: ObservableObject {
         }
         isLoading = true
         errorMessage = nil // Clear previous error
-        Logger.debug(category: "loadPublication", "Starting load process...")
 
         guard let fileURL = getFileURL(for: book.filePath) else {
             // This part is NOT happening based on your logs
@@ -126,25 +124,20 @@ class ReaderViewModel: ObservableObject {
         let url = fileURL.absoluteURL
 
         do {
-            Logger.debug(category: "loadPublication", "Creating anyURL...")
             guard let anyURL = url.anyURL else {
                 errorMessage = "Invalid URL format for anyURL" // More specific error
                 isLoading = false
                 Logger.error(category: "loadPublication", "Failed to create anyURL from \(url)")
                 return
             }
-            Logger.debug(category: "loadPublication", "Created anyURL: \(anyURL)")
 
-            Logger.debug(category: "loadPublication", "Retrieving asset...")
             let assetResult = await assetRetriever.retrieve(url: anyURL)
 
             // --- Log Asset Retrieval Result ---
             switch assetResult {
             case .success(let asset):
-                Logger.debug(category: "loadPublication", "Asset retrieved successfully. Format: \(asset.format)")
 
                 // --- Open Publication ---
-                Logger.debug(category: "loadPublication", "Opening publication from asset...")
                 let result = await publicationOpener.open(
                     asset: asset,
                     allowUserInteraction: false, // Should be false for background loading
@@ -154,14 +147,11 @@ class ReaderViewModel: ObservableObject {
                 // --- Log Publication Opening Result ---
                 switch result {
                 case .success(let pub):
-                    Logger.debug(category: "loadPublication", "Publication opened successfully!")
                     self.publication = pub
                     // Start TOC loading (keep existing logic)
                     Task {
-                        Logger.debug(category: "loadPublication", "Starting TOC load...")
                         let tocResult = await pub.tableOfContents()
                         if case .success(let toc) = tocResult {
-                            Logger.debug(category: "loadPublication", "TOC loaded with \(toc.count) items.")
                             self.tableOfContents = toc
                         } else {
                             Logger.error(category: "loadPublication", "Failed to load TOC.")
@@ -169,7 +159,6 @@ class ReaderViewModel: ObservableObject {
                         }
                     }
                     self.errorMessage = nil // Clear error on success
-                    Logger.debug(category: "loadPublication", "Publication setup complete.")
 
                 case .failure(let openError):
                     // Specific error during opening
@@ -192,16 +181,13 @@ class ReaderViewModel: ObservableObject {
 
         // Ensure isLoading is set to false regardless of success or failure path within do-catch
         isLoading = false
-        Logger.debug(category: "loadPublication", "Load process finished. isLoading: \(isLoading), publication != nil: \(publication != nil), errorMessage: \(errorMessage ?? "None")")
     }
 
     // MARK: - Preferences
     private func loadPreferences() {
-        Logger.debug(category: "ReadiumBookViewModel", "Loading user preferences...")
         
         // First try to load book-specific preferences from Core Data
         if let bookPrefs = settingsRepository.getBookPreferences(bookId: book.id) {
-            Logger.debug(category: "ReadiumBookViewModel", "Found book-specific preferences in Core Data")
             
             // FIXED: Properly map BookPreference to EPUBPreferences
             let fontSize = Double(bookPrefs.fontSize)
@@ -255,17 +241,14 @@ class ReaderViewModel: ObservableObject {
             let savedDirection = UserDefaults.standard.string(forKey: "preferred_reading_direction")
             if savedDirection == "rtl" {
                 preferences.readingProgression = .rtl
-                Logger.debug(category: "ReadiumBookViewModel", "Using RTL reading direction from defaults")
             } else {
                 preferences.readingProgression = .ltr
-                Logger.debug(category: "ReadiumBookViewModel", "Using LTR reading direction from defaults")
             }
         }
     }
     
     // Save preferences to Core Data
     func savePreferences() {
-        Logger.debug(category: "ReadiumBookViewModel", "Saving preferences to Core Data")
         
         // Determine reading direction string representation
         let readingDirection: String
@@ -295,7 +278,6 @@ class ReaderViewModel: ObservableObject {
     // Submit preferences to navigator (to be called from SwiftUI view when navigator is available)
     func submitPreferencesToNavigator(_ navigator: EPUBNavigatorViewController) {
         navigator.submitPreferences(preferences)
-        Logger.debug(category: "ReadiumBookViewModel", "Submitted preferences to navigator")
     }
 
     // MARK: - Location Handling
@@ -305,7 +287,6 @@ class ReaderViewModel: ObservableObject {
            let jsonString = String(data: locatorData, encoding: .utf8),
            let locator = try? Locator(jsonString: jsonString) {
             self.initialLocation = locator
-            Logger.debug(category: "ReadiumBookViewModel", "Loaded initial locator from Core Data: \(locator.locations.progression ?? -1.0)%")
             return
         }
         
@@ -320,7 +301,6 @@ class ReaderViewModel: ObservableObject {
         }
 
         self.initialLocation = locator
-        Logger.debug(category: "ReadiumBookViewModel", "Loaded initial locator from UserDefaults: \(locator.locations.progression ?? -1.0)%")
     }
     
     func saveLocation(_ locator: Locator) {
@@ -341,9 +321,7 @@ class ReaderViewModel: ObservableObject {
             // Also update our local book object
             book.readingProgress = locator.locations.progression ?? book.readingProgress
             book.currentLocatorData = jsonData
-            
-            Logger.debug(category: "ReadiumBookViewModel", "Saved locator to Core Data successfully.")
-            
+                        
             // Legacy: Also save to UserDefaults for backward compatibility
             let key = "readium_locator_\(book.id.uuidString)"
             UserDefaults.standard.set(jsonData, forKey: key)
@@ -373,7 +351,6 @@ class ReaderViewModel: ObservableObject {
             // Find the bookmark ID to remove
             if let bookmarkId = bookmarkRepository.findBookmarkId(bookId: book.id, locator: locator) {
                 _ = await bookmarkRepository.remove(bookmarkId)
-                Logger.debug(category: "ReadiumBookViewModel", "Removed bookmark at \(locator.href)")
                 isCurrentLocationBookmarked = false
             }
         } else {
@@ -385,7 +362,6 @@ class ReaderViewModel: ObservableObject {
             )
             
             _ = await bookmarkRepository.add(bookmark)
-            Logger.debug(category: "ReadiumBookViewModel", "Added bookmark at \(locator.href)")
             isCurrentLocationBookmarked = true
         }
         
@@ -397,7 +373,6 @@ class ReaderViewModel: ObservableObject {
     @MainActor
     func removeBookmark(_ bookmark: Bookmark) async {
         _ = await bookmarkRepository.remove(bookmark.id)
-        Logger.debug(category: "ReadiumBookViewModel", "Removed bookmark \(bookmark.id)")
         
         // Refresh bookmarks list
         await refreshBookmarks()
@@ -405,7 +380,6 @@ class ReaderViewModel: ObservableObject {
     
     /// Navigate to a bookmarked location
     func navigateToBookmark(_ bookmark: Bookmark) {
-        Logger.debug(category: "ReadiumBookViewModel", "Navigating to bookmark at \(bookmark.locator.href)")
         requestNavigation(to: bookmark.locator)
     }
     
@@ -413,7 +387,6 @@ class ReaderViewModel: ObservableObject {
     
     private func getFileURL(for storedPath: String) -> URL? {
         let fileManager = FileManager.default
-        Logger.debug(category: "getFileURL", "Resolving path: \(storedPath)")
         
         // Get current Documents directory
         guard let documentsDirectory = try? fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else {
@@ -426,21 +399,17 @@ class ReaderViewModel: ObservableObject {
             let fullURL = documentsDirectory.appendingPathComponent(storedPath)
             Logger.debug(category: "getFileURL", "Trying relative path: \(fullURL.path)")
             if fileManager.fileExists(atPath: fullURL.path) {
-                Logger.debug(category: "getFileURL", "Found via relative path")
                 return fullURL
             }
         }
         
         // Case 2: Absolute path (legacy format) - try direct access first
         if storedPath.starts(with: "/") {
-            Logger.debug(category: "getFileURL", "Trying absolute path: \(storedPath)")
             if fileManager.fileExists(atPath: storedPath) {
-                Logger.debug(category: "getFileURL", "Found via absolute path (container unchanged)")
                 return URL(fileURLWithPath: storedPath)
             }
             
             // Case 3: Absolute path migration - extract relative path and update database
-            Logger.debug(category: "getFileURL", "Absolute path not found, attempting migration")
             if let migratedURL = migrateAbsolutePath(storedPath, documentsDirectory: documentsDirectory) {
                 Logger.debug(category: "getFileURL", "Successfully migrated absolute path")
                 return migratedURL
@@ -449,10 +418,8 @@ class ReaderViewModel: ObservableObject {
         
         // Case 4: Fallback - try bundle resources
         let filename = URL(fileURLWithPath: storedPath).lastPathComponent
-        Logger.debug(category: "getFileURL", "Checking Bundle for filename: \(filename)")
         if let bundleURL = Bundle.main.url(forResource: filename, withExtension: nil, subdirectory: "Books") ?? Bundle.main.url(forResource: filename, withExtension: nil) {
             if fileManager.fileExists(atPath: bundleURL.path) {
-                Logger.debug(category: "getFileURL", "Found in Bundle")
                 return bundleURL
             }
         }
@@ -471,11 +438,7 @@ class ReaderViewModel: ObservableObject {
             let relativePath = String(absolutePath[documentsRange.upperBound...])
             let newURL = documentsDirectory.appendingPathComponent(relativePath)
             
-            Logger.debug(category: "migrateAbsolutePath", "Extracted relative path: \(relativePath)")
-            Logger.debug(category: "migrateAbsolutePath", "Testing new URL: \(newURL.path)")
-            
             if fileManager.fileExists(atPath: newURL.path) {
-                Logger.debug(category: "migrateAbsolutePath", "File found at migrated path, updating database")
                 
                 // Update the database with the relative path
                 Task { @MainActor in
@@ -497,7 +460,6 @@ class ReaderViewModel: ObservableObject {
         for relativePath in possiblePaths {
             let testURL = documentsDirectory.appendingPathComponent(relativePath)
             if fileManager.fileExists(atPath: testURL.path) {
-                Logger.debug(category: "migrateAbsolutePath", "File found via filename search: \(testURL.path)")
                 
                 // Update the database with the relative path
                 Task { @MainActor in
@@ -515,13 +477,11 @@ class ReaderViewModel: ObservableObject {
     /// Updates the book's file path in the database with a relative path
     @MainActor
     private func updateBookPathInDatabase(relativePath: String) {
-        Logger.debug(category: "updateBookPathInDatabase", "Updating book \(book.id) with relative path: \(relativePath)")
         
         // Update the database through Core Data
         if let entity = CoreDataManager.shared.getBook(by: book.id) {
             entity.filePath = relativePath
             CoreDataManager.shared.saveContext()
-            Logger.debug(category: "updateBookPathInDatabase", "Successfully updated database")
             
             // Create a new Book object with the updated path
             let updatedBook = Book(
@@ -539,7 +499,6 @@ class ReaderViewModel: ObservableObject {
             
             // Update our local book reference
             book = updatedBook
-            Logger.debug(category: "updateBookPathInDatabase", "Updated local book object")
         } else {
             Logger.error(category: "updateBookPathInDatabase", "Could not find book entity in database")
         }
@@ -556,15 +515,9 @@ class ReaderViewModel: ObservableObject {
         // Update the current offset
         self.currentTextOffset = safeOffset
         
-        print("🔍 handleCharacterSelection - New offset: \(offset) -> safe: \(safeOffset)")
-        print("🔍 handleCharacterSelection - Full text: \(fullTextForSelection.prefix(20))... (length: \(fullTextForSelection.count))")
-        
         // Get the new text to search - slice from safe offset to end
         let newStartIndex = fullTextForSelection.index(fullTextForSelection.startIndex, offsetBy: safeOffset)
         let newSelectedText = String(fullTextForSelection[newStartIndex...])
-        
-        // Clean debug log - just show what we're searching
-        print("💬 SEARCHING FROM PICKER: \(newSelectedText.prefix(20))...")
         
         // Update selected word (single character at the new position)
         if safeOffset < fullTextForSelection.count {
@@ -583,18 +536,14 @@ class ReaderViewModel: ObservableObject {
     }
     
     func handleWordSelection(text: String, options: [String: Any]) {
-        Logger.debug(category: "ReaderViewModel", "Word tapped - \(text) with options: \(options)")
-        
         // Check if this is just an initialization message
         if let type = options["type"] as? String, type == "initialization" {
-            Logger.debug(category: "ReaderViewModel", "Received initialization message, not showing dictionary")
             return
         }
         
         // Store the full text for selection and character picker
         if let fullText = options["fullText"] as? String {
             self.fullTextForSelection = fullText
-            print("📚 RECEIVED - Text: \(text.prefix(10))... from fullText of length \(fullText.count)")
             
             // Get the absoluteOffset if available
             if let offset = options["absoluteOffset"] as? Int {
@@ -602,42 +551,29 @@ class ReaderViewModel: ObservableObject {
                 let safeOffset = max(0, min(offset, fullText.count - 1))
                 self.clickedTextOffset = safeOffset
                 self.currentTextOffset = safeOffset
-                print("📚 CLICKED - At offset: \(safeOffset) in text (original: \(offset))")
             } else {
                 // Default to start of text
                 self.clickedTextOffset = 0
                 self.currentTextOffset = 0
-                print("📚 NO OFFSET - Starting from beginning")
             }
         } else {
             // If fullText is not available, use a larger context or just the current word
             self.fullTextForSelection = text
             self.clickedTextOffset = 0
             self.currentTextOffset = 0
-            print("📚 NO FULLTEXT - Using just: \(text)")
         }
         
         // Extract sentence context if available
         var sentenceContext = ""
         if let surroundingText = options["surroundingText"] as? String {
-            sentenceContext = surroundingText
-            Logger.debug(category: "ReaderViewModel", "Raw sentence context: \(sentenceContext)")
-            
-            // Clean up the sentence context
-            sentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
+            sentenceContext = surroundingText.trimmingCharacters(in: .whitespacesAndNewlines)
             
             // Limit length if necessary (Anki URL has size limits)
             if sentenceContext.count > 250 {
                 sentenceContext = String(sentenceContext.prefix(250)) + "..."
             }
-            
-            Logger.debug(category: "ReaderViewModel", "Processed sentence context: \(sentenceContext)")
         } else if let textFromClickedKanji = options["textFromClickedKanji"] as? String {
-            // Try alternative fields if surroundingText is not available
             sentenceContext = textFromClickedKanji
-            Logger.debug(category: "ReaderViewModel", "Using textFromClickedKanji as context: \(sentenceContext)")
-        } else {
-            Logger.debug(category: "ReaderViewModel", "No context text found in options")
         }
         
         // Set the selected word for display
@@ -651,9 +587,6 @@ class ReaderViewModel: ObservableObject {
                 // Always show the dictionary even if no matches found
                 self.showDictionary = true
             }
-            
-            // Simple log for search
-            print("💬 TEXT TAPPED - SEARCHING: \(text)")
         }
     }
     
@@ -668,12 +601,9 @@ class ReaderViewModel: ObservableObject {
             var matches: [DictionaryMatch] = []
             var foundWords: Set<String> = [] // Track words we've already found
             
-            // Debug logging for the search process
-            let isDebugWord = text.hasPrefix("よって")
-            if isDebugWord {
-                print("🔍 [WORD SEARCH DEBUG] Starting search for text: '\(text.prefix(20))...'")
-                print("🔍 [WORD SEARCH DEBUG] Will try lengths from \(maxLength) down to 1")
-            }
+            // Debug logging for specific problematic words only (remove or modify as needed)
+            let shouldDebug = false // Set to true only for specific debugging
+            let isDebugWord = shouldDebug && text.hasPrefix("よって")
             
             // Try words of decreasing length, starting from the longest
             for length in stride(from: maxLength, through: 1, by: -1) {
@@ -684,27 +614,8 @@ class ReaderViewModel: ObservableObject {
                 let endIndex = text.index(text.startIndex, offsetBy: length)
                 let candidateWord = String(text[..<endIndex])
                 
-                // Debug logging for each candidate
-                if isDebugWord && (length <= 4 || candidateWord == "よ") {
-                    print("🔍 [WORD SEARCH DEBUG] Trying length \(length): '\(candidateWord)'")
-                }
-                
                 // Look up this word in the dictionary with improved deinflection
                 let entries = DictionaryManager.shared.lookupWithDeinflection(word: candidateWord)
-                
-                // Debug logging for results
-                if isDebugWord && (length <= 4 || candidateWord == "よ") {
-                    print("🔍 [WORD SEARCH DEBUG] Found \(entries.count) entries for '\(candidateWord)'")
-                    if !entries.isEmpty {
-                        for (index, entry) in entries.prefix(3).enumerated() {
-                            let transformInfo = entry.transformed != nil ? " [transformed from \(entry.transformed!)]" : " [direct]"
-                            print("   Entry[\(index)]: \(entry.term) (\(entry.reading))\(transformInfo) - \(entry.meanings.first ?? "no meaning")")
-                        }
-                        if entries.count > 3 {
-                            print("   ... and \(entries.count - 3) more entries")
-                        }
-                    }
-                }
                 
                 // If we found matches, add this as a valid match
                 if !entries.isEmpty {
@@ -730,28 +641,9 @@ class ReaderViewModel: ObservableObject {
                             foundWords.insert(baseTerm)
                             addedFromThisLength += 1
                             
-                            if isDebugWord && (length <= 4 || candidateWord == "よ") {
-                                print("🔍 [WORD SEARCH DEBUG] Added match for '\(candidateWord)' -> '\(baseTerm)'")
-                            }
-                        } else {
-                            if isDebugWord && (length <= 4 || candidateWord == "よ") {
-                                print("🔍 [WORD SEARCH DEBUG] Skipped duplicate baseTerm '\(baseTerm)' for '\(candidateWord)'")
-                            }
                         }
                     }
-                    
-                    if isDebugWord && (length <= 4 || candidateWord == "よ") {
-                        print("🔍 [WORD SEARCH DEBUG] Added \(addedFromThisLength) new matches from '\(candidateWord)'")
-                    }
-                    
                     // No match limit - try all possible lengths
-                }
-            }
-            
-            if isDebugWord {
-                print("🔍 [WORD SEARCH DEBUG] Final results: \(matches.count) matches")
-                for (index, match) in matches.enumerated() {
-                    print("   Match[\(index)]: '\(match.word)' with \(match.entries.count) entries")
                 }
             }
             
@@ -816,15 +708,6 @@ class ReaderViewModel: ObservableObject {
             
             // Return all matches found
             DispatchQueue.main.async {
-                // Log all final matches being sent to UI in display order
-                print("📋 [UI MATCHES] Sending \(sortedMatches.count) matches to UI for '\(text.prefix(20))...'")
-                for (index, match) in sortedMatches.enumerated() {
-                    let primaryEntry = match.entries.first!
-                    let transformInfo = primaryEntry.transformed != nil ? " [←\(primaryEntry.transformed!)]" : " [direct]"
-                    let readingInfo = primaryEntry.reading.isEmpty ? "" : " (\(primaryEntry.reading))"
-                    let meaning = primaryEntry.meanings.first ?? "no meaning"
-                    print("  [\(index + 1)] \(primaryEntry.term)\(readingInfo)\(transformInfo) - \(meaning)")
-                }
                 completion(sortedMatches)
             }
         }
@@ -871,18 +754,15 @@ class ReaderViewModel: ObservableObject {
     func requestNavigation(to locator: Locator) {
         // Normalize the locator before publishing the request
         let normalizedLocator = publication?.normalizeLocator(locator) ?? locator
-        Logger.debug(category: "ReadiumBookViewModel", "Navigation requested to locator: \(normalizedLocator.href)")
         self.navigationRequest = normalizedLocator
     }
 
     /// Call this after the navigation attempt has been made by the actual navigator view.
     func clearNavigationRequest() {
         if navigationRequest != nil {
-             Logger.debug(category: "ReadiumBookViewModel", "Scheduling navigation request to be cleared.")
              // Schedule the actual modification for the next run loop cycle
              DispatchQueue.main.async {
                  if self.navigationRequest != nil {
-                     Logger.debug(category: "ReadiumBookViewModel", "Executing clear navigation request.")
                      self.navigationRequest = nil
                  }
              }
@@ -891,7 +771,6 @@ class ReaderViewModel: ObservableObject {
 
     /// Renamed/Updated method for TOC or similar link navigation
     func requestNavigation(to link: ReadiumShared.Link) {
-         Logger.debug(category: "ReadiumBookViewModel", "Navigation requested to link: \(link.href)")
          // Resolve the Link to a Locator before requesting navigation
          Task {
              if let locator = await publication?.locate(link) {
@@ -904,14 +783,11 @@ class ReaderViewModel: ObservableObject {
 
     // Keep your existing navigateToLink if used elsewhere, or rename it like above
     func navigateToLink(_ link: ReadiumShared.Link) {
-         Logger.debug(category: "ReadiumBookViewModel", "Request to navigate to link: \(link.href)")
          // This now becomes a request
          requestNavigation(to: link)
      }
     
     func handleLocationUpdate(_ locator: Locator) {
-        Logger.debug(category: "ReadiumBookViewModel", "handleLocationUpdate called with locator progression: \(locator.locations.progression ?? -1.0)")
-        
         // Save location to Core Data
         saveLocation(locator)
 
@@ -931,12 +807,7 @@ class ReaderViewModel: ObservableObject {
             
             // Update our local book object as well
             book.readingProgress = totalProgression
-            
-            Logger.debug(category: "ReadiumBookViewModel", "Updated book total progress to \(totalProgression)")
         } else if let progression = locator.locations.progression {
-            // Fallback to using progression as total progression if totalProgression is not available
-            Logger.debug(category: "ReadiumBookViewModel", "No totalProgression available, using progression.")
-            
             // Update the book's progress in the repository
             bookRepository.updateBookProgress(
                 id: book.id,
@@ -946,11 +817,6 @@ class ReaderViewModel: ObservableObject {
             
             // Update our local book object as well
             book.readingProgress = progression
-            
-            Logger.debug(category: "ReadiumBookViewModel", "After assignment, book.readingProgress is now: \(self.book.readingProgress)")
-            Logger.debug(category: "ReadiumBookViewModel", "Updated book progress to \(progression)")
-        } else {
-            Logger.debug(category: "ReadiumBookViewModel", "Locator progression was nil, not updating.")
         }
         
         // Check if current location is bookmarked

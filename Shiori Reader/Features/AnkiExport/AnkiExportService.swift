@@ -219,20 +219,16 @@ class AnkiExportService {
     
     // Test connection to AnkiMobile
     func testAnkiConnection(completion: @escaping (Bool) -> Void) {
-        Logger.debug(category: "AnkiExport", "Testing Anki connection")
         let testURL = URL(string: "anki://")!
         
         // Check if we're running in the simulator
         let isSimulator = ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil
-        Logger.debug(category: "AnkiExport", "Running in simulator: \(isSimulator)")
         
         if isSimulator {
-            Logger.debug(category: "AnkiExport", "In simulator - AnkiMobile likely not installed")
             // For simulator testing, provide a mock result
             // You can toggle this to test both success and failure paths
             let mockSuccess = true
             
-            Logger.debug(category: "AnkiExport", "Using mock success: \(mockSuccess)")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 completion(mockSuccess)
             }
@@ -240,11 +236,8 @@ class AnkiExportService {
         }
         
         // For real device testing
-        Logger.debug(category: "AnkiExport", "Checking if URL '\(testURL)' can be opened")
         if UIApplication.shared.canOpenURL(testURL) {
-            Logger.debug(category: "AnkiExport", "URL can be opened, attempting to open AnkiMobile")
             UIApplication.shared.open(testURL, options: [:]) { success in
-                Logger.debug(category: "AnkiExport", "Open URL result: \(success)")
                 completion(success)
             }
         } else {
@@ -255,17 +248,14 @@ class AnkiExportService {
     
     // Get deck and note type information from AnkiMobile
     func fetchAnkiInfo(completion: @escaping (Bool, [String: Any]?) -> Void) {
-        Logger.debug(category: "AnkiExport", "Attempting to fetch Anki info")
         let infoURL = URL(string: "anki://x-callback-url/infoForAdding?x-success=shiori://anki-info")!
         
         // Check if URL can be opened
         if UIApplication.shared.canOpenURL(infoURL) {
-            Logger.debug(category: "AnkiExport", "Can open Anki info URL")
             
             // Create a timeout mechanism
             let timeoutWorkItem = DispatchWorkItem { [weak self] in
                 guard let self = self else { return }
-                Logger.debug(category: "AnkiExport", "Timeout reached while waiting for Anki data")
                 
                 // Check clipboard one last time
                 let pasteboard = UIPasteboard.general
@@ -284,7 +274,6 @@ class AnkiExportService {
             NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
                 guard let self = self else { return }
                 
-                Logger.debug(category: "AnkiExport", "App became active, checking clipboard")
                 timeoutWorkItem.cancel()  // Cancel the timeout since we're back
                 
                 // Check for clipboard data when app becomes active
@@ -293,7 +282,6 @@ class AnkiExportService {
                     // Process the data
                     self.processAnkiData(data, completion: completion)
                 } else {
-                    Logger.debug(category: "AnkiExport", "No Anki data found in clipboard after return")
                     completion(false, nil)
                 }
                 
@@ -306,7 +294,6 @@ class AnkiExportService {
             
             // Open AnkiMobile
             UIApplication.shared.open(infoURL, options: [:]) { success in
-                Logger.debug(category: "AnkiExport", "Open URL result: \(success)")
                 if !success {
                     timeoutWorkItem.cancel()
                     completion(false, nil)
@@ -326,7 +313,6 @@ class AnkiExportService {
         do {
             // Parse the JSON data
             if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                Logger.debug(category: "AnkiExport", "Successfully parsed Anki JSON data")
                 
                 // Process the decks data (convert from array of dictionaries to array of strings)
                 var processedData: [String: Any] = [:]
@@ -334,7 +320,6 @@ class AnkiExportService {
                 if let decksArray = json["decks"] as? [[String: String]] {
                     let deckNames = decksArray.compactMap { $0["name"] }
                     processedData["decks"] = deckNames
-                    Logger.debug(category: "AnkiExport", "Processed \(deckNames.count) decks")
                     
                     // Store first deck as default if we don't already have one set
                     let settings = settingsRepository.getAnkiSettings()
@@ -358,7 +343,6 @@ class AnkiExportService {
                     }
                     
                     processedData["noteTypes"] = noteTypesDict
-                    Logger.debug(category: "AnkiExport", "Processed \(noteTypesDict.count) note types")
                     
                     // Store first note type as default if we don't already have one set
                     let settings = settingsRepository.getAnkiSettings()

@@ -94,11 +94,6 @@ struct BookCoverImage: View {
                 DispatchQueue.main.async {
                     self.loadedUIImage = image
                     self.isLoading = false
-                    if image == nil {
-                         print("DEBUG [BookCoverImage]: Failed to load local cover '\(coverPath)'. Using default.")
-                    } else {
-                         print("DEBUG [BookCoverImage]: Successfully loaded local cover '\(coverPath)'.")
-                    }
                 }
             }
         } else {
@@ -106,11 +101,6 @@ struct BookCoverImage: View {
             let image = UIImage(named: coverPath) // Assumes coverPath is the asset name
             self.loadedUIImage = image
             self.isLoading = false
-            if image == nil {
-                 print("DEBUG [BookCoverImage]: Failed to load asset cover '\(coverPath)'. Using default.")
-            } else {
-                 print("DEBUG [BookCoverImage]: Successfully loaded asset cover '\(coverPath)'.")
-            }
         }
     }
 
@@ -131,12 +121,10 @@ struct BookCoverImage: View {
         // Try loading as relative path first (new format)
         if filenameStem.contains("/") {
             let coverURL = documentsDirectory.appendingPathComponent(filenameStem)
-            print("DEBUG [BookCoverImage]: Trying relative path: \(coverURL.path)")
             
             if fileManager.fileExists(atPath: coverURL.path) {
                 do {
                     let imageData = try Data(contentsOf: coverURL)
-                    print("DEBUG [BookCoverImage]: Successfully loaded via relative path")
                     return UIImage(data: imageData)
                 } catch {
                     print("ERROR [BookCoverImage]: Failed to load image data from \(coverURL.path): \(error)")
@@ -148,13 +136,10 @@ struct BookCoverImage: View {
         let legacyCoverURL = documentsDirectory
             .appendingPathComponent("BookCovers")
             .appendingPathComponent("\(filenameStem).png")
-        
-        print("DEBUG [BookCoverImage]: Trying legacy path: \(legacyCoverURL.path)")
-        
+                
         if fileManager.fileExists(atPath: legacyCoverURL.path) {
             do {
                 let imageData = try Data(contentsOf: legacyCoverURL)
-                print("DEBUG [BookCoverImage]: Successfully loaded via legacy path")
                 return UIImage(data: imageData)
             } catch {
                 print("ERROR [BookCoverImage]: Failed to load image data from \(legacyCoverURL.path): \(error)")

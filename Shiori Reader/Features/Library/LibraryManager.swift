@@ -42,14 +42,11 @@ class LibraryManager: ObservableObject {
     }
     
     func renameBook(_ book: Book, newTitle: String) {
-        print("LibraryManager: Attempting to rename book '\(book.title)' to '\(newTitle)'")
         let success = bookRepository.updateBookTitle(id: book.id, newTitle: newTitle)
         
         if success {
-            print("LibraryManager: Title update successful, reloading library")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 let newBooks = self.bookRepository.getAllBooks()
-                print("LibraryManager: Reloaded \(newBooks.count) books after rename")
                 self.books = newBooks
                 self.refreshTrigger = UUID() // Force UI refresh
             }
@@ -73,17 +70,9 @@ class LibraryManager: ObservableObject {
     
     // Load all books from repository
     func loadLibrary() {
-        print("LibraryManager: Loading library...")
         let loadedBooks = bookRepository.getAllBooks()
-        print("LibraryManager: Loaded \(loadedBooks.count) books")
-        
-        // Print book titles for debugging
-        for book in loadedBooks {
-            print("LibraryManager: Book - ID: \(book.id), Title: '\(book.title)'")
-        }
         
         books = loadedBooks
-        print("LibraryManager: Library updated with \(books.count) books")
     }
     
     // MARK: - Book Preferences
@@ -100,7 +89,6 @@ class LibraryManager: ObservableObject {
     
     /// Migrates existing books with absolute paths to relative paths
     private func migrateAbsolutePaths() {
-        Logger.info(category: "LibraryManager", "Starting migration of absolute paths...")
         
         let fileManager = FileManager.default
         guard let documentsDirectory = try? fileManager.url(

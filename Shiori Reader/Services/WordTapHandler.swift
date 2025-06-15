@@ -18,54 +18,44 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
     
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let viewModel = viewModel else { 
-            print("ERROR [WordTapHandler]: ViewModel is nil, cannot process message: \(message.name)")
+            Logger.error(category: "WordTapHandler", "ViewModel is nil, cannot process message: \(message.name)")
             return 
         }
         
-        print("DEBUG [WordTapHandler]: Received message: \(message.name) with body type: \(type(of: message.body))")
-        
         switch message.name {
         case "wordTapped":
-            print("DEBUG [WordTapHandler]: Processing wordTapped message: \(message.body)")
-            
             // Handle test messages
             if let body = message.body as? [String: Any] {
                 if let type = body["type"] as? String, type == "test" {
-                    print("DEBUG [WordTapHandler]: Received test message, handler is working")
-                    return
+                    return // Silent test message handling
                 }
                 
                 if let text = body["text"] as? String {
-                    // Process the message
-                    print("DEBUG [WordTapHandler]: Processing wordTapped with text: '\(text)' and \(body.keys.count) options")
                     viewModel.handleWordSelection(text: text, options: body)
                 } else {
-                    print("ERROR [WordTapHandler]: wordTapped message missing 'text' field: \(body)")
+                    Logger.error(category: "WordTapHandler", "wordTapped message missing 'text' field")
                 }
             } else if let textString = message.body as? String {
                 // Try to parse as JSON string
-                print("DEBUG [WordTapHandler]: Received message as string, attempting to parse JSON")
                 if let data = textString.data(using: .utf8),
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let text = json["text"] as? String {
-                    print("DEBUG [WordTapHandler]: Successfully parsed JSON, processing with text: '\(text)'")
                     viewModel.handleWordSelection(text: text, options: json)
                 } else {
-                    print("ERROR [WordTapHandler]: Failed to parse string message as JSON: \(textString)")
+                    Logger.error(category: "WordTapHandler", "Failed to parse string message as JSON")
                 }
             } else {
-                print("ERROR [WordTapHandler]: Unexpected message body format for wordTapped: \(message.body)")
+                Logger.error(category: "WordTapHandler", "Unexpected message body format for wordTapped")
             }
             
         case "dismissDictionary":
-            print("DEBUG [WordTapHandler]: Processing dismissDictionary message")
             viewModel.showDictionary = false
             
         default:
             if message.name.starts(with: "shioriLog") {
                 Logger.jsLog(category: "Shiori", "\(message.body)")
             } else {
-                Logger.debug(category: "WordTapHandler", "Received unhandled message type: \(message.name)")
+                Logger.warning(category: "WordTapHandler", "Received unhandled message type: \(message.name)")
             }
         }
     }
@@ -76,10 +66,7 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
         
         // If already registered, forcibly remove and re-register (clean approach for mode switching)
         if registeredHandlers.contains(identifier) {
-            Logger.debug(category: "WordTapHandler", "Re-registering handlers for WebView: \(identifier)")
             unregisterHandlers(for: webView)
-        } else {
-            Logger.debug(category: "WordTapHandler", "First-time registering handlers for WebView: \(identifier)")
         }
         
         let userContentController = webView.configuration.userContentController
@@ -105,7 +92,6 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
     // Explicitly unregister handlers for a WebView to clean up and avoid duplicates
     func unregisterHandlers(for webView: WKWebView) {
         let identifier = "\(Unmanaged.passUnretained(webView).toOpaque())"
-        Logger.debug(category: "WordTapHandler", "Unregistering handlers for WebView: \(identifier)")
         
         let userContentController = webView.configuration.userContentController
         
@@ -126,7 +112,7 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
             return
         }
         
-        Logger.debug(category: "WordTapHandler", "Injecting script into WebView with log handler: \(logHandlerName)")
+        // Injecting word selection script
         
         // Modify the script to use the unique log handler name
         let modifiedScript = """
@@ -156,15 +142,11 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
             if let error = error {
                 Logger.error(category: "WordTapHandler", "Script injection failed: \(error)")
             } else {
-                Logger.debug(category: "WordTapHandler", "Script injection succeeded for \(logHandlerName)")
-                
-                // Now inject a test to verify the handler is working
+                // Silent test to verify the handler is working
                 let testScript = """
                 try {
                     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.wordTapped) {
                         window.webkit.messageHandlers.wordTapped.postMessage({type: "test", text: "Test message from script injection"});
-                    } else {
-                        console.error("wordTapped handler not found");
                     }
                 } catch (e) {
                     console.error("Error in test message: " + e);
@@ -174,8 +156,6 @@ class WordTapHandler: NSObject, WKScriptMessageHandler {
                 webView.evaluateJavaScript(testScript) { _, testError in
                     if let testError = testError {
                         Logger.error(category: "WordTapHandler", "Test message injection failed: \(testError)")
-                    } else {
-                        Logger.debug(category: "WordTapHandler", "Test message injection succeeded")
                     }
                 }
             }

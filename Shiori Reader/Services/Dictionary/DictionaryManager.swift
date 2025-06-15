@@ -22,7 +22,6 @@ class DictionaryManager {
                 var configuration = Configuration()
                 configuration.readonly = true
                 jmdictQueue = try DatabaseQueue(path: jmdictPath, configuration: configuration)
-                print("JMdict database loaded successfully")
             } else {
                 print("JMdict database not found in bundle")
             }
@@ -871,35 +870,5 @@ class DictionaryManager {
             tag.contains("adj-i") || tag.contains("adj-ix") || tag.contains("i-adj")
         }
     }
-    
-    // MARK: - Pitch Accent Testing
-    
-    /// Test the pitch accent functionality
-    func testPitchAccentIntegration() {
-        print("🧪 [DICTIONARY MANAGER] Testing pitch accent integration...")
-        
-        // Test with some common Japanese words
-        let testWords = ["こんにちは", "ありがとう", "日本", "にほん", "猫", "ねこ", "学校", "がっこう"]
-        
-        for word in testWords {
-            let entries = lookupWithDeinflection(word: word)
-            print("🧪 [DICTIONARY MANAGER] Word '\(word)': found \(entries.count) entries")
-            
-            for (index, entry) in entries.prefix(2).enumerated() {
-                let pitchInfo = entry.hasPitchAccent ? 
-                    "Pitch: \(entry.pitchAccentString ?? "none")" : 
-                    "No pitch accent data"
-                print("   [\(index)] \(entry.term) (\(entry.reading)) - \(pitchInfo)")
-                
-                if let pitchAccents = entry.pitchAccents {
-                    for accent in pitchAccents.accents {
-                        print("      Accent: [\(accent.pitchAccent)]")
-                    }
-                }
-            }
-        }
-        
-        // Also test the pitch accent manager directly
-        pitchAccentManager.testDatabase()
-    }
+
 }

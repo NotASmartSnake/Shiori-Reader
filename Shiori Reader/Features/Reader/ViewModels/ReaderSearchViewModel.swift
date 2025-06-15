@@ -172,12 +172,10 @@ class ReaderSearchViewModel: ObservableObject {
             // Try to get the primary dictionary form (lemma) of the main word
             if let primaryForm = JapaneseSearchHelper.shared.getPrimaryDictionaryForm(query), primaryForm != query {
                  // Use the specific lemma if it was found and is different from the input
-                 print("DEBUG [ReaderSearchViewModel]: Using deinflected primary form for search: '\(primaryForm)' (from query '\(query)')")
                  return primaryForm
             } else {
                  // Fallback: If no useful primary form found, or if input was already base form,
                  // search using the original user query.
-                 print("DEBUG [ReaderSearchViewModel]: No different primary form found, using original query for search: '\(query)'")
                  return query
             }
         } else {

@@ -7,7 +7,6 @@ let documentClickListener = null;
 window.shioriCleanupEventListeners = function() {
     if (documentClickListener) {
         document.removeEventListener('click', documentClickListener);
-        console.log('Removed previous Shiori click listener');
     }
     // Reset the reference
     documentClickListener = null;
@@ -176,33 +175,19 @@ documentClickListener = function(event) {
             // Calculate the offset of the clicked text within the clean paragraph
             let absoluteOffset = 0;
             try {
-                // Add debug logging to see what's happening
-                shioriLog(`🔍 DEBUG: About to calculate offset for clicked text`);
-                shioriLog(`🔍 DEBUG: Node textContent: "${node.textContent.substring(0, 30)}..."`);
-                shioriLog(`🔍 DEBUG: Click offset within node: ${offset}`);
-                shioriLog(`🔍 DEBUG: Clean paragraph text: "${cleanParagraphText.substring(0, 50)}..."`);
-                
                 // Calculate base offset of the text node within the paragraph
                 const baseOffset = calculateCleanOffsetOfElement(node, paragraph);
                 absoluteOffset = baseOffset + offset;
                 
-                shioriLog(`🔍 DEBUG: Base offset of text node: ${baseOffset}`);
-                shioriLog(`🔍 DEBUG: Final absolute offset: ${absoluteOffset}`);
-                
                 // Verify the offset makes sense
                 if (absoluteOffset >= 0 && absoluteOffset < cleanParagraphText.length) {
                     const charAtOffset = cleanParagraphText[absoluteOffset];
-                    shioriLog(`🔍 DEBUG: Character at calculated offset: "${charAtOffset}"`);
-                    shioriLog(`🔍 DEBUG: Expected character from click: "${contextText[0]}"`);
                     
                     if (charAtOffset !== contextText[0]) {
-                        shioriLog(`⚠️ WARNING: Offset mismatch! Expected "${contextText[0]}" but got "${charAtOffset}"`);
-                        
                         // Try to find the correct offset by searching
                         const expectedChar = contextText[0];
                         for (let i = Math.max(0, absoluteOffset - 10); i < Math.min(cleanParagraphText.length, absoluteOffset + 10); i++) {
                             if (cleanParagraphText[i] === expectedChar) {
-                                shioriLog(`🔍 Found expected character "${expectedChar}" at offset ${i} instead of ${absoluteOffset}`);
                                 absoluteOffset = i;
                                 break;
                             }
@@ -215,9 +200,7 @@ documentClickListener = function(event) {
                 shioriLog(`Error calculating offset, using simple offset: ${error}`);
                 absoluteOffset = offset;
             }
-            
-            shioriLog(`Paragraph context: cleanText length=${cleanParagraphText.length}, absoluteOffset=${absoluteOffset}`);
-            
+                        
             // Send to Swift with paragraph context
             sendWordToSwift(contextText, {
                 absoluteOffset: absoluteOffset,

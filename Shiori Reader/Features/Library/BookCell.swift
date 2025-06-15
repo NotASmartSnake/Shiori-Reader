@@ -29,11 +29,9 @@ struct BookCell: View {
                 .onAppear {
                     isReadingBook.setReading(true)
                     lastViewedBookPath = book.filePath
-                    print("DEBUG: Book appeared, set lastViewedBookPath = \(book.filePath)")
                 }
                 .onDisappear {
                     isReadingBook.setReading(false)
-                    print("DEBUG: Book disappeared")
                 }
             ) {
                 VStack {
