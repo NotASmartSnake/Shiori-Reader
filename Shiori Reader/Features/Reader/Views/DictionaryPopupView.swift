@@ -77,10 +77,31 @@ struct DictionaryPopupView: View {
                                                 .padding(.bottom, 1)
                                         }
                                         
-                                        // Main term
-                                        Text(entry.term)
-                                            .font(.headline)
-                                            .foregroundColor(.blue)
+                                        HStack(alignment: .center, spacing: 6) {
+                                            // Main term
+                                            Text(entry.term)
+                                                .font(.headline)
+                                                .foregroundColor(.blue)
+                                            
+                                            // Dictionary source badge
+                                            if entry.source == "obunsha" {
+                                                Text("旺文社")
+                                                    .font(.caption2)
+                                                    .padding(.horizontal, 4)
+                                                    .padding(.vertical, 1)
+                                                    .background(Color.orange.opacity(0.2))
+                                                    .foregroundColor(.orange)
+                                                    .cornerRadius(4)
+                                            } else if entry.source == "jmdict" {
+                                                Text("JMdict")
+                                                    .font(.caption2)
+                                                    .padding(.horizontal, 4)
+                                                    .padding(.vertical, 1)
+                                                    .background(Color.blue.opacity(0.2))
+                                                    .foregroundColor(.blue)
+                                                    .cornerRadius(4)
+                                            }
+                                        }
                                     }
                                     
                                     // Pitch accent graphs right after the word/reading (left-aligned)
@@ -150,20 +171,37 @@ struct DictionaryPopupView: View {
                                     let definitionId = "\(entry.id)_\(index)" // Unique ID for each definition
                                     let isExpanded = expandedDefinitions.contains(definitionId)
                                     
-                                    Text(entry.meanings[index])
-                                        .font(.body)
-                                        .lineLimit(isExpanded ? nil : 1) // Show 1 line when collapsed, unlimited when expanded
-                                        .padding(.leading, 8)
-                                        .contentShape(Rectangle()) // Make entire area tappable
-                                        .onTapGesture {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                if isExpanded {
-                                                    expandedDefinitions.remove(definitionId)
-                                                } else {
-                                                    expandedDefinitions.insert(definitionId)
-                                                }
+                                    // For Obunsha entries, show only 2 lines initially; for JMdict, show 1 line
+                                    let lineLimit = if entry.source == "obunsha" {
+                                        isExpanded ? nil : 2
+                                    } else {
+                                        isExpanded ? nil : 1
+                                    }
+                                    
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(entry.meanings[index])
+                                            .font(.body)
+                                            .lineLimit(lineLimit)
+                                            .padding(.leading, 8)
+                                        
+                                        // Show "tap to expand" hint for truncated text
+                                        if !isExpanded && entry.meanings[index].count > 50 {
+                                            Text("(tap to expand)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                                .padding(.leading, 8)
+                                        }
+                                    }
+                                    .contentShape(Rectangle()) // Make entire area tappable
+                                    .onTapGesture {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            if isExpanded {
+                                                expandedDefinitions.remove(definitionId)
+                                            } else {
+                                                expandedDefinitions.insert(definitionId)
                                             }
                                         }
+                                    }
                                 }
                                 
                                 Divider()

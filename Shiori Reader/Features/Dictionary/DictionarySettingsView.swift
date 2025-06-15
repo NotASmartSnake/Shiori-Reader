@@ -56,6 +56,10 @@ struct DictionarySettingsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(dictionary.name)
+                    .font(.headline)
+                Text(dictionary.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             
             Spacer()
@@ -64,7 +68,7 @@ struct DictionarySettingsView: View {
                 get: { dictionary.isEnabled },
                 set: { viewModel.toggleDictionary(id: dictionary.id, isEnabled: $0) }
             ))
-            .disabled(!dictionary.canDisable) // Can't disable the only dictionary
+            .disabled(!dictionary.canDisable) // Can't disable if it's the only enabled dictionary
         }
     }
     

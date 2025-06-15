@@ -4,9 +4,11 @@ import GRDB
 class DictionaryManager {
     static let shared = DictionaryManager()
     
-    private var dbQueue: DatabaseQueue?
+    private var jmdictQueue: DatabaseQueue?
+    private var obunshaQueue: DatabaseQueue?
     private var deinflector: Deinflector?
     private let pitchAccentManager = PitchAccentManager.shared
+    private let settingsKey = "dictionarySettings"
     
     private init() {
         setupDatabase()
@@ -15,19 +17,27 @@ class DictionaryManager {
     
     private func setupDatabase() {
         do {
-            if let dictionaryPath = Bundle.main.path(forResource: "jmdict", ofType: "db") {
-                // Configure database options
+            // Setup JMdict database
+            if let jmdictPath = Bundle.main.path(forResource: "jmdict", ofType: "db") {
                 var configuration = Configuration()
-                configuration.readonly = true // Dictionary is read-only
-                
-                // Create database queue
-                dbQueue = try DatabaseQueue(path: dictionaryPath, configuration: configuration)
-                print("Dictionary database loaded successfully")
+                configuration.readonly = true
+                jmdictQueue = try DatabaseQueue(path: jmdictPath, configuration: configuration)
+                print("JMdict database loaded successfully")
             } else {
-                print("Dictionary database not found in bundle")
+                print("JMdict database not found in bundle")
+            }
+            
+            // Setup Obunsha database
+            if let obunshaPath = Bundle.main.path(forResource: "obunsha", ofType: "db") {
+                var configuration = Configuration()
+                configuration.readonly = true
+                obunshaQueue = try DatabaseQueue(path: obunshaPath, configuration: configuration)
+                print("Obunsha database loaded successfully")
+            } else {
+                print("Obunsha database not found in bundle")
             }
         } catch {
-            print("Error setting up database: \(error)")
+            print("Error setting up databases: \(error)")
         }
     }
     
@@ -46,6 +56,21 @@ class DictionaryManager {
         }
     }
     
+    /// Get currently enabled dictionaries from user settings
+    private func getEnabledDictionaries() -> [String] {
+        // Simple struct to decode settings
+        struct SimpleDictionarySettings: Codable {
+            var enabledDictionaries: [String]
+        }
+        
+        if let data = UserDefaults.standard.data(forKey: settingsKey),
+           let settings = try? JSONDecoder().decode(SimpleDictionarySettings.self, from: data) {
+            return settings.enabledDictionaries
+        }
+        // Default to both dictionaries enabled
+        return ["jmdict", "obunsha"]
+    }
+    
     /// Create dictionary entry with lazy-loaded pitch accents
     private func createDictionaryEntry(
         id: String,
@@ -58,7 +83,8 @@ class DictionaryManager {
         rules: String?,
         transformed: String? = nil,
         transformationNotes: String? = nil,
-        popularity: Double?
+        popularity: Double?,
+        source: String = "jmdict"
     ) -> DictionaryEntry {
         // Create entry without pitch accents - they will load lazily when accessed
         let entry = DictionaryEntry(
@@ -72,7 +98,8 @@ class DictionaryManager {
             rules: rules,
             transformed: transformed,
             transformationNotes: transformationNotes,
-            popularity: popularity
+            popularity: popularity,
+            source: source
         )
         
         // Pitch accents will be loaded lazily via the computed property
@@ -81,8 +108,9 @@ class DictionaryManager {
     
 
     
-    func lookup(word: String) -> [DictionaryEntry] {
-        guard let db = dbQueue else { return [] }
+    /// Lookup from JMdict database
+    private func lookupJMdict(word: String) -> [DictionaryEntry] {
+        guard let db = jmdictQueue else { return [] }
         
         var entries: [DictionaryEntry] = []
         
@@ -118,7 +146,7 @@ class DictionaryManager {
                     
                     // Create a new entry with pitch accent lookup
                     let entry = createDictionaryEntry(
-                        id: "\(termId)",
+                        id: "jmdict_\(termId)",
                         term: expression,
                         reading: reading,
                         meanings: meanings,
@@ -126,17 +154,98 @@ class DictionaryManager {
                         termTags: tags.split(separator: ",").map(String.init),
                         score: score,
                         rules: rules,
-                        popularity: popularity
+                        popularity: popularity,
+                        source: "jmdict"
                     )
                     
                     entries.append(entry)
                 }
             }
         } catch {
-            print("Error looking up word: \(error)")
+            print("Error looking up word in JMdict: \(error)")
         }
         
-        return sortEntriesByPopularity(entries, searchTerm: word)
+        return entries
+    }
+    
+    /// Lookup from Obunsha dictionary database
+    private func lookupObunsha(word: String) -> [DictionaryEntry] {
+        guard let db = obunshaQueue else { return [] }
+        
+        var entries: [DictionaryEntry] = []
+        
+        do {
+            try db.read { db in
+                // Query terms that match the word (either expression or reading)
+                // Assuming Obunsha uses similar structure to JMdict
+                let rows = try Row.fetchAll(db, sql: """
+                    SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
+                    FROM terms
+                    WHERE expression = ? OR reading = ?
+                    ORDER BY id
+                    """, arguments: [word, word])
+                
+                for row in rows {
+                    let termId = row["id"] as? Int64 ?? 0
+                    let expression = row["expression"] as? String ?? ""
+                    let reading = row["reading"] as? String ?? ""
+                    let tags = row["term_tags"] as? String ?? ""
+                    let score = row["score"] as? String
+                    let rules = row["rules"] as? String
+                    let definitionsText = row["definitions"] as? String ?? ""
+                    // Handle popularity stored as string in database
+                    let popularity: Double
+                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
+                        popularity = popDouble
+                    } else {
+                        popularity = 0.0
+                    }
+                    
+                    // For Obunsha, keep definitions as single entries (long definitions)
+                    let meanings = [definitionsText].filter { !$0.isEmpty }
+                    
+                    // Create a new entry
+                    let entry = createDictionaryEntry(
+                        id: "obunsha_\(termId)",
+                        term: expression,
+                        reading: reading,
+                        meanings: meanings,
+                        meaningTags: [],
+                        termTags: tags.split(separator: ",").map(String.init),
+                        score: score,
+                        rules: rules,
+                        popularity: popularity,
+                        source: "obunsha"
+                    )
+                    
+                    entries.append(entry)
+                }
+            }
+        } catch {
+            print("Error looking up word in Obunsha: \(error)")
+        }
+        
+        return entries
+    }
+    
+    /// Main lookup function that searches all enabled dictionaries
+    func lookup(word: String) -> [DictionaryEntry] {
+        let enabledDictionaries = getEnabledDictionaries()
+        var allEntries: [DictionaryEntry] = []
+        
+        // Search JMdict if enabled
+        if enabledDictionaries.contains("jmdict") {
+            let jmdictEntries = lookupJMdict(word: word)
+            allEntries.append(contentsOf: jmdictEntries)
+        }
+        
+        // Search Obunsha if enabled
+        if enabledDictionaries.contains("obunsha") {
+            let obunshaEntries = lookupObunsha(word: word)
+            allEntries.append(contentsOf: obunshaEntries)
+        }
+        
+        return sortEntriesByPopularity(allEntries, searchTerm: word)
     }
     
     func lookupWithDeinflection(word: String) -> [DictionaryEntry] {
@@ -173,7 +282,8 @@ class DictionaryManager {
                         rules: entry.rules,
                         transformed: word,
                         transformationNotes: result.reasons.joined(separator: " ← "),
-                        popularity: entry.popularity
+                        popularity: entry.popularity,
+                        source: entry.source
                     )
                     allEntries.append(enhancedEntry)
                 }
@@ -307,7 +417,24 @@ class DictionaryManager {
     
     // Advanced lookup with prefix matching
     func searchByPrefix(prefix: String, limit: Int = 10) -> [DictionaryEntry] {
-        guard let db = dbQueue else { return [] }
+        let enabledDictionaries = getEnabledDictionaries()
+        var allEntries: [DictionaryEntry] = []
+        
+        // Search JMdict if enabled
+        if enabledDictionaries.contains("jmdict") {
+            allEntries.append(contentsOf: searchByPrefixJMdict(prefix: prefix, limit: limit))
+        }
+        
+        // Search Obunsha if enabled
+        if enabledDictionaries.contains("obunsha") {
+            allEntries.append(contentsOf: searchByPrefixObunsha(prefix: prefix, limit: limit))
+        }
+        
+        return Array(allEntries.prefix(limit))
+    }
+    
+    private func searchByPrefixJMdict(prefix: String, limit: Int = 10) -> [DictionaryEntry] {
+        guard let db = jmdictQueue else { return [] }
         
         var entries: [DictionaryEntry] = []
         
@@ -340,7 +467,7 @@ class DictionaryManager {
                     let definitions = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
                     
                     let entry = createDictionaryEntry(
-                        id: "\(termId)",
+                        id: "jmdict_\(termId)",
                         term: expression,
                         reading: reading,
                         meanings: definitions,
@@ -348,14 +475,71 @@ class DictionaryManager {
                         termTags: tags.split(separator: ",").map(String.init),
                         score: score,
                         rules: rules,
-                        popularity: popularity
+                        popularity: popularity,
+                        source: "jmdict"
                     )
                     
                     entries.append(entry)
                 }
             }
         } catch {
-            print("Error searching by prefix: \(error)")
+            print("Error searching JMdict by prefix: \(error)")
+        }
+        
+        return entries
+    }
+    
+    private func searchByPrefixObunsha(prefix: String, limit: Int = 10) -> [DictionaryEntry] {
+        guard let db = obunshaQueue else { return [] }
+        
+        var entries: [DictionaryEntry] = []
+        
+        do {
+            try db.read { db in
+                let rows = try Row.fetchAll(db, sql: """
+                    SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
+                    FROM terms
+                    WHERE expression LIKE ? || '%' OR reading LIKE ? || '%'
+                    ORDER BY sequence, id
+                    LIMIT ?
+                    """, arguments: [prefix, prefix, limit])
+                
+                for row in rows {
+                    let termId = row["id"] as? Int64 ?? 0
+                    let expression = row["expression"] as? String ?? ""
+                    let reading = row["reading"] as? String ?? ""
+                    let tags = row["term_tags"] as? String ?? ""
+                    let score = row["score"] as? String
+                    let rules = row["rules"] as? String
+                    let definitionsText = row["definitions"] as? String ?? ""
+                    let popularity: Double
+                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
+                        popularity = popDouble
+                    } else {
+                        popularity = 0.0
+                    }
+                    
+                    // For Obunsha, keep definitions as single entries
+                    let definitions = [definitionsText].filter { !$0.isEmpty }
+                    
+                    let entry = createDictionaryEntry(
+                        id: "obunsha_\(termId)",
+                        term: expression,
+                        reading: reading,
+                        meanings: definitions,
+                        meaningTags: [],
+                        termTags: tags.split(separator: ",").map(String.init),
+                        score: score,
+                        rules: rules,
+                        popularity: popularity,
+                        source: "obunsha"
+                    )
+                    
+                    entries.append(entry)
+                }
+            }
+        } catch {
+            print("Error searching Obunsha by prefix: \(error)")
         }
         
         return entries
@@ -363,7 +547,24 @@ class DictionaryManager {
     
     // Search by English meaning
     func searchByMeaning(text: String, limit: Int = 20) -> [DictionaryEntry] {
-        guard let db = dbQueue else { return [] }
+        let enabledDictionaries = getEnabledDictionaries()
+        var allEntries: [DictionaryEntry] = []
+        
+        // Search JMdict if enabled (English meanings are most useful here)
+        if enabledDictionaries.contains("jmdict") {
+            allEntries.append(contentsOf: searchByMeaningJMdict(text: text, limit: limit))
+        }
+        
+        // Search Obunsha if enabled (though English meaning search may not be as useful for monolingual dictionary)
+        if enabledDictionaries.contains("obunsha") {
+            allEntries.append(contentsOf: searchByMeaningObunsha(text: text, limit: limit))
+        }
+        
+        return sortEntriesByPopularity(Array(allEntries.prefix(limit)))
+    }
+    
+    private func searchByMeaningJMdict(text: String, limit: Int = 20) -> [DictionaryEntry] {
+        guard let db = jmdictQueue else { return [] }
         
         var entries: [DictionaryEntry] = []
         let searchTerm = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
@@ -424,7 +625,7 @@ class DictionaryManager {
                     // or include partial matches if we have very few results
                     if containsExactMatch || entries.count < 5 {
                         let entry = createDictionaryEntry(
-                            id: "\(termId)",
+                            id: "jmdict_\(termId)",
                             term: expression,
                             reading: reading,
                             meanings: definitions,
@@ -432,7 +633,8 @@ class DictionaryManager {
                             termTags: tags.split(separator: ",").map(String.init),
                             score: score,
                             rules: rules,
-                            popularity: popularity
+                            popularity: popularity,
+                            source: "jmdict"
                         )
                         
                         entries.append(entry)
@@ -440,10 +642,75 @@ class DictionaryManager {
                 }
             }
         } catch {
-            print("Error searching by meaning: \(error)")
+            print("Error searching JMdict by meaning: \(error)")
         }
         
-        return sortEntriesByPopularity(entries)
+        return entries
+    }
+    
+    private func searchByMeaningObunsha(text: String, limit: Int = 20) -> [DictionaryEntry] {
+        guard let db = obunshaQueue else { return [] }
+        
+        var entries: [DictionaryEntry] = []
+        let searchTerm = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        do {
+            try db.read { db in
+                // For Obunsha (Japanese monolingual), we'll search in definitions but this may not be as useful
+                let sql = """
+                    SELECT id, expression, reading, term_tags, score, rules, definitions, popularity,
+                        (CASE
+                            WHEN definitions LIKE '% \(searchTerm) %' OR definitions LIKE '\(searchTerm) %' OR definitions LIKE '% \(searchTerm)' OR definitions = '\(searchTerm)' THEN 1
+                            WHEN definitions LIKE '%\(searchTerm)%' THEN 2
+                            ELSE 3
+                        END) AS match_quality
+                    FROM terms
+                    WHERE definitions LIKE '%\(searchTerm)%'
+                    ORDER BY match_quality, popularity DESC, sequence
+                    LIMIT ?
+                    """
+                
+                let rows = try Row.fetchAll(db, sql: sql, arguments: [limit])
+                
+                for row in rows {
+                    let termId = row["id"] as? Int64 ?? 0
+                    let expression = row["expression"] as? String ?? ""
+                    let reading = row["reading"] as? String ?? ""
+                    let tags = row["term_tags"] as? String ?? ""
+                    let score = row["score"] as? String
+                    let rules = row["rules"] as? String
+                    let definitionsText = row["definitions"] as? String ?? ""
+                    let popularity: Double
+                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
+                        popularity = popDouble
+                    } else {
+                        popularity = 0.0
+                    }
+                    
+                    // For Obunsha, keep definitions as single entries
+                    let definitions = [definitionsText].filter { !$0.isEmpty }
+                    
+                    let entry = createDictionaryEntry(
+                        id: "obunsha_\(termId)",
+                        term: expression,
+                        reading: reading,
+                        meanings: definitions,
+                        meaningTags: [],
+                        termTags: tags.split(separator: ",").map(String.init),
+                        score: score,
+                        rules: rules,
+                        popularity: popularity,
+                        source: "obunsha"
+                    )
+                    
+                    entries.append(entry)
+                }
+            }
+        } catch {
+            print("Error searching Obunsha by meaning: \(error)")
+        }
+        
+        return entries
     }
     
     func sortEntriesByPopularity(_ entries: [DictionaryEntry]) -> [DictionaryEntry] {

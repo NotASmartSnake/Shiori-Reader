@@ -50,6 +50,7 @@ struct DictionaryEntry: Identifiable, Equatable {
     var transformed: String? = nil
     var transformationNotes: String? = nil
     let popularity: Double?
+    let source: String // Dictionary source identifier (e.g., "jmdict", "obunsha")
     
     // Lazy loading helper
     private let pitchAccentLoader: PitchAccentLoader
@@ -65,7 +66,7 @@ struct DictionaryEntry: Identifiable, Equatable {
     }
     
     // Custom initializer to set up lazy loader
-    init(id: String, term: String, reading: String, meanings: [String], meaningTags: [String], termTags: [String], score: String?, rules: String?, transformed: String? = nil, transformationNotes: String? = nil, popularity: Double?) {
+    init(id: String, term: String, reading: String, meanings: [String], meaningTags: [String], termTags: [String], score: String?, rules: String?, transformed: String? = nil, transformationNotes: String? = nil, popularity: Double?, source: String = "jmdict") {
         self.id = id
         self.term = term
         self.reading = reading
@@ -77,6 +78,7 @@ struct DictionaryEntry: Identifiable, Equatable {
         self.transformed = transformed
         self.transformationNotes = transformationNotes
         self.popularity = popularity
+        self.source = source
         self.pitchAccentLoader = PitchAccentLoader(term: term, reading: reading)
     }
     
@@ -91,7 +93,8 @@ struct DictionaryEntry: Identifiable, Equatable {
                lhs.rules == rhs.rules &&
                lhs.transformed == rhs.transformed &&
                lhs.transformationNotes == rhs.transformationNotes &&
-               lhs.popularity == rhs.popularity
+               lhs.popularity == rhs.popularity &&
+               lhs.source == rhs.source
     }
     
     /// Returns true if this entry has pitch accent information

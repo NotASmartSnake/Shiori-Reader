@@ -24,7 +24,7 @@ class DictionarySettingsViewModel: ObservableObject {
         // Initialize with default settings first
         self.settings = DictionarySettings()
         
-        // Initialize with the only dictionary we support for now (JMdict)
+        // Initialize with the available dictionaries
         self.availableDictionaries = [
             DictionaryInfo(
                 id: "jmdict",
@@ -32,7 +32,15 @@ class DictionarySettingsViewModel: ObservableObject {
                 description: "Japanese-English dictionary",
                 isBuiltIn: true,
                 isEnabled: true,
-                canDisable: false
+                canDisable: true
+            ),
+            DictionaryInfo(
+                id: "obunsha",
+                name: "旺文社国語辞典 第十一版",
+                description: "Japanese monolingual dictionary",
+                isBuiltIn: true,
+                isEnabled: true,
+                canDisable: true
             )
         ]
         
@@ -42,8 +50,30 @@ class DictionarySettingsViewModel: ObservableObject {
             self.settings = savedSettings
         }
         
+        // Sync the dictionary enabled state with settings
+        syncDictionaryStatesWithSettings()
+        
         // Set up publishers to monitor changes
         setupObservers()
+    }
+    
+    private func syncDictionaryStatesWithSettings() {
+        for index in availableDictionaries.indices {
+            let dictionaryId = availableDictionaries[index].id
+            let isEnabled = settings.enabledDictionaries.contains(dictionaryId)
+            availableDictionaries[index].isEnabled = isEnabled
+            
+            // Ensure at least one dictionary can't be disabled if it's the only one enabled
+            let enabledCount = availableDictionaries.filter { $0.isEnabled }.count
+            if enabledCount <= 1 {
+                // If this is the only enabled dictionary, it can't be disabled
+                if availableDictionaries[index].isEnabled {
+                    availableDictionaries[index].canDisable = false
+                }
+            } else {
+                availableDictionaries[index].canDisable = true
+            }
+        }
     }
     
     private func setupObservers() {
@@ -94,6 +124,9 @@ class DictionarySettingsViewModel: ObservableObject {
             
             settings = updatedSettings
             saveSettings()
+            
+            // Update canDisable states for all dictionaries
+            syncDictionaryStatesWithSettings()
         }
     }
 }
@@ -105,7 +138,7 @@ struct DictionaryInfo: Identifiable, Equatable {
     let description: String
     let isBuiltIn: Bool
     var isEnabled: Bool
-    let canDisable: Bool
+    var canDisable: Bool
     
     static func == (lhs: DictionaryInfo, rhs: DictionaryInfo) -> Bool {
         return lhs.id == rhs.id
@@ -120,7 +153,7 @@ struct DictionarySettings: Equatable, Codable {
         return lhs.enabledDictionaries == rhs.enabledDictionaries
     }
     
-    init(enabledDictionaries: [String] = ["jmdict"]) {
+    init(enabledDictionaries: [String] = ["jmdict", "obunsha"]) {
         self.enabledDictionaries = enabledDictionaries
     }
 }
