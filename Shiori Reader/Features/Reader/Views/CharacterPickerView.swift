@@ -21,10 +21,6 @@ struct CharacterPickerView: View {
         // Ensure selectedOffset is within valid bounds
         let safeSelectedOffset = max(0, min(selectedOffset, currentText.count - 1))
         
-        // Print debugging info
-        print("✨ PICKER - Current text: \(currentText.prefix(20))... (length: \(currentText.count))")
-        print("✨ PICKER - Selected offset: \(selectedOffset) -> safe: \(safeSelectedOffset)")
-        
         // Helper function to safely get character at offset
         func safeCharacterAt(_ offset: Int) -> (character: String, isValid: Bool) {
             guard offset >= 0 && offset < currentText.count else {
@@ -40,7 +36,6 @@ struct CharacterPickerView: View {
             let (character, isValid) = safeCharacterAt(targetIndex)
             if isValid {
                 characters.append((character, targetIndex))
-                print("✨ PICKER - Adding Left Char: '\(character)' at offset \(targetIndex)")
             }
         }
         
@@ -48,7 +43,6 @@ struct CharacterPickerView: View {
         let (currentChar, currentIsValid) = safeCharacterAt(safeSelectedOffset)
         if currentIsValid {
             characters.append((currentChar, safeSelectedOffset))
-            print("✨ PICKER - Adding Current Char: '\(currentChar)' at offset \(safeSelectedOffset)")
         }
         
         // Add 2 characters to the right
@@ -57,7 +51,6 @@ struct CharacterPickerView: View {
             let (character, isValid) = safeCharacterAt(targetIndex)
             if isValid {
                 characters.append((character, targetIndex))
-                print("✨ PICKER - Adding Right Char: '\(character)' at offset \(targetIndex)")
             }
         }
         

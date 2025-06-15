@@ -23,6 +23,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Initialize and apply appearance settings
         _ = AppearanceManager.shared
         
+        DictionaryManager.shared.testObunshaDatabaseIntegration()
+        
         // Configure logging based on build type
         #if DEBUG
             Logger.isEnabled = true

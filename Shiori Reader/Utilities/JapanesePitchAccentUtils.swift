@@ -54,9 +54,6 @@ struct JapanesePitchAccentUtils {
             i = nextIndex
         }
         
-        // Debug logging to help troubleshoot
-        print("🔤 [MORA DEBUG] Input: '\(text)' → Mora: \(mora)")
-        
         return mora
     }
     

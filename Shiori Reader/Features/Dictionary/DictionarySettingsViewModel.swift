@@ -48,6 +48,16 @@ class DictionarySettingsViewModel: ObservableObject {
         if let data = userDefaults.data(forKey: dictionarySettingsKey),
            let savedSettings = try? JSONDecoder().decode(DictionarySettings.self, from: data) {
             self.settings = savedSettings
+            
+            // Migration: Add obunsha to existing settings if it's not there
+            if !savedSettings.enabledDictionaries.contains("obunsha") {
+                print("📚 [SETTINGS] Migrating settings to include Obunsha dictionary")
+                self.settings.enabledDictionaries.append("obunsha")
+                saveSettings()
+            }
+        } else {
+            // No saved settings, use defaults
+            print("📚 [SETTINGS] No saved settings found, using defaults")
         }
         
         // Sync the dictionary enabled state with settings
