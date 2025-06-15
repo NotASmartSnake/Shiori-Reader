@@ -89,16 +89,13 @@ class DictionaryManager {
         do {
             try db.read { db in
                 // Query terms that match the word (either expression or reading)
+                // Updated to work with consolidated terms table
                 let rows = try Row.fetchAll(db, sql: """
-                    SELECT t.id, t.expression, t.reading, t.term_tags, t.score, t.rules, d.definition, t.popularity
-                    FROM terms t
-                    JOIN definitions d ON t.id = d.term_id
-                    WHERE t.expression = ? OR t.reading = ?
-                    ORDER BY t.id, d.id
+                    SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
+                    FROM terms
+                    WHERE expression = ? OR reading = ?
+                    ORDER BY id
                     """, arguments: [word, word])
-                
-                var currentTermId: Int64?
-                var currentEntry: DictionaryEntry?
                 
                 for row in rows {
                     let termId = row["id"] as? Int64 ?? 0
@@ -107,7 +104,7 @@ class DictionaryManager {
                     let tags = row["term_tags"] as? String ?? ""
                     let score = row["score"] as? String
                     let rules = row["rules"] as? String
-                    let definitionText = row["definition"] as? String ?? ""
+                    let definitionsText = row["definitions"] as? String ?? ""
                     // Handle popularity stored as string in database
                     let popularity: Double
                     if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
@@ -116,34 +113,22 @@ class DictionaryManager {
                         popularity = 0.0
                     }
                     
-                    // If we're still working with the same term
-                    if currentTermId == termId {
-                        currentEntry?.meanings.append(definitionText)
-                    } else {
-                        // Save the previous entry if it exists
-                        if let entry = currentEntry {
-                            entries.append(entry)
-                        }
-                        
-                        // Create a new entry with pitch accent lookup
-                        currentEntry = createDictionaryEntry(
-                            id: "\(termId)",
-                            term: expression,
-                            reading: reading,
-                            meanings: [definitionText],
-                            meaningTags: [],
-                            termTags: tags.split(separator: ",").map(String.init),
-                            score: score,
-                            rules: rules,
-                            popularity: popularity
-                        )
-                        
-                        currentTermId = termId
-                    }
-                }
-                
-                // Add the last entry if it exists
-                if let entry = currentEntry {
+                    // Split definitions by newline separator (assuming definitions are stored separated by newlines)
+                    let meanings = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
+                    
+                    // Create a new entry with pitch accent lookup
+                    let entry = createDictionaryEntry(
+                        id: "\(termId)",
+                        term: expression,
+                        reading: reading,
+                        meanings: meanings,
+                        meaningTags: [],
+                        termTags: tags.split(separator: ",").map(String.init),
+                        score: score,
+                        rules: rules,
+                        popularity: popularity
+                    )
+                    
                     entries.append(entry)
                 }
             }
@@ -329,10 +314,10 @@ class DictionaryManager {
         do {
             try db.read { db in
                 let rows = try Row.fetchAll(db, sql: """
-                    SELECT DISTINCT t.id, t.expression, t.reading, t.term_tags, t.score, t.rules, t.popularity
-                    FROM terms t
-                    WHERE t.expression LIKE ? || '%' OR t.reading LIKE ? || '%'
-                    ORDER BY t.sequence, t.id
+                    SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
+                    FROM terms
+                    WHERE expression LIKE ? || '%' OR reading LIKE ? || '%'
+                    ORDER BY sequence, id
                     LIMIT ?
                     """, arguments: [prefix, prefix, limit])
                 
@@ -343,6 +328,7 @@ class DictionaryManager {
                     let tags = row["term_tags"] as? String ?? ""
                     let score = row["score"] as? String
                     let rules = row["rules"] as? String
+                    let definitionsText = row["definitions"] as? String ?? ""
                     let popularity: Double
                     if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
                         popularity = popDouble
@@ -350,12 +336,8 @@ class DictionaryManager {
                         popularity = 0.0
                     }
                     
-                    // Fetch definitions for this term
-                    let definitions = try String.fetchAll(db, sql: """
-                        SELECT definition FROM definitions
-                        WHERE term_id = ?
-                        ORDER BY id
-                        """, arguments: [termId])
+                    // Split definitions by newline separator
+                    let definitions = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
                     
                     let entry = createDictionaryEntry(
                         id: "\(termId)",
@@ -389,16 +371,15 @@ class DictionaryManager {
         do {
             try db.read { db in
                 let sql = """
-                    SELECT DISTINCT t.id, t.expression, t.reading, t.term_tags, t.score, t.rules, t.popularity,
+                    SELECT id, expression, reading, term_tags, score, rules, definitions, popularity,
                         (CASE
-                            WHEN d.definition LIKE '% \(searchTerm) %' OR d.definition LIKE '\(searchTerm) %' OR d.definition LIKE '% \(searchTerm)' OR d.definition = '\(searchTerm)' THEN 1
-                            WHEN d.definition LIKE '%\(searchTerm)%' THEN 2
+                            WHEN definitions LIKE '% \(searchTerm) %' OR definitions LIKE '\(searchTerm) %' OR definitions LIKE '% \(searchTerm)' OR definitions = '\(searchTerm)' THEN 1
+                            WHEN definitions LIKE '%\(searchTerm)%' THEN 2
                             ELSE 3
                         END) AS match_quality
-                    FROM terms t
-                    JOIN definitions d ON t.id = d.term_id
-                    WHERE d.definition LIKE '%\(searchTerm)%'
-                    ORDER BY match_quality, t.popularity DESC, t.sequence
+                    FROM terms
+                    WHERE definitions LIKE '%\(searchTerm)%'
+                    ORDER BY match_quality, popularity DESC, sequence
                     LIMIT ?
                     """
                 
@@ -411,6 +392,7 @@ class DictionaryManager {
                     let tags = row["term_tags"] as? String ?? ""
                     let score = row["score"] as? String
                     let rules = row["rules"] as? String
+                    let definitionsText = row["definitions"] as? String ?? ""
                     let popularity: Double
                     if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
                         popularity = popDouble
@@ -418,12 +400,8 @@ class DictionaryManager {
                         popularity = 0.0
                     }
                     
-                    // Fetch all definitions for this term
-                    let definitions = try String.fetchAll(db, sql: """
-                        SELECT definition FROM definitions
-                        WHERE term_id = ?
-                        ORDER BY id
-                        """, arguments: [termId])
+                    // Split definitions by newline separator
+                    let definitions = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
                     
                     // Filter out false positive matches
                     let containsExactMatch = definitions.contains { definition in
