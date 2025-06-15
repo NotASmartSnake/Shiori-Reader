@@ -28,7 +28,8 @@ class SavedWordsManager: ObservableObject {
             reading: word.reading,
             definition: word.definition,
             sentence: word.sentence,
-            sourceBook: word.sourceBook
+            sourceBook: word.sourceBook,
+            pitchAccents: word.pitchAccents
         )
         savedWords.append(newWord)
     }
@@ -105,7 +106,7 @@ class SavedWordsManager: ObservableObject {
     /// - Returns: A tuple containing the URL of the saved file and its filename
     func exportToCSV() -> (fileURL: URL, filename: String)? {
         // Create CSV content
-        var csvString = "Word,Reading,Definition,Example Sentence,Source Book,Date Added\n"
+        var csvString = "Word,Reading,Definition,Example Sentence,Source Book,Date Added,Pitch Accent\n"
         
         // Add each word's data as a row
         for word in savedWords {
@@ -115,6 +116,9 @@ class SavedWordsManager: ObservableObject {
             dateFormatter.timeStyle = .short
             let dateString = dateFormatter.string(from: word.timeAdded)
             
+            // Get pitch accent string
+            let pitchAccentString = word.pitchAccentString ?? ""
+            
             // Escape CSV fields properly
             let escapedWord = escapeCSVField(word.word)
             let escapedReading = escapeCSVField(word.reading)
@@ -122,9 +126,10 @@ class SavedWordsManager: ObservableObject {
             let escapedSentence = escapeCSVField(word.sentence)
             let escapedSource = escapeCSVField(word.sourceBook)
             let escapedDate = escapeCSVField(dateString)
+            let escapedPitchAccent = escapeCSVField(pitchAccentString)
             
             // Add row to CSV
-            csvString.append("\(escapedWord),\(escapedReading),\(escapedDefinition),\(escapedSentence),\(escapedSource),\(escapedDate)\n")
+            csvString.append("\(escapedWord),\(escapedReading),\(escapedDefinition),\(escapedSentence),\(escapedSource),\(escapedDate),\(escapedPitchAccent)\n")
         }
         
         // Create a temporary directory URL

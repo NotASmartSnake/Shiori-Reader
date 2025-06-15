@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788.4" systemVersion="24F74" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="AdditionalFieldEntity" representedClassName="AdditionalFieldEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="fieldName" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="type" optional="YES" attributeType="String"/>
+        <relationship name="ankiSettings" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="AnkiSettingsEntity" inverseName="additionalFields" inverseEntity="AnkiSettingsEntity"/>
+    </entity>
+    <entity name="AnkiSettingsEntity" representedClassName="AnkiSettingsEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="deckName" optional="YES" attributeType="String"/>
+        <attribute name="definitionField" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="noteType" optional="YES" attributeType="String"/>
+        <attribute name="pitchAccentField" optional="YES" attributeType="String"/>
+        <attribute name="pitchAccentGraphColor" optional="YES" attributeType="String" defaultValueString="black"/>
+        <attribute name="pitchAccentTextColor" optional="YES" attributeType="String" defaultValueString="black"/>
+        <attribute name="readingField" optional="YES" attributeType="String"/>
+        <attribute name="sentenceField" optional="YES" attributeType="String"/>
+        <attribute name="tags" optional="YES" attributeType="String"/>
+        <attribute name="wordField" optional="YES" attributeType="String"/>
+        <attribute name="wordWithReadingField" optional="YES" attributeType="String"/>
+        <relationship name="additionalFields" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="AdditionalFieldEntity" inverseName="ankiSettings" inverseEntity="AdditionalFieldEntity"/>
+    </entity>
+    <entity name="BookEntity" representedClassName="BookEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="addedDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="author" optional="YES" attributeType="String"/>
+        <attribute name="coverImagePath" optional="YES" attributeType="String"/>
+        <attribute name="currentLocatorData" optional="YES" attributeType="Binary"/>
+        <attribute name="filePath" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isLocalCover" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="lastOpenedDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="readingProgress" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <relationship name="bookmarks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="BookmarkEntity" inverseName="book" inverseEntity="BookmarkEntity"/>
+        <relationship name="preferences" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="BookPreferenceEntity" inverseName="book" inverseEntity="BookPreferenceEntity"/>
+        <relationship name="savedWords" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="SavedWordEntity" inverseName="book" inverseEntity="SavedWordEntity"/>
+    </entity>
+    <entity name="BookmarkEntity" representedClassName="BookmarkEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="bookId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="created" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="locatorData" optional="YES" attributeType="Binary"/>
+        <attribute name="progression" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <relationship name="book" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="BookEntity" inverseName="bookmarks" inverseEntity="BookEntity"/>
+    </entity>
+    <entity name="BookPreferenceEntity" representedClassName="BookPreferenceEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="backgroundColor" optional="YES" attributeType="String"/>
+        <attribute name="fontFamily" optional="YES" attributeType="String"/>
+        <attribute name="fontSize" optional="YES" attributeType="Float" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="fontWeight" optional="YES" attributeType="Float" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isScrollMode" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isVerticalText" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="readingDirection" optional="YES" attributeType="String"/>
+        <attribute name="textColor" optional="YES" attributeType="String"/>
+        <attribute name="theme" optional="YES" attributeType="String"/>
+        <relationship name="book" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="BookEntity" inverseName="preferences" inverseEntity="BookEntity"/>
+    </entity>
+    <entity name="CustomThemeEntity" representedClassName=".CustomThemeEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="backgroundColor" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="textColor" optional="YES" attributeType="String"/>
+    </entity>
+    <entity name="DefaultAppearanceSettingsEntity" representedClassName="DefaultAppearanceSettingsEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="backgroundColor" optional="YES" attributeType="String" defaultValueString="#FFFFFF"/>
+        <attribute name="fontFamily" optional="YES" attributeType="String" defaultValueString="Default"/>
+        <attribute name="fontSize" optional="YES" attributeType="Float" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="fontWeight" optional="YES" attributeType="Float" defaultValueString="400" usesScalarValueType="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isScrollMode" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="isVerticalText" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="readingDirection" optional="YES" attributeType="String" defaultValueString="ltr"/>
+        <attribute name="textColor" optional="YES" attributeType="String" defaultValueString="#000000"/>
+        <attribute name="theme" optional="YES" attributeType="String" defaultValueString="light"/>
+    </entity>
+    <entity name="SavedWordEntity" representedClassName="SavedWordEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="definition" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="pitchAccentData" optional="YES" attributeType="Binary"/>
+        <attribute name="reading" optional="YES" attributeType="String"/>
+        <attribute name="sentence" optional="YES" attributeType="String"/>
+        <attribute name="sourceBook" optional="YES" attributeType="String"/>
+        <attribute name="timeAdded" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="word" optional="YES" attributeType="String"/>
+        <relationship name="book" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="BookEntity" inverseName="savedWords" inverseEntity="BookEntity"/>
+    </entity>
+</model>

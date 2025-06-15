@@ -113,6 +113,50 @@ struct SavedWordDetailView: View {
                     }
                     .padding(.horizontal)
                     
+                    // Pitch accent section
+                    if editedWord.hasPitchAccent, let pitchAccents = editedWord.pitchAccents {
+                        let matchingAccents = pitchAccents.accents.filter { accent in
+                            accent.term == editedWord.word && accent.reading == editedWord.reading
+                        }
+                        
+                        if !matchingAccents.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Pitch Accent")
+                                    .font(.headline)
+                                    .foregroundColor(.gray)
+                                
+                                // Show pitch accent graphs with pattern numbers
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(Array(matchingAccents.enumerated()), id: \.element.id) { index, accent in
+                                        HStack(alignment: .center, spacing: 12) {
+                                            // Pitch accent number badge
+                                            Text("[\(accent.pitchAccent)]")
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(pitchAccentColor(for: accent.pitchAccent))
+                                                .cornerRadius(6)
+                                            
+                                            // Pitch accent graph
+                                            PitchAccentGraphView(
+                                                word: accent.term,
+                                                reading: accent.reading,
+                                                pitchValue: accent.pitchAccent
+                                            )
+                                            
+                                            Spacer()
+                                        }
+                                    }
+                                }
+                                .padding(.leading, 4)
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 5)
+                        }
+                    }
+                    
                     // Definition
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Definition")
@@ -291,6 +335,21 @@ struct SavedWordDetailView: View {
         }
     }
     
+    // MARK: - Helper Functions
+    
+    private func pitchAccentColor(for pattern: Int) -> Color {
+        switch pattern {
+        case 0:
+            return .green  // Heiban (flat)
+        case 1:
+            return .orange // Atamadaka (head-high)
+        default:
+            return .blue   // Nakadaka (middle-high)
+        }
+    }
+    
+    // MARK: - Actions
+    
     private func saveChanges() {
         wordManager.updateWord(updated: editedWord)
     }
@@ -313,6 +372,7 @@ struct SavedWordDetailView: View {
             reading: editedWord.reading,
             definition: editedWord.definition,
             sentence: editedWord.sentence,
+            pitchAccents: editedWord.pitchAccents,
             completion: { success in
                 if success {
                     withAnimation {
@@ -339,7 +399,12 @@ struct SavedWordDetailView: View {
                 reading: "べんきょう",
                 definition: "study",
                 sentence: "日本語の勉強は楽しいけど、難しいです。",
-                sourceBook: "ReZero", timeAdded: Date()
+                sourceBook: "ReZero",
+                timeAdded: Date(),
+                pitchAccents: PitchAccentData(accents: [
+                    PitchAccent(term: "勉強", reading: "べんきょう", pitchAccent: 0),
+                    PitchAccent(term: "勉強", reading: "べんきょう", pitchAccent: 1)
+                ])
             )
         )
     }

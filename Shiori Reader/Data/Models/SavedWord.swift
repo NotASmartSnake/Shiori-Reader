@@ -16,6 +16,7 @@ struct SavedWord: Identifiable, Equatable, Hashable {
     let sourceBook: String
     let timeAdded: Date
     var bookId: UUID?
+    var pitchAccents: PitchAccentData? // Pitch accent information
     
     // MARK: - Initialization
     
@@ -26,7 +27,8 @@ struct SavedWord: Identifiable, Equatable, Hashable {
          sentence: String,
          sourceBook: String,
          timeAdded: Date = Date(),
-         bookId: UUID? = nil) {
+         bookId: UUID? = nil,
+         pitchAccents: PitchAccentData? = nil) {
         self.id = id
         self.word = word
         self.reading = reading
@@ -35,6 +37,7 @@ struct SavedWord: Identifiable, Equatable, Hashable {
         self.sourceBook = sourceBook
         self.timeAdded = timeAdded
         self.bookId = bookId
+        self.pitchAccents = pitchAccents
     }
     
     // Initialize from Core Data entity
@@ -47,6 +50,13 @@ struct SavedWord: Identifiable, Equatable, Hashable {
         self.sourceBook = entity.sourceBook ?? ""
         self.timeAdded = entity.timeAdded ?? Date()
         self.bookId = entity.book?.id
+        
+        // Deserialize pitch accent data if available
+        if let pitchAccentData = entity.pitchAccentData {
+            self.pitchAccents = deserializePitchAccentData(from: pitchAccentData)
+        } else {
+            self.pitchAccents = nil
+        }
     }
     
     // MARK: - Helper Methods
@@ -69,7 +79,8 @@ struct SavedWord: Identifiable, Equatable, Hashable {
             sentence: self.sentence,
             sourceBook: self.sourceBook,
             timeAdded: self.timeAdded,
-            bookId: self.bookId
+            bookId: self.bookId,
+            pitchAccents: self.pitchAccents
         )
     }
     
@@ -83,8 +94,25 @@ struct SavedWord: Identifiable, Equatable, Hashable {
             sentence: newSentence,
             sourceBook: self.sourceBook,
             timeAdded: self.timeAdded,
-            bookId: self.bookId
+            bookId: self.bookId,
+            pitchAccents: self.pitchAccents
         )
+    }
+    
+    /// Returns true if this saved word has pitch accent information
+    var hasPitchAccent: Bool {
+        return pitchAccents?.isEmpty == false
+    }
+    
+    /// Returns the primary pitch accent number, or nil if no pitch accent data
+    var primaryPitchAccent: Int? {
+        return pitchAccents?.primary?.pitchAccent
+    }
+    
+    /// Returns all pitch accent patterns as a comma-separated string
+    var pitchAccentString: String? {
+        guard let accents = pitchAccents?.allPatterns, !accents.isEmpty else { return nil }
+        return accents.map { "[\($0)]" }.joined(separator: ", ")
     }
     
     // MARK: - Hashable
@@ -110,10 +138,61 @@ struct SavedWord: Identifiable, Equatable, Hashable {
         entity.sourceBook = sourceBook
         entity.timeAdded = timeAdded
         
+        // Serialize pitch accent data if available
+        if let pitchAccents = self.pitchAccents {
+            entity.pitchAccentData = serializePitchAccentData(pitchAccents)
+        } else {
+            entity.pitchAccentData = nil
+        }
+        
         // Only update the book relationship if provided
         if let bookEntity = bookEntity {
             entity.book = bookEntity
         }
     }
-    
 }
+
+// MARK: - Pitch Accent Serialization Helpers
+
+/// Serialize PitchAccentData to Data for Core Data storage
+private func serializePitchAccentData(_ pitchAccents: PitchAccentData) -> Data? {
+    let accentsData = pitchAccents.accents.map { accent in
+        [
+            "term": accent.term,
+            "reading": accent.reading,
+            "pitchAccent": accent.pitchAccent
+        ] as [String: Any]
+    }
+    
+    do {
+        return try JSONSerialization.data(withJSONObject: accentsData)
+    } catch {
+        print("Failed to serialize pitch accent data: \(error)")
+        return nil
+    }
+}
+
+/// Deserialize Data to PitchAccentData from Core Data storage
+private func deserializePitchAccentData(from data: Data) -> PitchAccentData? {
+    do {
+        guard let accentsArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return nil
+        }
+        
+        let accents = accentsArray.compactMap { dict -> PitchAccent? in
+            guard let term = dict["term"] as? String,
+                  let reading = dict["reading"] as? String,
+                  let pitchAccent = dict["pitchAccent"] as? Int else {
+                return nil
+            }
+            
+            return PitchAccent(term: term, reading: reading, pitchAccent: pitchAccent)
+        }
+        
+        return PitchAccentData(accents: accents)
+    } catch {
+        print("Failed to deserialize pitch accent data: \(error)")
+        return nil
+    }
+}
+

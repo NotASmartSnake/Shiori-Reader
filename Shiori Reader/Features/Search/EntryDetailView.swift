@@ -280,7 +280,8 @@ struct EntryDetailView: View {
                 definition: entry.meanings.joined(separator: "; "),
                 sentence: "", // Empty for now, user can add later
                 sourceBook: "Search", // Indicate this was from search
-                timeAdded: Date()
+                timeAdded: Date(),
+                pitchAccents: entry.pitchAccents // Include pitch accent data
             )
             
             // Add to saved words

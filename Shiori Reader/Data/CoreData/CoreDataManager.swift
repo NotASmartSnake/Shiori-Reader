@@ -134,7 +134,7 @@ class CoreDataManager {
     // MARK: - SavedWord Operations
     
     func createSavedWord(word: String, reading: String, definition: String,
-                         sentence: String, sourceBook: String, relatedBook: BookEntity? = nil) -> SavedWordEntity {
+                         sentence: String, sourceBook: String, pitchAccents: PitchAccentData? = nil, relatedBook: BookEntity? = nil) -> SavedWordEntity {
         let savedWord = SavedWordEntity(context: viewContext)
         savedWord.id = UUID()
         savedWord.word = word
@@ -143,6 +143,11 @@ class CoreDataManager {
         savedWord.sentence = sentence
         savedWord.sourceBook = sourceBook
         savedWord.timeAdded = Date()
+        
+        // Serialize pitch accent data if available
+        if let pitchAccents = pitchAccents {
+            savedWord.pitchAccentData = serializePitchAccentData(pitchAccents)
+        }
         
         if let relatedBook = relatedBook {
             // If we have a relationship with a specific book
@@ -556,6 +561,25 @@ class CoreDataManager {
             return nil
         } catch {
             Logger.debug(category: "CoreData", "Error finding bookmark ID: \(error)")
+            return nil
+        }
+    }
+    
+    // MARK: - Pitch Accent Serialization Helper
+    
+    private func serializePitchAccentData(_ pitchAccents: PitchAccentData) -> Data? {
+        let accentsData = pitchAccents.accents.map { accent in
+            [
+                "term": accent.term,
+                "reading": accent.reading,
+                "pitchAccent": accent.pitchAccent
+            ] as [String: Any]
+        }
+        
+        do {
+            return try JSONSerialization.data(withJSONObject: accentsData)
+        } catch {
+            Logger.debug(category: "CoreData", "Failed to serialize pitch accent data: \(error)")
             return nil
         }
     }

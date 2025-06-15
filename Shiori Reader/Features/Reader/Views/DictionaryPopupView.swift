@@ -301,7 +301,8 @@ struct DictionaryPopupView: View {
             definition: entry.meanings.joined(separator: "; "),
             sentence: sentenceContext,
             sourceBook: bookTitle,
-            timeAdded: Date()
+            timeAdded: Date(),
+            pitchAccents: entry.pitchAccents // Include pitch accent data
         )
         
         // Add to saved words manager

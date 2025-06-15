@@ -19,13 +19,14 @@ class SavedWordRepository {
     
     // Add a new saved word
     func addSavedWord(word: String, reading: String, definition: String,
-                      sentence: String, sourceBook: String) -> SavedWord {
+                      sentence: String, sourceBook: String, pitchAccents: PitchAccentData? = nil) -> SavedWord {
         let entity = coreDataManager.createSavedWord(
             word: word,
             reading: reading,
             definition: definition,
             sentence: sentence,
-            sourceBook: sourceBook
+            sourceBook: sourceBook,
+            pitchAccents: pitchAccents
         )
         return SavedWord(entity: entity)
     }
@@ -33,11 +34,7 @@ class SavedWordRepository {
     // Update an existing saved word
     func updateSavedWord(_ savedWord: SavedWord) {
         guard let entity = coreDataManager.getSavedWord(by: savedWord.id) else { return }
-        entity.word = savedWord.word
-        entity.reading = savedWord.reading
-        entity.definition = savedWord.definition
-        entity.sentence = savedWord.sentence
-        entity.sourceBook = savedWord.sourceBook
+        savedWord.updateEntity(entity)
         coreDataManager.saveContext()
     }
     
