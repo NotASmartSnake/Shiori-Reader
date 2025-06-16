@@ -152,7 +152,7 @@ class Deinflector {
                     }
                     
                     let newTerm = term.prefix(term.count - kanaIn.count) + kanaOut
-                    var newReasons = [reason] + reasonsList // Prepend new reason
+                    let newReasons = [reason] + reasonsList // Prepend new reason
                     
                     if debugMode {
                         let rulesOutStrings = Deinflector.ruleFlagsToStrings(rulesOut)

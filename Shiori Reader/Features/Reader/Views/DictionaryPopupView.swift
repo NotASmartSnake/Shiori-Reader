@@ -370,7 +370,7 @@ struct DictionaryPopupView: View {
         AnkiExportService.shared.addVocabularyCard(
             word: entry.term,
             reading: entry.reading,
-            definition: entry.meanings.joined(separator: "; "),
+            definition: entry.meanings.joined(separator: "<br>"),
             sentence: sentenceContext,
             pitchAccents: entry.pitchAccents,
             completion: { success in
@@ -407,7 +407,7 @@ struct DictionaryPopupView: View {
         let newWord = SavedWord(
             word: entry.term,
             reading: entry.reading,
-            definition: entry.meanings.joined(separator: "; "),
+            definition: entry.meanings.joined(separator: "\n"),
             sentence: sentenceContext,
             sourceBook: bookTitle,
             timeAdded: Date(),

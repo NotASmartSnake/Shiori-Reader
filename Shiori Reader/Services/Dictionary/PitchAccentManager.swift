@@ -37,13 +37,11 @@ class PitchAccentManager {
                     let fileManager = FileManager.default
                     do {
                         let files = try fileManager.contentsOfDirectory(atPath: resourcePath)
-                                                for file in files.sorted() {
-                                                    }
-                        
                         // Look for any .db files
-                        let dbFiles = files.filter { $0.hasSuffix(".db") }
-                                            } catch {
-                                            }
+                        _ = files.filter { $0.hasSuffix(".db") }
+                    } catch {
+                        // Handle error silently
+                    }
                 }
             }
         } catch {
@@ -70,24 +68,15 @@ class PitchAccentManager {
                 
                 // Check the structure of each table
                 for tableName in tableNames.prefix(5) { // Limit to first 5 tables
-                    let columns = try Row.fetchAll(db, sql: "PRAGMA table_info(\(tableName))")
-                                        for column in columns {
-                        let name = column["name"] as? String ?? "unknown"
-                        let type = column["type"] as? String ?? "unknown"
-                                            }
+                    _ = try Row.fetchAll(db, sql: "PRAGMA table_info(\(tableName))")
                     
                     // Sample a few rows to understand the data format
-                    let sampleRows = try Row.fetchAll(db, sql: "SELECT * FROM \(tableName) LIMIT 3")
-                                        for (index, row) in sampleRows.enumerated() {
-                                                for columnName in row.columnNames {
-                            let value = row[columnName]
-                                                    }
-                    }
+                    _ = try Row.fetchAll(db, sql: "SELECT * FROM \(tableName) LIMIT 3")
                     
                     // If this is the pitch_accents table, show some stats
                     if tableName == "pitch_accents" {
-                        let count = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pitch_accents") ?? 0
-                                            }
+                        _ = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pitch_accents") ?? 0
+                    }
                 }
             }
         } catch {
@@ -216,8 +205,8 @@ class PitchAccentManager {
         
         for word in testWords {
             let result = lookupPitchAccents(for: word)
-                        for accent in result.accents {
-                            }
+            // Process accents if needed
+            _ = result.accents
         }
     }
 }

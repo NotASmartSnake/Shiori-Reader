@@ -104,7 +104,7 @@ struct JapanesePitchAccentUtils {
             var pattern = ["L", "H"]
             
             // Add H's up to the pitch accent position (drop occurs AFTER this position)
-            for i in 2..<pitchValue {
+            for _ in 2..<pitchValue {
                 pattern.append("H")
             }
             

@@ -83,8 +83,8 @@ class ReaderViewModel: ObservableObject {
         self.totalBookProgression = book.readingProgress
         
         // Load existing bookmarks
-        Task {
-            await refreshBookmarks()
+        Task { [weak self] in
+            await self?.refreshBookmarks()
         }
         
         // Subscribe to bookmark updates
@@ -149,13 +149,13 @@ class ReaderViewModel: ObservableObject {
                 case .success(let pub):
                     self.publication = pub
                     // Start TOC loading (keep existing logic)
-                    Task {
+                    Task { [weak self] in
                         let tocResult = await pub.tableOfContents()
                         if case .success(let toc) = tocResult {
-                            self.tableOfContents = toc
+                            self?.tableOfContents = toc
                         } else {
                             Logger.error(category: "loadPublication", "Failed to load TOC.")
-                            self.tableOfContents = []
+                            self?.tableOfContents = []
                         }
                     }
                     self.errorMessage = nil // Clear error on success
@@ -455,9 +455,11 @@ class ReaderViewModel: ObservableObject {
             
             if fileManager.fileExists(atPath: newURL.path) {
                 
-                // Update the database with the relative path
-                Task { @MainActor in
-                    self.updateBookPathInDatabase(relativePath: relativePath)
+                // Update the database with the relative path  
+                Task { [weak self] in
+                    await MainActor.run {
+                        self?.updateBookPathInDatabase(relativePath: relativePath)
+                    }
                 }
                 
                 return newURL
@@ -477,8 +479,10 @@ class ReaderViewModel: ObservableObject {
             if fileManager.fileExists(atPath: testURL.path) {
                 
                 // Update the database with the relative path
-                Task { @MainActor in
-                    self.updateBookPathInDatabase(relativePath: relativePath)
+                Task { [weak self] in
+                    await MainActor.run {
+                        self?.updateBookPathInDatabase(relativePath: relativePath)
+                    }
                 }
                 
                 return testURL
@@ -541,11 +545,11 @@ class ReaderViewModel: ObservableObject {
         }
         
         // Lookup with the new text
-        getDictionaryMatches(text: newSelectedText) { matches in
+        getDictionaryMatches(text: newSelectedText) { [weak self] matches in
             DispatchQueue.main.async {
-                self.dictionaryMatches = matches
+                self?.dictionaryMatches = matches
                 // Always show the dictionary even if no matches found
-                self.showDictionary = true
+                self?.showDictionary = true
             }
         }
     }
@@ -595,12 +599,12 @@ class ReaderViewModel: ObservableObject {
         self.selectedWord = text
         
         // Lookup words in the dictionary
-        getDictionaryMatches(text: text) { matches in
+        getDictionaryMatches(text: text) { [weak self] matches in
             withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
-                self.dictionaryMatches = matches
-                self.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
+                self?.dictionaryMatches = matches
+                self?.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
                 // Always show the dictionary even if no matches found
-                self.showDictionary = true
+                self?.showDictionary = true
             }
         }
     }
@@ -617,8 +621,7 @@ class ReaderViewModel: ObservableObject {
             var foundWords: Set<String> = [] // Track words we've already found
             
             // Debug logging for specific problematic words only (remove or modify as needed)
-            let shouldDebug = false // Set to true only for specific debugging
-            let isDebugWord = shouldDebug && text.hasPrefix("よって")
+            _ = false // Set to true only for specific debugging
             
             // Try words of decreasing length, starting from the longest
             for length in stride(from: maxLength, through: 1, by: -1) {
@@ -662,6 +665,32 @@ class ReaderViewModel: ObservableObject {
                 }
             }
             
+            // Helper functions for sorting (to avoid self capture)
+            func getExactMatchCount(match: DictionaryMatch) -> Int {
+                let candidateWord = match.word
+                var count = 0
+                
+                // Count exact term matches
+                if match.entries.contains(where: { $0.term == candidateWord }) {
+                    count += 1
+                }
+                
+                // Count exact reading matches
+                if match.entries.contains(where: { $0.reading == candidateWord }) {
+                    count += 1
+                }
+                
+                return count
+            }
+            
+            func hasPopularTag(entry: DictionaryEntry) -> Bool {
+                // Check if the entry has popular indicators
+                if let popularity = entry.popularity, popularity > 0.5 {
+                    return true
+                }
+                return false
+            }
+            
             // Sort matches using multi-criteria comparison (based on _sortDefinitionsForTermSearch)
             let sortedMatches = matches.sorted { first, second in
                 // Multi-criteria comparators in order of priority
@@ -675,8 +704,8 @@ class ReaderViewModel: ObservableObject {
                     
                     // 2. Source term exact match count (higher is better)
                     { match1, match2 in
-                        let firstExactCount = self.getExactMatchCount(match: match1)
-                        let secondExactCount = self.getExactMatchCount(match: match2)
+                        let firstExactCount = getExactMatchCount(match: match1)
+                        let secondExactCount = getExactMatchCount(match: match2)
                         return firstExactCount.compare(to: secondExactCount)
                     },
                     
@@ -689,8 +718,8 @@ class ReaderViewModel: ObservableObject {
                     
                     // 4. Has popular tag (entries with popular tags first)
                     { match1, match2 in
-                        let firstHasPopularTag = self.hasPopularTag(entry: match1.entries.first!)
-                        let secondHasPopularTag = self.hasPopularTag(entry: match2.entries.first!)
+                        let firstHasPopularTag = hasPopularTag(entry: match1.entries.first!)
+                        let secondHasPopularTag = hasPopularTag(entry: match2.entries.first!)
                         return firstHasPopularTag.compare(to: secondHasPopularTag)
                     },
                     
@@ -729,37 +758,7 @@ class ReaderViewModel: ObservableObject {
     }
     
     // MARK: - Helper Methods for Dictionary Sorting
-    
-    private func getExactMatchCount(match: DictionaryMatch) -> Int {
-        let candidateWord = match.word
-        var count = 0
-        
-        // Count exact term matches
-        if match.entries.contains(where: { $0.term == candidateWord }) {
-            count += 1
-        }
-        
-        // Count exact reading matches
-        if match.entries.contains(where: { $0.reading == candidateWord }) {
-            count += 1
-        }
-        
-        return count
-    }
-    
-    private func hasPopularTag(entry: DictionaryEntry) -> Bool {
-        // Check if the entry has popular indicators
-        // This could be based on popularity score, frequency tags, etc.
-        // For now, we'll use a popularity threshold
-        if let popularity = entry.popularity, popularity > 0.5 {
-            return true
-        }
-        
-        // You might also check for specific tags if your DictionaryEntry has a tags field
-        // For example: return entry.tags?.contains("P") ?? false
-        
-        return false
-    }
+    // Note: Helper methods moved to local functions in getDictionaryMatches to avoid self capture issues
     
     func setNavigatorController(_ navigator: EPUBNavigatorViewController) {
         self.navigatorController = navigator
@@ -776,9 +775,9 @@ class ReaderViewModel: ObservableObject {
     func clearNavigationRequest() {
         if navigationRequest != nil {
              // Schedule the actual modification for the next run loop cycle
-             DispatchQueue.main.async {
-                 if self.navigationRequest != nil {
-                     self.navigationRequest = nil
+             DispatchQueue.main.async { [weak self] in
+                 if self?.navigationRequest != nil {
+                     self?.navigationRequest = nil
                  }
              }
         }
@@ -787,9 +786,9 @@ class ReaderViewModel: ObservableObject {
     /// Renamed/Updated method for TOC or similar link navigation
     func requestNavigation(to link: ReadiumShared.Link) {
          // Resolve the Link to a Locator before requesting navigation
-         Task {
-             if let locator = await publication?.locate(link) {
-                 self.requestNavigation(to: locator)
+         Task { [weak self] in
+             if let locator = await self?.publication?.locate(link) {
+                 self?.requestNavigation(to: locator)
              } else {
                  Logger.warning(category: "ReadiumBookViewModel", "Could not create locator for link: \(link.href)")
              }

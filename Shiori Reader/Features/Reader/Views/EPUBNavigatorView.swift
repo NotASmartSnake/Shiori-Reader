@@ -55,7 +55,7 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
             viewModel.clearNavigationRequest()
             
             Task {
-                let success = await uiViewController.go(to: targetLocator, options: .init(animated: false))
+                _ = await uiViewController.go(to: targetLocator, options: .init(animated: false))
             }
         }
         

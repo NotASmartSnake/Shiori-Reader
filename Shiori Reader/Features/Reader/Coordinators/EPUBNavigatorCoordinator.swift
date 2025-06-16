@@ -106,7 +106,7 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
         findWebViews(in: view) { webView in
             webViewCount += 1
             // Reinject the word tap handlers
-            let success = wordTapHandler.registerHandlers(for: webView)
+            _ = wordTapHandler.registerHandlers(for: webView)
             
             // Check if it's already loading content, as that can interfere with script injection
             if webView.isLoading {
@@ -154,7 +154,7 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
                 
                 // Now register the handlers fresh
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    let success = self.wordTapHandler.registerHandlers(for: webView)
+                    _ = self.wordTapHandler.registerHandlers(for: webView)
                 }
             }
         }
