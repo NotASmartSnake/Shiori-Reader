@@ -297,27 +297,58 @@ struct EntryDetailView: View {
         
         // Function to handle exporting to Anki
         private func exportToAnki() {
-            // Check if Anki is configured
-            if !AnkiExportService.shared.isConfigured() {
-                // Show the settings sheet
-                showingAnkiSettings = true
+            // Get the root view controller to present from
+            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let window = windowScene.windows.first,
+                  let rootViewController = window.rootViewController else {
                 return
             }
             
-            // Export the word to Anki
-            AnkiExportService.shared.addVocabularyCard(
-            word: entry.term,
-            reading: entry.reading,
-            definition: entry.meanings.joined(separator: "<br>"),
-            sentence: "", // No sentence from search results
-            pitchAccents: entry.pitchAccents,
-            completion: { success in
-                    if success {
-                        withAnimation {
-                            showAnkiSuccess = true
+            // Get the topmost view controller
+            var topViewController = rootViewController
+            while let presentedViewController = topViewController.presentedViewController {
+                topViewController = presentedViewController
+            }
+            
+            // Check if this is a combined entry from multiple dictionaries
+            if entry.source == "combined" {
+                // Look up the original entries from both dictionaries
+                let originalEntries = DictionaryManager.shared.lookup(word: entry.term)
+                let matchingEntries = originalEntries.filter { $0.term == entry.term && $0.reading == entry.reading }
+                
+                // Use the new export method with all matching entries
+                AnkiExportService.shared.exportWordToAnki(
+                    word: entry.term,
+                    reading: entry.reading,
+                    entries: matchingEntries,
+                    sentence: "", // No sentence from search results
+                    pitchAccents: entry.pitchAccents,
+                    sourceView: topViewController,
+                    completion: { success in
+                        if success {
+                            withAnimation {
+                                showAnkiSuccess = true
+                            }
                         }
                     }
-                }
-            )
+                )
+            } else {
+                // Single entry - create array with just this entry for consistent handling
+                AnkiExportService.shared.exportWordToAnki(
+                    word: entry.term,
+                    reading: entry.reading,
+                    entries: [entry],
+                    sentence: "", // No sentence from search results
+                    pitchAccents: entry.pitchAccents,
+                    sourceView: topViewController,
+                    completion: { success in
+                        if success {
+                            withAnimation {
+                                showAnkiSuccess = true
+                            }
+                        }
+                    }
+                )
+            }
         }
 }

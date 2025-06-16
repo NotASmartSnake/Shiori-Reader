@@ -26,6 +26,9 @@ struct AnkiSettingsView: View {
                 // MARK: - Add Additional Field Button
                 addFieldSection
                 
+                // MARK: - App Settings Section
+                appSettingsSection
+                
                 // MARK: - Test Connection Section
                 testConnectionSection
             }
@@ -51,6 +54,23 @@ struct AnkiSettingsView: View {
                     presentationMode.wrappedValue.dismiss()
                 }
             }
+        }
+    }
+    
+    private var appSettingsSection: some View {
+        Section(header: Text("App Settings"), footer: Text("Show a popup to select which definitions to export to Anki. When disabled, all definitions will be exported automatically.")) {
+            Toggle("Show Definition Selection Popup", isOn: Binding(
+                get: { 
+                    // Return true if no value has been set (first time), otherwise return stored value
+                    if UserDefaults.standard.object(forKey: "showDefinitionSelectionPopup") == nil {
+                        return true // Default to enabled
+                    }
+                    return UserDefaults.standard.bool(forKey: "showDefinitionSelectionPopup")
+                },
+                set: { 
+                    UserDefaults.standard.set($0, forKey: "showDefinitionSelectionPopup")
+                }
+            ))
         }
     }
     

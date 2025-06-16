@@ -369,37 +369,74 @@ struct SavedWordDetailView: View {
     }
     
     private func exportToAnki() {
-        // Check if Anki is configured
-        if !AnkiExportService.shared.isConfigured() {
-            // Show the settings sheet
-            showingAnkiSettings = true
+        // Get the root view controller to present from
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let rootViewController = window.rootViewController else {
             return
         }
         
-        // Join definitions with HTML breaks for Anki
-        let ankiDefinition = editedWord.definitions.joined(separator: "<br>")
+        // Get the topmost view controller
+        var topViewController = rootViewController
+        while let presentedViewController = topViewController.presentedViewController {
+            topViewController = presentedViewController
+        }
         
-        AnkiExportService.shared.addVocabularyCard(
-            word: editedWord.word,
-            reading: editedWord.reading,
-            definition: ankiDefinition,
-            sentence: editedWord.sentence,
-            pitchAccents: editedWord.pitchAccents,
-            completion: { success in
-                if success {
-                    withAnimation {
-                        showAnkiSuccess = true
-                        
-                        // Hide success message after a delay
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            withAnimation {
-                                showAnkiSuccess = false
+        // Look up the original dictionary entries to get fresh data
+        let originalEntries = DictionaryManager.shared.lookup(word: editedWord.word)
+        let matchingEntries = originalEntries.filter { $0.term == editedWord.word && $0.reading == editedWord.reading }
+        
+        if !matchingEntries.isEmpty {
+            // Use the new method with fresh dictionary data
+            AnkiExportService.shared.exportWordToAnki(
+                word: editedWord.word,
+                reading: editedWord.reading,
+                entries: matchingEntries,
+                sentence: editedWord.sentence,
+                pitchAccents: editedWord.pitchAccents,
+                sourceView: topViewController,
+                completion: { success in
+                    if success {
+                        withAnimation {
+                            showAnkiSuccess = true
+                            
+                            // Hide success message after a delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                withAnimation {
+                                    showAnkiSuccess = false
+                                }
                             }
                         }
                     }
                 }
-            }
-        )
+            )
+        } else {
+            // Fallback to saved definitions if word is no longer in dictionaries
+            let ankiDefinition = editedWord.definitions.joined(separator: "<br>")
+            
+            AnkiExportService.shared.addVocabularyCard(
+                word: editedWord.word,
+                reading: editedWord.reading,
+                definition: ankiDefinition,
+                sentence: editedWord.sentence,
+                pitchAccents: editedWord.pitchAccents,
+                sourceView: topViewController,
+                completion: { success in
+                    if success {
+                        withAnimation {
+                            showAnkiSuccess = true
+                            
+                            // Hide success message after a delay
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                withAnimation {
+                                    showAnkiSuccess = false
+                                }
+                            }
+                        }
+                    }
+                }
+            )
+        }
     }
 }
 

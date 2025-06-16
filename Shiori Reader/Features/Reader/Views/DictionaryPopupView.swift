@@ -360,19 +360,32 @@ struct DictionaryPopupView: View {
     }
     
     private func exportToAnki(_ entry: DictionaryEntry) {
-        // Check if Anki is configured
-        if !AnkiExportService.shared.isConfigured() {
-            // Show the settings sheet
-            showingAnkiSettings = true
+        // Get the root view controller to present from
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let rootViewController = window.rootViewController else {
             return
         }
         
-        AnkiExportService.shared.addVocabularyCard(
+        // Get the topmost view controller
+        var topViewController = rootViewController
+        while let presentedViewController = topViewController.presentedViewController {
+            topViewController = presentedViewController
+        }
+        
+        // Find all entries for this word/reading combination from matches
+        let wordEntries = matches.flatMap { match in
+            match.entries.filter { $0.term == entry.term && $0.reading == entry.reading }
+        }
+        
+        // Use the new exportWordToAnki method
+        AnkiExportService.shared.exportWordToAnki(
             word: entry.term,
             reading: entry.reading,
-            definition: entry.meanings.joined(separator: "<br>"),
+            entries: wordEntries,
             sentence: sentenceContext,
             pitchAccents: entry.pitchAccents,
+            sourceView: topViewController,
             completion: { success in
                 if success {
                     withAnimation {

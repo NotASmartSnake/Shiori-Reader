@@ -22,34 +22,72 @@ class AnkiExportService {
         return !settings.noteType.isEmpty && !settings.deckName.isEmpty
     }
     
+    // MARK: - Public Export Methods
+    
+    /// Export word to Anki with automatic definition selection logic
+    /// - If popup setting is enabled, shows selection popup
+    /// - If popup setting is disabled, exports all definitions directly
+    func exportWordToAnki(word: String, reading: String, entries: [DictionaryEntry], sentence: String = "",
+                         pitchAccents: PitchAccentData? = nil, sourceView: UIViewController? = nil, completion: ((Bool) -> Void)? = nil) {
+        
+        // Check if Anki is configured
+        if !isConfigured() {
+            showAnkiSetupAlert(sourceView: sourceView)
+            completion?(false)
+            return
+        }
+        
+        // Get the current settings
+        let settings = settingsRepository.getAnkiSettings()
+        
+        // Group definitions by dictionary source
+        let definitionsBySource = getDefinitionsBySource(from: entries)
+        
+        // If no definitions found, fail
+        if definitionsBySource.isEmpty {
+            completion?(false)
+            return
+        }
+        
+        // Check if popup should be shown based on user preference
+        let shouldShowPopup: Bool
+        if UserDefaults.standard.object(forKey: "showDefinitionSelectionPopup") == nil {
+            shouldShowPopup = true // Default to enabled
+        } else {
+            shouldShowPopup = UserDefaults.standard.bool(forKey: "showDefinitionSelectionPopup")
+        }
+        
+        if shouldShowPopup {
+            // Show selection popup
+            showDefinitionSelectionPopup(
+                word: word,
+                reading: reading,
+                definitionsBySource: definitionsBySource,
+                sentence: sentence,
+                pitchAccents: pitchAccents,
+                sourceView: sourceView,
+                completion: completion
+            )
+        } else {
+            // Export all definitions directly without popup
+            exportAllDefinitionsDirectly(
+                word: word,
+                reading: reading,
+                definitionsBySource: definitionsBySource,
+                sentence: sentence,
+                pitchAccents: pitchAccents,
+                sourceView: sourceView,
+                completion: completion
+            )
+        }
+    }
+    
     // Create a full vocabulary card in Anki using repository data
     func addVocabularyCard(word: String, reading: String, definition: String, sentence: String,
                          pitchAccents: PitchAccentData? = nil, sourceView: UIViewController? = nil, completion: ((Bool) -> Void)? = nil) {
         // Check if Anki is configured
         if !isConfigured() {
-            // Show setup UI if needed
-            if let sourceViewController = sourceView {
-                let alert = UIAlertController(
-                    title: "Anki Setup Required",
-                    message: "You need to configure Anki integration before adding cards. Would you like to do that now?",
-                    preferredStyle: .alert
-                )
-                
-                alert.addAction(UIAlertAction(title: "Configure", style: .default) { _ in
-                    // Present the Anki settings view
-                    let settingsView = UIHostingController(rootView:
-                        NavigationView {
-                            AnkiSettingsView()
-                        }
-                    )
-                    sourceViewController.present(settingsView, animated: true)
-                })
-                
-                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-                
-                sourceViewController.present(alert, animated: true)
-            }
-            
+            showAnkiSetupAlert(sourceView: sourceView)
             completion?(false)
             return
         }
@@ -215,6 +253,189 @@ class AnkiExportService {
         
         // Wrap in a centered horizontal container div
         return "<div style='display: flex; align-items: center; justify-content: center; gap: 3px; line-height: 1; margin: 0; padding: 0;'>\(htmlParts.joined())</div>"
+    }
+    
+    // MARK: - Helper Methods for Definition Selection
+    
+    /// Group dictionary entries by source and extract their definitions
+    private func getDefinitionsBySource(from entries: [DictionaryEntry]) -> [String: [String]] {
+        var definitionsBySource: [String: [String]] = [:]
+        
+        for entry in entries {
+            if definitionsBySource[entry.source] == nil {
+                definitionsBySource[entry.source] = []
+            }
+            definitionsBySource[entry.source]?.append(contentsOf: entry.meanings)
+        }
+        
+        // Remove duplicates within each source and sort
+        for (source, definitions) in definitionsBySource {
+            let uniqueDefinitions = Array(Set(definitions))
+            // Sort by length to put shorter, more concise definitions first
+            definitionsBySource[source] = uniqueDefinitions.sorted { $0.count < $1.count }
+        }
+        
+        return definitionsBySource
+    }
+    
+    /// Export all definitions from all sources directly without showing popup
+    private func exportAllDefinitionsDirectly(
+        word: String,
+        reading: String,
+        definitionsBySource: [String: [String]],
+        sentence: String,
+        pitchAccents: PitchAccentData?,
+        sourceView: UIViewController?,
+        completion: ((Bool) -> Void)?
+    ) {
+        // Ensure JMdict comes first, then Obunsha, then others
+        let sortedSources = definitionsBySource.keys.sorted { first, second in
+            if first == "jmdict" && second != "jmdict" {
+                return true
+            } else if first != "jmdict" && second == "jmdict" {
+                return false
+            } else if first == "obunsha" && second != "obunsha" && second != "jmdict" {
+                return true
+            } else if first != "obunsha" && second == "obunsha" && first != "jmdict" {
+                return false
+            } else {
+                return first < second
+            }
+        }
+        
+        let formattedDefinitions = sortedSources.compactMap { source -> String? in
+            guard let definitions = definitionsBySource[source], !definitions.isEmpty else { return nil }
+            let sourceLabel = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : source.capitalized)
+            let combinedDefs = definitions.joined(separator: "<br>")
+            return "<b>\(sourceLabel):</b><br>\(combinedDefs)"
+        }.joined(separator: "<br><br>")
+        
+        // Export with all definitions
+        addVocabularyCard(
+            word: word,
+            reading: reading,
+            definition: formattedDefinitions,
+            sentence: sentence,
+            pitchAccents: pitchAccents,
+            sourceView: sourceView,
+            completion: completion
+        )
+    }
+    
+    /// Show the definition selection popup
+    private func showDefinitionSelectionPopup(
+        word: String,
+        reading: String,
+        definitionsBySource: [String: [String]],
+        sentence: String,
+        pitchAccents: PitchAccentData?,
+        sourceView: UIViewController?,
+        completion: ((Bool) -> Void)?
+    ) {
+        guard let sourceViewController = sourceView else {
+            completion?(false)
+            return
+        }
+        
+        // Convert to the format expected by the popup
+        let availableDefinitions = definitionsBySource.compactMap { (source, definitions) -> DictionarySourceDefinition? in
+            // Only include sources that have definitions
+            guard !definitions.isEmpty else { return nil }
+            return DictionarySourceDefinition(source: source, definitions: definitions)
+        }.sorted { first, second in
+            // Sort so JMdict comes first, then Obunsha, then others alphabetically
+            if first.source == "jmdict" && second.source != "jmdict" {
+                return true
+            } else if first.source != "jmdict" && second.source == "jmdict" {
+                return false
+            } else if first.source == "obunsha" && second.source != "obunsha" && second.source != "jmdict" {
+                return true
+            } else if first.source != "obunsha" && second.source == "obunsha" && first.source != "jmdict" {
+                return false
+            } else {
+                return first.source < second.source
+            }
+        }
+        
+        let popupView = DefinitionSelectionPopupView(
+            word: word,
+            reading: reading,
+            availableDefinitions: availableDefinitions,
+            onDefinitionsSelected: { selectedDefinitions in
+                // Combine selected definitions with source labels for clarity
+                // Ensure JMdict comes first, then Obunsha, then others
+                let sortedSources = selectedDefinitions.keys.sorted { first, second in
+                    if first == "jmdict" && second != "jmdict" {
+                        return true
+                    } else if first != "jmdict" && second == "jmdict" {
+                        return false
+                    } else if first == "obunsha" && second != "obunsha" && second != "jmdict" {
+                        return true
+                    } else if first != "obunsha" && second == "obunsha" && first != "jmdict" {
+                        return false
+                    } else {
+                        return first < second
+                    }
+                }
+                
+                let formattedDefinitions = sortedSources.compactMap { source -> String? in
+                    guard let definitions = selectedDefinitions[source], !definitions.isEmpty else { return nil }
+                    let sourceLabel = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : source.capitalized)
+                    let combinedDefs = definitions.joined(separator: "<br>")
+                    return "<b>\(sourceLabel):</b><br>\(combinedDefs)"
+                }.joined(separator: "<br><br>")
+                
+                // Dismiss the popup
+                sourceViewController.dismiss(animated: true) {
+                    // Export with selected definitions
+                    self.addVocabularyCard(
+                        word: word,
+                        reading: reading,
+                        definition: formattedDefinitions,
+                        sentence: sentence,
+                        pitchAccents: pitchAccents,
+                        sourceView: sourceView,
+                        completion: completion
+                    )
+                }
+            },
+            onCancel: {
+                sourceViewController.dismiss(animated: true)
+                completion?(false)
+            }
+        )
+        
+        let hostingController = UIHostingController(rootView: popupView)
+        hostingController.modalPresentationStyle = .overFullScreen
+        hostingController.modalTransitionStyle = .crossDissolve
+        hostingController.view.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+        
+        sourceViewController.present(hostingController, animated: true)
+    }
+    
+    /// Show Anki setup alert
+    private func showAnkiSetupAlert(sourceView: UIViewController?) {
+        guard let sourceViewController = sourceView else { return }
+        
+        let alert = UIAlertController(
+            title: "Anki Setup Required",
+            message: "You need to configure Anki integration before adding cards. Would you like to do that now?",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Configure", style: .default) { _ in
+            // Present the Anki settings view
+            let settingsView = UIHostingController(rootView:
+                NavigationView {
+                    AnkiSettingsView()
+                }
+            )
+            sourceViewController.present(settingsView, animated: true)
+        })
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        sourceViewController.present(alert, animated: true)
     }
     
     // Test connection to AnkiMobile
