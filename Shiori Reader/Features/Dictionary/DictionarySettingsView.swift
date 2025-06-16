@@ -56,10 +56,6 @@ struct DictionarySettingsView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(dictionary.name)
-                    .font(.headline)
-                Text(dictionary.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
             
             Spacer()
