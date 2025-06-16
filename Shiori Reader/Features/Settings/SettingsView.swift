@@ -62,6 +62,23 @@ struct SettingsView: View {
                         }
                         .listRowBackground(Color(.systemGray6))
                         
+                        // MARK: - Support Section
+                        Button(action: {
+                            openGitHubIssues()
+                        }) {
+                            HStack {
+                                Image(systemName: "exclamationmark.bubble")
+                                    .foregroundColor(.primary)
+                                Text("Report Issues")
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Image(systemName: "arrow.up.right.square")
+                                    .foregroundColor(.secondary)
+                                    .font(.caption)
+                            }
+                        }
+                        .listRowBackground(Color(.systemGray6))
+                        
                         
                     }
                     .listStyle(PlainListStyle())
@@ -75,7 +92,14 @@ struct SettingsView: View {
                 Text("Settings")
             )
         }
-            
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func openGitHubIssues() {
+        if let url = URL(string: "https://github.com/russgrav/Shiori-Reader/issues") {
+            UIApplication.shared.open(url)
+        }
     }
 }
 
