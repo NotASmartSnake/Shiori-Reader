@@ -11,7 +11,7 @@ struct SavedWord: Identifiable, Equatable, Hashable {
     let id: UUID
     var word: String
     var reading: String
-    var definition: String
+    var definitions: [String] // Changed from definition: String to definitions: [String]
     var sentence: String
     let sourceBook: String
     let timeAdded: Date
@@ -23,7 +23,7 @@ struct SavedWord: Identifiable, Equatable, Hashable {
     init(id: UUID = UUID(),
          word: String,
          reading: String,
-         definition: String,
+         definitions: [String],
          sentence: String,
          sourceBook: String,
          timeAdded: Date = Date(),
@@ -32,7 +32,7 @@ struct SavedWord: Identifiable, Equatable, Hashable {
         self.id = id
         self.word = word
         self.reading = reading
-        self.definition = definition
+        self.definitions = definitions
         self.sentence = sentence
         self.sourceBook = sourceBook
         self.timeAdded = timeAdded
@@ -40,12 +40,46 @@ struct SavedWord: Identifiable, Equatable, Hashable {
         self.pitchAccents = pitchAccents
     }
     
+    // Convenience initializer for single definition (backward compatibility)
+    init(id: UUID = UUID(),
+         word: String,
+         reading: String,
+         definition: String,
+         sentence: String,
+         sourceBook: String,
+         timeAdded: Date = Date(),
+         bookId: UUID? = nil,
+         pitchAccents: PitchAccentData? = nil) {
+        self.init(
+            id: id,
+            word: word,
+            reading: reading,
+            definitions: definition.components(separatedBy: "; ").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) },
+            sentence: sentence,
+            sourceBook: sourceBook,
+            timeAdded: timeAdded,
+            bookId: bookId,
+            pitchAccents: pitchAccents
+        )
+    }
+    
     // Initialize from Core Data entity
     init(entity: SavedWordEntity) {
         self.id = entity.id ?? UUID()
         self.word = entity.word ?? ""
         self.reading = entity.reading ?? ""
-        self.definition = entity.definition ?? ""
+        
+        // Handle definitions migration - if it's stored as JSON, parse it; otherwise split by semicolon
+        if let definitionData = entity.definitionData,
+           let decodedDefinitions = try? JSONDecoder().decode([String].self, from: definitionData) {
+            self.definitions = decodedDefinitions
+        } else if let legacyDefinition = entity.definition, !legacyDefinition.isEmpty {
+            // Legacy: split by semicolon and trim whitespace
+            self.definitions = legacyDefinition.components(separatedBy: "; ").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        } else {
+            self.definitions = []
+        }
+        
         self.sentence = entity.sentence ?? ""
         self.sourceBook = entity.sourceBook ?? ""
         self.timeAdded = entity.timeAdded ?? Date()
@@ -69,13 +103,13 @@ struct SavedWord: Identifiable, Equatable, Hashable {
         return formatter.string(from: timeAdded)
     }
     
-    // Create a copy with updated definition
-    func withUpdatedDefinition(_ newDefinition: String) -> SavedWord {
+    // Create a copy with updated definitions
+    func withUpdatedDefinitions(_ newDefinitions: [String]) -> SavedWord {
         return SavedWord(
             id: self.id,
             word: self.word,
             reading: self.reading,
-            definition: newDefinition,
+            definitions: newDefinitions,
             sentence: self.sentence,
             sourceBook: self.sourceBook,
             timeAdded: self.timeAdded,
@@ -84,13 +118,18 @@ struct SavedWord: Identifiable, Equatable, Hashable {
         )
     }
     
+    // Legacy compatibility - get definitions as a single string
+    var definition: String {
+        return definitions.joined(separator: "; ")
+    }
+    
     // Create a copy with updated sentence example
     func withUpdatedSentence(_ newSentence: String) -> SavedWord {
         return SavedWord(
             id: self.id,
             word: self.word,
             reading: self.reading,
-            definition: self.definition,
+            definitions: self.definitions,
             sentence: newSentence,
             sourceBook: self.sourceBook,
             timeAdded: self.timeAdded,
@@ -133,7 +172,14 @@ struct SavedWord: Identifiable, Equatable, Hashable {
         entity.id = id
         entity.word = word
         entity.reading = reading
-        entity.definition = definition
+        
+        // Store definitions as JSON data
+        if let definitionData = try? JSONEncoder().encode(definitions) {
+            entity.definitionData = definitionData
+        }
+        // Also keep legacy definition field for backward compatibility
+        entity.definition = definitions.joined(separator: "; ")
+        
         entity.sentence = sentence
         entity.sourceBook = sourceBook
         entity.timeAdded = timeAdded

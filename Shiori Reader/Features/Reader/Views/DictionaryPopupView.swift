@@ -407,7 +407,7 @@ struct DictionaryPopupView: View {
         let newWord = SavedWord(
             word: entry.term,
             reading: entry.reading,
-            definition: entry.meanings.joined(separator: "\n"),
+            definitions: entry.meanings,
             sentence: sentenceContext,
             sourceBook: bookTitle,
             timeAdded: Date(),

@@ -26,7 +26,7 @@ class SavedWordsManager: ObservableObject {
         let newWord = repository.addSavedWord(
             word: word.word,
             reading: word.reading,
-            definition: word.definition,
+            definitions: word.definitions,
             sentence: word.sentence,
             sourceBook: word.sourceBook,
             pitchAccents: word.pitchAccents

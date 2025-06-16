@@ -165,22 +165,31 @@ struct SavedWordDetailView: View {
                         
                         if isEditing {
                             ZStack(alignment: .topLeading) {
-                                TextEditor(text: $editedWord.definition)
+                                TextEditor(text: Binding(
+                                    get: { editedWord.definitions.joined(separator: "\n") },
+                                    set: { newValue in
+                                        editedWord.definitions = newValue.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+                                    }
+                                ))
                                     .padding()
                                     .frame(minHeight: 100)
                                     .background(Color(.systemGray6))
                                     .cornerRadius(8)
                                     .disableAutocorrection(true)
                                 
-                                if editedWord.definition.isEmpty {
+                                if editedWord.definitions.isEmpty {
                                     Text("Enter definition")
                                         .foregroundColor(.gray)
                                         .padding(25)
                                 }
                             }
                         } else {
-                            Text(editedWord.definition)
-                                .padding(.leading, 4)
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(editedWord.definitions.indices, id: \.self) { index in
+                                    Text("• \(editedWord.definitions[index])")
+                                        .padding(.leading, 4)
+                                }
+                            }
                         }
                     }
                     .padding(.horizontal)
@@ -267,7 +276,7 @@ struct SavedWordDetailView: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, 10)
-                    .padding(.bottom, 30)
+                    .padding(.bottom, 80) // Increased bottom padding
                     .alert(isPresented: $showDeleteConfirmation) {
                         Alert(
                             title: Text("Delete Word"),
@@ -367,10 +376,13 @@ struct SavedWordDetailView: View {
             return
         }
         
+        // Join definitions with HTML breaks for Anki
+        let ankiDefinition = editedWord.definitions.joined(separator: "<br>")
+        
         AnkiExportService.shared.addVocabularyCard(
             word: editedWord.word,
             reading: editedWord.reading,
-            definition: editedWord.definition,
+            definition: ankiDefinition,
             sentence: editedWord.sentence,
             pitchAccents: editedWord.pitchAccents,
             completion: { success in

@@ -277,7 +277,7 @@ struct EntryDetailView: View {
             let newSavedWord = SavedWord(
                 word: entry.term,
                 reading: entry.reading,
-                definition: entry.meanings.joined(separator: "; "),
+                definitions: entry.meanings,
                 sentence: "", // Empty for now, user can add later
                 sourceBook: "Search", // Indicate this was from search
                 timeAdded: Date(),
@@ -308,7 +308,7 @@ struct EntryDetailView: View {
             AnkiExportService.shared.addVocabularyCard(
             word: entry.term,
             reading: entry.reading,
-            definition: entry.meanings.joined(separator: "; "),
+            definition: entry.meanings.joined(separator: "<br>"),
             sentence: "", // No sentence from search results
             pitchAccents: entry.pitchAccents,
             completion: { success in

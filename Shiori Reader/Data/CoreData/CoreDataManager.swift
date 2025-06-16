@@ -133,13 +133,20 @@ class CoreDataManager {
     
     // MARK: - SavedWord Operations
     
-    func createSavedWord(word: String, reading: String, definition: String,
+    func createSavedWord(word: String, reading: String, definitions: [String],
                          sentence: String, sourceBook: String, pitchAccents: PitchAccentData? = nil, relatedBook: BookEntity? = nil) -> SavedWordEntity {
         let savedWord = SavedWordEntity(context: viewContext)
         savedWord.id = UUID()
         savedWord.word = word
         savedWord.reading = reading
-        savedWord.definition = definition
+        
+        // Store definitions as JSON data
+        if let definitionData = try? JSONEncoder().encode(definitions) {
+            savedWord.definitionData = definitionData
+        }
+        // Also store as legacy string for backward compatibility
+        savedWord.definition = definitions.joined(separator: "; ")
+        
         savedWord.sentence = sentence
         savedWord.sourceBook = sourceBook
         savedWord.timeAdded = Date()
