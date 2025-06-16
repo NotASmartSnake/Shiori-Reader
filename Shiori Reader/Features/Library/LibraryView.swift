@@ -73,7 +73,12 @@ struct LibraryView: View {
 //        .onAppear { libraryManager.loadLibrary() }
         .onChange(of: isReadingBook.isReading) { _, isReading in
             if !isReading && lastViewedBookPath != nil {
-                libraryManager.loadLibrary()
+                // Refresh the specific book that was being read
+                if let bookPath = lastViewedBookPath,
+                   let book = libraryManager.books.first(where: { $0.filePath == bookPath }) {
+                    libraryManager.refreshBook(withId: book.id)
+                }
+                lastViewedBookPath = nil
             }
         }
     }

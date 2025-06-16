@@ -282,6 +282,13 @@ class ReaderViewModel: ObservableObject {
 
     // MARK: - Location Handling
     private func loadInitialLocation() {
+        // CRITICAL FIX: Always refresh book data from Core Data before loading location
+        if let freshBookEntity = CoreDataManager.shared.getBook(by: book.id) {
+            let freshBook = Book(entity: freshBookEntity)
+            // Update our book reference with fresh data
+            self.book = freshBook
+        }
+        
         // Try to load location from Core Data first
         if let locatorData = book.currentLocatorData,
            let jsonString = String(data: locatorData, encoding: .utf8),
@@ -292,15 +299,15 @@ class ReaderViewModel: ObservableObject {
         
         // Fall back to legacy UserDefaults approach if needed
         let key = "readium_locator_\(book.id.uuidString)"
-        guard let data = UserDefaults.standard.data(forKey: key),
-              let jsonString = String(data: data, encoding: .utf8),
-              let locator = try? Locator(jsonString: jsonString) else {
-            Logger.debug(category: "ReadiumBookViewModel", "No saved locator found for book \(book.id)")
-            initialLocation = nil
+        if let data = UserDefaults.standard.data(forKey: key),
+           let jsonString = String(data: data, encoding: .utf8),
+           let locator = try? Locator(jsonString: jsonString) {
+            self.initialLocation = locator
             return
         }
-
-        self.initialLocation = locator
+        
+        // No saved location found
+        initialLocation = nil
     }
     
     func saveLocation(_ locator: Locator) {
@@ -311,22 +318,30 @@ class ReaderViewModel: ObservableObject {
             // Serialize the dictionary into Data using JSONSerialization
             let jsonData = try JSONSerialization.data(withJSONObject: jsonDictionary, options: [])
             
-            // Save to Core Data via repository
-            bookRepository.updateBookProgress(
-                id: book.id,
-                progress: locator.locations.progression ?? book.readingProgress,
-                locatorData: jsonData
-            )
-            
-            // Also update our local book object
-            book.readingProgress = locator.locations.progression ?? book.readingProgress
+            // Update local book object first for immediate UI feedback
+            let newProgress = locator.locations.totalProgression ?? locator.locations.progression ?? book.readingProgress
+            book.readingProgress = newProgress
             book.currentLocatorData = jsonData
+            book.lastOpenedDate = Date()
+            
+            // Save to Core Data with completion tracking
+            Task.detached { [weak self, bookId = self.book.id, progress = newProgress] in
+                // Use main context for immediate consistency
+                await MainActor.run {
+                    self?.bookRepository.updateBookProgress(
+                        id: bookId,
+                        progress: progress,
+                        locatorData: jsonData
+                    )
+                    
+                    // Legacy: Also save to UserDefaults for backward compatibility
+                    let key = "readium_locator_\(bookId.uuidString)"
+                    UserDefaults.standard.set(jsonData, forKey: key)
+                }
+            }
                         
-            // Legacy: Also save to UserDefaults for backward compatibility
-            let key = "readium_locator_\(book.id.uuidString)"
-            UserDefaults.standard.set(jsonData, forKey: key)
         } catch {
-            Logger.error(category: "ReadiumBookViewModel", "Failed to serialize or save locator: \(error)")
+            Logger.error(category: "ReaderViewModel", "Failed to serialize or save locator: \(error)")
         }
     }
     
@@ -797,26 +812,8 @@ class ReaderViewModel: ObservableObject {
         // Use totalProgression if available, otherwise fall back to progression for compatibility
         if let totalProgression = locator.locations.totalProgression {
             self.totalBookProgression = totalProgression
-            
-            // Update the book's progress in the repository and local model
-            bookRepository.updateBookProgress(
-                id: book.id,
-                progress: totalProgression,
-                locatorData: book.currentLocatorData
-            )
-            
-            // Update our local book object as well
-            book.readingProgress = totalProgression
         } else if let progression = locator.locations.progression {
-            // Update the book's progress in the repository
-            bookRepository.updateBookProgress(
-                id: book.id,
-                progress: progression,
-                locatorData: book.currentLocatorData
-            )
-            
-            // Update our local book object as well
-            book.readingProgress = progression
+            self.totalBookProgression = progression
         }
         
         // Check if current location is bookmarked

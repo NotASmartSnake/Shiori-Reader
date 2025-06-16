@@ -81,7 +81,6 @@ struct ReaderView: View {
             isReadingBookState.setReading(true)
             
             if viewModel.publication == nil && !viewModel.isLoading {
-                print("DEBUG [ReaderView]: onAppear - Triggering loadPublication")
                 Task {
                     await viewModel.loadPublication()
                 }

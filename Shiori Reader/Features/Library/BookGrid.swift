@@ -80,7 +80,6 @@ struct BookGrid: View {
             ForEach(books) { book in
                 BookCell(book: book, isReadingBook: isReadingBook, lastViewedBookPath: $lastViewedBookPath)
                     .frame(maxWidth: .infinity) // Ensure cell fills column width
-                    .id("\(book.id)-\(libraryManager.refreshTrigger)") // Force refresh when trigger changes
             }
         }
         .padding(.horizontal, deviceType == .iPad ? 24 : 30) // Reduced padding on iPad to fit more columns

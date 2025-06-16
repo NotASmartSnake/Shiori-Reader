@@ -11,7 +11,6 @@ import Combine
 
 class LibraryManager: ObservableObject {
     @Published var books: [Book] = []
-    @Published var refreshTrigger = UUID() // Add this to force UI refresh
     private let bookRepository = BookRepository()
     private let settingsRepository = SettingsRepository()
     
@@ -48,7 +47,6 @@ class LibraryManager: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 let newBooks = self.bookRepository.getAllBooks()
                 self.books = newBooks
-                self.refreshTrigger = UUID() // Force UI refresh
             }
         } else {
             print("LibraryManager: Title update failed")
@@ -65,6 +63,22 @@ class LibraryManager: ObservableObject {
         // Update the book in the array
         if let index = books.firstIndex(where: { $0.id == book.id }) {
             books[index] = book
+        }
+    }
+    
+    /// Refresh a specific book's data from Core Data
+    func refreshBook(withId bookId: UUID) {
+        if let entity = CoreDataManager.shared.getBook(by: bookId) {
+            let freshBook = Book(entity: entity)
+            
+            if let index = books.firstIndex(where: { $0.id == bookId }) {
+                // Only update if there's actually a change to avoid unnecessary UI updates
+                if books[index].readingProgress != freshBook.readingProgress || 
+                   books[index].lastOpenedDate != freshBook.lastOpenedDate {
+                    books[index] = freshBook
+                    // Don't trigger full UI refresh - SwiftUI will handle the individual book update
+                }
+            }
         }
     }
     
