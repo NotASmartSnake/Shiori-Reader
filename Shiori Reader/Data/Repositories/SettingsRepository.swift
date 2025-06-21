@@ -53,7 +53,9 @@ class SettingsRepository {
                 readingDirection: "ltr",
                 isVerticalText: false,
                 isScrollMode: false,
-                theme: "light"
+                theme: "light",
+                isDictionaryAnimationEnabled: true,
+                dictionaryAnimationSpeed: "normal"
             )
             return DefaultAppearanceSettings(entity: entity)
         }
@@ -70,7 +72,9 @@ class SettingsRepository {
             readingDirection: settings.readingDirection,
             isVerticalText: settings.isVerticalText,
             isScrollMode: settings.isScrollMode,
-            theme: settings.theme
+            theme: settings.theme,
+            isDictionaryAnimationEnabled: settings.isDictionaryAnimationEnabled,
+            dictionaryAnimationSpeed: settings.dictionaryAnimationSpeed
         )
     }
     

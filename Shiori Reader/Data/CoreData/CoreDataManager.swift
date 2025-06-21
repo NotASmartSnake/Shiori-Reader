@@ -126,6 +126,14 @@ class CoreDataManager {
         saveContext()
     }
     
+    func updateBookProgress(id: UUID, progress: Double, locatorData: Data?) {
+        guard let book = getBook(by: id) else { return }
+        book.readingProgress = progress
+        book.currentLocatorData = locatorData
+        book.lastOpenedDate = Date()
+        saveContext()
+    }
+    
     func deleteBook(_ book: BookEntity) {
         viewContext.delete(book)
         saveContext()
@@ -225,7 +233,9 @@ class CoreDataManager {
                                               readingDirection: String,
                                               isVerticalText: Bool,
                                               isScrollMode: Bool,
-                                              theme: String) -> DefaultAppearanceSettingsEntity {
+                                              theme: String,
+                                              isDictionaryAnimationEnabled: Bool = true,
+                                              dictionaryAnimationSpeed: String = "normal") -> DefaultAppearanceSettingsEntity {
         
         // Check if settings already exist
         if let existingSettings = getDefaultAppearanceSettings() {
@@ -239,6 +249,8 @@ class CoreDataManager {
             existingSettings.isVerticalText = isVerticalText
             existingSettings.isScrollMode = isScrollMode
             existingSettings.theme = theme
+            existingSettings.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
+            existingSettings.dictionaryAnimationSpeed = dictionaryAnimationSpeed
             saveContext()
             return existingSettings
         } else {
@@ -254,6 +266,8 @@ class CoreDataManager {
             settings.isVerticalText = isVerticalText
             settings.isScrollMode = isScrollMode
             settings.theme = theme
+            settings.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
+            settings.dictionaryAnimationSpeed = dictionaryAnimationSpeed
             saveContext()
             return settings
         }

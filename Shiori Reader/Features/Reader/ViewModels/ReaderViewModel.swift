@@ -52,6 +52,9 @@ class ReaderViewModel: ObservableObject {
     @Published var dictionaryMatches: [DictionaryMatch] = []
     @Published var currentSentenceContext: String = ""
     
+    // Animation settings
+    private var animationSettings: DefaultAppearanceSettings?
+    
     // Core Data repositories
     private let bookRepository = BookRepository()
     private let settingsRepository = SettingsRepository()
@@ -600,7 +603,14 @@ class ReaderViewModel: ObservableObject {
         
         // Lookup words in the dictionary
         getDictionaryMatches(text: text) { [weak self] matches in
-            withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+            if let settings = self?.animationSettings, settings.isDictionaryAnimationEnabled {
+                withAnimation(.spring(duration: settings.animationDuration, bounce: 0.2)) {
+                    self?.dictionaryMatches = matches
+                    self?.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
+                    // Always show the dictionary even if no matches found
+                    self?.showDictionary = true
+                }
+            } else {
                 self?.dictionaryMatches = matches
                 self?.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
                 // Always show the dictionary even if no matches found
@@ -762,6 +772,10 @@ class ReaderViewModel: ObservableObject {
     
     func setNavigatorController(_ navigator: EPUBNavigatorViewController) {
         self.navigatorController = navigator
+    }
+    
+    func updateAnimationSettings(_ settings: DefaultAppearanceSettings) {
+        self.animationSettings = settings
     }
     
     /// Call this to request navigation to a specific locator.

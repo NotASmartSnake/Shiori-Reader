@@ -20,6 +20,7 @@ struct ReaderView: View {
     @State private var showSearchSheet = false
     @State private var showSettingsSheet = false
     @State private var showContentsSheet = false
+    @State private var defaultAppearanceSettings: DefaultAppearanceSettings
     @Environment(\.dismiss) var dismiss
     
     // Access the orientation manager
@@ -30,6 +31,10 @@ struct ReaderView: View {
     init(book: Book) {
         _viewModel = StateObject(wrappedValue: ReaderViewModel(book: book))
         _settingsViewModel = StateObject(wrappedValue: ReaderSettingsViewModel(bookId: book.id))
+        
+        // Load default appearance settings for animation preferences
+        let settingsRepository = SettingsRepository()
+        _defaultAppearanceSettings = State(initialValue: settingsRepository.getDefaultAppearanceSettings())
     }
 
     var body: some View {
@@ -55,7 +60,11 @@ struct ReaderView: View {
                     Color.black.opacity(0.001) // Nearly transparent overlay
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .onTapGesture {
-                            withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                            if defaultAppearanceSettings.isDictionaryAnimationEnabled {
+                                withAnimation(.spring(duration: defaultAppearanceSettings.animationDuration, bounce: 0.2)) {
+                                    viewModel.showDictionary = false
+                                }
+                            } else {
                                 viewModel.showDictionary = false
                             }
                         }
@@ -65,7 +74,11 @@ struct ReaderView: View {
                     dictionaryPopup
                 }
             }
-            .animation(.easeInOut(duration: 0.3), value: viewModel.showDictionary)
+            .animation(
+                defaultAppearanceSettings.isDictionaryAnimationEnabled ? 
+                    .easeInOut(duration: defaultAppearanceSettings.animationDuration) : .none, 
+                value: viewModel.showDictionary
+            )
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
@@ -86,6 +99,9 @@ struct ReaderView: View {
                 }
             }
             updateReaderPreferences()
+            
+            // Pass animation settings to the view model
+            viewModel.updateAnimationSettings(defaultAppearanceSettings)
         }
         .onDisappear {
             // Lock back to portrait when leaving
@@ -303,7 +319,11 @@ struct ReaderView: View {
             DictionaryPopupView(
                 matches: viewModel.dictionaryMatches,
                 onDismiss: {
-                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                    if defaultAppearanceSettings.isDictionaryAnimationEnabled {
+                        withAnimation(.spring(duration: defaultAppearanceSettings.animationDuration, bounce: 0.2)) {
+                            viewModel.showDictionary = false
+                        }
+                    } else {
                         viewModel.showDictionary = false
                     }
                 },

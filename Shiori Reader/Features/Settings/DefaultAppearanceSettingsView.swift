@@ -26,7 +26,8 @@ struct DefaultAppearanceSettingsView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                List {
+                VStack {
+                    List {
                     // MARK: - Theme Section
                     Section(header: Text("Theme")) {
                         Picker("Theme", selection: Binding(
@@ -137,6 +138,28 @@ struct DefaultAppearanceSettingsView: View {
                         ))
                     }
                     
+                    // MARK: - Animation Section
+                    Section(header: Text("Dictionary Popup")) {
+                        // Animation toggle
+                        Toggle("Animate Dictionary Popup", isOn: Binding(
+                            get: { viewModel.preferences.isDictionaryAnimationEnabled },
+                            set: { _ in viewModel.toggleDictionaryAnimation() }
+                        ))
+                        
+                        // Animation speed picker (only show when animation is enabled)
+                        if viewModel.preferences.isDictionaryAnimationEnabled {
+                            Picker("Animation Speed", selection: Binding(
+                                get: { viewModel.preferences.dictionaryAnimationSpeed },
+                                set: { viewModel.updateDictionaryAnimationSpeed($0) }
+                            )) {
+                                Text("Slow").tag("slow")
+                                Text("Normal").tag("normal")
+                                Text("Fast").tag("fast")
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                        }
+                    }
+                    
                     // MARK: - Reset Section
                     Section {
                         Button(action: {
@@ -157,8 +180,14 @@ struct DefaultAppearanceSettingsView: View {
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
+                    }
+                    .listStyle(InsetGroupedListStyle())
+                    
+                    // Bottom spacer to prevent overlap with tab bar
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(height: 60)
                 }
-                .listStyle(InsetGroupedListStyle())
                 .navigationBarTitle("Reader Appearance", displayMode: .inline)
                 
             }

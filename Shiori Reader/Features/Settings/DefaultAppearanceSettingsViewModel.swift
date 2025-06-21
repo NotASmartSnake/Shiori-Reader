@@ -21,6 +21,7 @@ class DefaultAppearanceSettingsViewModel: ObservableObject {
         
         // Load default appearance settings
         self.preferences = settingsRepository.getDefaultAppearanceSettings()
+        print("[DEBUG] Loaded preferences: isDictionaryAnimationEnabled=\(preferences.isDictionaryAnimationEnabled), speed=\(preferences.dictionaryAnimationSpeed)")
         
         // Load custom themes
         self.customThemes = settingsRepository.getAllCustomThemes()
@@ -35,7 +36,9 @@ class DefaultAppearanceSettingsViewModel: ObservableObject {
     }
     
     func savePreferences() {
+        print("[DEBUG] Saving preferences: isDictionaryAnimationEnabled=\(preferences.isDictionaryAnimationEnabled), speed=\(preferences.dictionaryAnimationSpeed)")
         settingsRepository.saveDefaultAppearanceSettings(preferences)
+        print("[DEBUG] Preferences saved successfully")
     }
     
     // Helper functions for updating preferences
@@ -61,6 +64,14 @@ class DefaultAppearanceSettingsViewModel: ObservableObject {
     
     func toggleScrollMode() {
         preferences.isScrollMode.toggle()
+    }
+    
+    func toggleDictionaryAnimation() {
+        preferences.isDictionaryAnimationEnabled.toggle()
+    }
+    
+    func updateDictionaryAnimationSpeed(_ speed: String) {
+        preferences.dictionaryAnimationSpeed = speed
     }
     
     func setTheme(_ theme: String) {
@@ -101,7 +112,9 @@ class DefaultAppearanceSettingsViewModel: ObservableObject {
             readingDirection: "ltr",
             isVerticalText: false,
             isScrollMode: false,
-            theme: "light"
+            theme: "light",
+            isDictionaryAnimationEnabled: true,
+            dictionaryAnimationSpeed: "normal"
         )
         
         // Reset selected custom theme

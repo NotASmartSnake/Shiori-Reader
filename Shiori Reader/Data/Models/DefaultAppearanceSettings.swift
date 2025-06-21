@@ -20,6 +20,8 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
     var isVerticalText: Bool
     var isScrollMode: Bool
     var theme: String // "light", "dark", "sepia"
+    var isDictionaryAnimationEnabled: Bool
+    var dictionaryAnimationSpeed: String // "slow", "normal", "fast"
     
     // MARK: - Initialization
     
@@ -32,7 +34,9 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
          readingDirection: String = "ltr",
          isVerticalText: Bool = false,
          isScrollMode: Bool = false,
-         theme: String = "light") {
+         theme: String = "light",
+         isDictionaryAnimationEnabled: Bool = true,
+         dictionaryAnimationSpeed: String = "normal") {
         self.id = id
         self.fontSize = fontSize
         self.fontFamily = fontFamily
@@ -43,6 +47,8 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
         self.isVerticalText = isVerticalText
         self.isScrollMode = isScrollMode
         self.theme = theme
+        self.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
+        self.dictionaryAnimationSpeed = dictionaryAnimationSpeed
     }
     
     // Initialize from Core Data entity
@@ -57,6 +63,8 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
         self.isVerticalText = entity.isVerticalText
         self.isScrollMode = entity.isScrollMode
         self.theme = entity.theme ?? "light"
+        self.isDictionaryAnimationEnabled = entity.isDictionaryAnimationEnabled
+        self.dictionaryAnimationSpeed = entity.dictionaryAnimationSpeed ?? "normal"
     }
     
     // MARK: - Helper Methods
@@ -95,6 +103,20 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
         return readingDirection == "vertical"
     }
     
+    // Get animation duration based on speed setting
+    var animationDuration: Double {
+        guard isDictionaryAnimationEnabled else { return 0 }
+        
+        switch dictionaryAnimationSpeed {
+        case "slow":
+            return 0.5
+        case "fast":
+            return 0.15
+        default: // "normal"
+            return 0.3
+        }
+    }
+    
     // MARK: - Hashable
     
     func hash(into hasher: inout Hasher) {
@@ -113,7 +135,9 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
             lhs.readingDirection == rhs.readingDirection &&
             lhs.isScrollMode == rhs.isScrollMode &&
             lhs.isVertical == rhs.isVertical &&
-            lhs.theme == rhs.theme
+            lhs.theme == rhs.theme &&
+            lhs.isDictionaryAnimationEnabled == rhs.isDictionaryAnimationEnabled &&
+            lhs.dictionaryAnimationSpeed == rhs.dictionaryAnimationSpeed
     }
     
     // MARK: - Core Data Helpers
@@ -130,5 +154,7 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
         entity.isScrollMode = isScrollMode
         entity.isVerticalText = isVertical
         entity.theme = theme
+        entity.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
+        entity.dictionaryAnimationSpeed = dictionaryAnimationSpeed
     }
 }
