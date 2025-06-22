@@ -111,22 +111,18 @@ struct DefaultAppearanceSettingsView: View {
                             }
                         }
                         
-                        // Font size slider
-                        HStack {
-                            Text("Font Size")
-                            Spacer()
-                            Text("A").font(.system(size: 12))
-                            Slider(
-                                value: Binding(
-                                    get: { viewModel.preferences.fontSize },
-                                    set: { viewModel.updateFontSize($0) }
-                                ),
-                                in: fontSizeRange,
-                                step: fontSizeStep
-                            )
-                            .frame(width: 120)
-                            Text("A").font(.system(size: 24))
-                        }
+                        // Font size button control
+                        FontSizeButtonControl(
+                            fontSize: Binding(
+                                get: { viewModel.preferences.fontSize },
+                                set: { viewModel.updateFontSize($0) }
+                            ),
+                            fontSizeRange: fontSizeRange,
+                            fontSizeStep: fontSizeStep,
+                            onFontSizeChanged: { newSize in
+                                viewModel.updateFontSize(newSize)
+                            }
+                        )
                     }
                     
                     // MARK: - Layout Section
