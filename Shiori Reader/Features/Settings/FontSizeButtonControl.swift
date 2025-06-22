@@ -20,7 +20,7 @@ struct FontSizeButtonControl: View {
     
     // Constants for dots display
     private let numberOfDots = 8
-    private let dotsDisplayDuration: Double = 2.5
+    private let dotsDisplayDuration: Double = 1.5
     
     var body: some View {
         // Font size button
