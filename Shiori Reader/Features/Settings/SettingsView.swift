@@ -24,6 +24,7 @@ struct SettingsView: View {
                         NavigationLink(destination: AppAppearanceSettingsView()) {
                             HStack {
                                 Image(systemName: "sun.min")
+                                    .frame(width: 20, alignment: .center)
                                 Text("App Appearance")
                             }
                         }
@@ -32,6 +33,7 @@ struct SettingsView: View {
                         NavigationLink(destination: DefaultAppearanceSettingsView()) {
                             HStack {
                                 Image(systemName: "book")
+                                    .frame(width: 20, alignment: .center)
                                 Text("Reader Appearance")
                             }
                         }
@@ -40,6 +42,7 @@ struct SettingsView: View {
                         NavigationLink(destination: DictionarySettingsView()) {
                             HStack {
                                 Image(systemName: "text.book.closed")
+                                    .frame(width: 20, alignment: .center)
                                 Text("Dictionaries")
                             }
                         }
@@ -48,6 +51,7 @@ struct SettingsView: View {
                         NavigationLink(destination: AnkiSettingsView()) {
                             HStack {
                                 Image(systemName: "rectangle.stack.fill")
+                                    .frame(width: 20, alignment: .center)
                                 Text("Anki Integration")
                             }
                         }
@@ -57,6 +61,7 @@ struct SettingsView: View {
                         NavigationLink(destination: AttributionView()) {
                             HStack {
                                 Image(systemName: "info.circle")
+                                    .frame(width: 20, alignment: .center)
                                 Text("Attributions")
                             }
                         }
@@ -69,6 +74,7 @@ struct SettingsView: View {
                             HStack {
                                 Image(systemName: "exclamationmark.bubble")
                                     .foregroundColor(.primary)
+                                    .frame(width: 20, alignment: .center)
                                 Text("Report Issues")
                                     .foregroundColor(.primary)
                                 Spacer()
