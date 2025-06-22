@@ -22,6 +22,7 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
     var theme: String // "light", "dark", "sepia"
     var isDictionaryAnimationEnabled: Bool
     var dictionaryAnimationSpeed: String // "slow", "normal", "fast"
+    var dictionaryDisplayMode: String // "card", "popup"
     
     // MARK: - Initialization
     
@@ -36,7 +37,8 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
          isScrollMode: Bool = false,
          theme: String = "light",
          isDictionaryAnimationEnabled: Bool = true,
-         dictionaryAnimationSpeed: String = "normal") {
+         dictionaryAnimationSpeed: String = "normal",
+         dictionaryDisplayMode: String = "card") {
         self.id = id
         self.fontSize = fontSize
         self.fontFamily = fontFamily
@@ -49,6 +51,7 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
         self.theme = theme
         self.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
         self.dictionaryAnimationSpeed = dictionaryAnimationSpeed
+        self.dictionaryDisplayMode = dictionaryDisplayMode
     }
     
     // Initialize from Core Data entity
@@ -65,6 +68,7 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
         self.theme = entity.theme ?? "light"
         self.isDictionaryAnimationEnabled = entity.isDictionaryAnimationEnabled
         self.dictionaryAnimationSpeed = entity.dictionaryAnimationSpeed ?? "normal"
+        self.dictionaryDisplayMode = entity.dictionaryDisplayMode ?? "card"
     }
     
     // MARK: - Helper Methods
@@ -137,7 +141,8 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
             lhs.isVertical == rhs.isVertical &&
             lhs.theme == rhs.theme &&
             lhs.isDictionaryAnimationEnabled == rhs.isDictionaryAnimationEnabled &&
-            lhs.dictionaryAnimationSpeed == rhs.dictionaryAnimationSpeed
+            lhs.dictionaryAnimationSpeed == rhs.dictionaryAnimationSpeed &&
+            lhs.dictionaryDisplayMode == rhs.dictionaryDisplayMode
     }
     
     // MARK: - Core Data Helpers
@@ -156,5 +161,6 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
         entity.theme = theme
         entity.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
         entity.dictionaryAnimationSpeed = dictionaryAnimationSpeed
+        entity.dictionaryDisplayMode = dictionaryDisplayMode
     }
 }

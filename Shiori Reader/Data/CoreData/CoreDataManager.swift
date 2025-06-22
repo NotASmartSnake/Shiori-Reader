@@ -235,7 +235,8 @@ class CoreDataManager {
                                               isScrollMode: Bool,
                                               theme: String,
                                               isDictionaryAnimationEnabled: Bool = true,
-                                              dictionaryAnimationSpeed: String = "normal") -> DefaultAppearanceSettingsEntity {
+                                              dictionaryAnimationSpeed: String = "normal",
+                                              dictionaryDisplayMode: String = "card") -> DefaultAppearanceSettingsEntity {
         
         // Check if settings already exist
         if let existingSettings = getDefaultAppearanceSettings() {
@@ -251,6 +252,7 @@ class CoreDataManager {
             existingSettings.theme = theme
             existingSettings.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
             existingSettings.dictionaryAnimationSpeed = dictionaryAnimationSpeed
+            existingSettings.dictionaryDisplayMode = dictionaryDisplayMode
             saveContext()
             return existingSettings
         } else {
@@ -268,6 +270,7 @@ class CoreDataManager {
             settings.theme = theme
             settings.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
             settings.dictionaryAnimationSpeed = dictionaryAnimationSpeed
+            settings.dictionaryDisplayMode = dictionaryDisplayMode
             saveContext()
             return settings
         }

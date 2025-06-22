@@ -55,7 +55,8 @@ class SettingsRepository {
                 isScrollMode: false,
                 theme: "light",
                 isDictionaryAnimationEnabled: true,
-                dictionaryAnimationSpeed: "normal"
+                dictionaryAnimationSpeed: "normal",
+                dictionaryDisplayMode: "card"
             )
             return DefaultAppearanceSettings(entity: entity)
         }
@@ -74,7 +75,8 @@ class SettingsRepository {
             isScrollMode: settings.isScrollMode,
             theme: settings.theme,
             isDictionaryAnimationEnabled: settings.isDictionaryAnimationEnabled,
-            dictionaryAnimationSpeed: settings.dictionaryAnimationSpeed
+            dictionaryAnimationSpeed: settings.dictionaryAnimationSpeed,
+            dictionaryDisplayMode: settings.dictionaryDisplayMode
         )
     }
     

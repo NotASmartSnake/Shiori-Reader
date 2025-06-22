@@ -21,7 +21,7 @@ class DefaultAppearanceSettingsViewModel: ObservableObject {
         
         // Load default appearance settings
         self.preferences = settingsRepository.getDefaultAppearanceSettings()
-        print("[DEBUG] Loaded preferences: isDictionaryAnimationEnabled=\(preferences.isDictionaryAnimationEnabled), speed=\(preferences.dictionaryAnimationSpeed)")
+        print("[DEBUG] Loaded preferences: isDictionaryAnimationEnabled=\(preferences.isDictionaryAnimationEnabled), speed=\(preferences.dictionaryAnimationSpeed), displayMode=\(preferences.dictionaryDisplayMode)")
         
         // Load custom themes
         self.customThemes = settingsRepository.getAllCustomThemes()
@@ -36,7 +36,7 @@ class DefaultAppearanceSettingsViewModel: ObservableObject {
     }
     
     func savePreferences() {
-        print("[DEBUG] Saving preferences: isDictionaryAnimationEnabled=\(preferences.isDictionaryAnimationEnabled), speed=\(preferences.dictionaryAnimationSpeed)")
+        print("[DEBUG] Saving preferences: isDictionaryAnimationEnabled=\(preferences.isDictionaryAnimationEnabled), speed=\(preferences.dictionaryAnimationSpeed), displayMode=\(preferences.dictionaryDisplayMode)")
         settingsRepository.saveDefaultAppearanceSettings(preferences)
         print("[DEBUG] Preferences saved successfully")
     }
@@ -72,6 +72,13 @@ class DefaultAppearanceSettingsViewModel: ObservableObject {
     
     func updateDictionaryAnimationSpeed(_ speed: String) {
         preferences.dictionaryAnimationSpeed = speed
+    }
+    
+    func updateDictionaryDisplayMode(_ mode: String) {
+        print("[DEBUG] Updating dictionary display mode from \(preferences.dictionaryDisplayMode) to \(mode)")
+        preferences.dictionaryDisplayMode = mode
+        // Explicitly save to ensure persistence
+        savePreferences()
     }
     
     func setTheme(_ theme: String) {
@@ -114,7 +121,8 @@ class DefaultAppearanceSettingsViewModel: ObservableObject {
             isScrollMode: false,
             theme: "light",
             isDictionaryAnimationEnabled: true,
-            dictionaryAnimationSpeed: "normal"
+            dictionaryAnimationSpeed: "normal",
+            dictionaryDisplayMode: "card"
         )
         
         // Reset selected custom theme

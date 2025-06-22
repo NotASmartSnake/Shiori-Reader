@@ -20,6 +20,7 @@ struct ReaderView: View {
     @State private var showSearchSheet = false
     @State private var showSettingsSheet = false
     @State private var showContentsSheet = false
+    @State private var selectedTextPosition: CGPoint = .zero
     @State private var defaultAppearanceSettings: DefaultAppearanceSettings
     @Environment(\.dismiss) var dismiss
     
@@ -71,7 +72,40 @@ struct ReaderView: View {
                         .zIndex(1) // Make sure this is below the popup but above other content
                         .transition(.opacity)
                     
-                    dictionaryPopup
+                    // Choose display mode based on user preference
+                    if defaultAppearanceSettings.dictionaryDisplayMode == "popup" {
+                        // Center the popup overlay on screen
+                        VStack {
+                            Spacer()
+                            DictionaryPopupCardView(
+                                matches: viewModel.dictionaryMatches,
+                                onDismiss: {
+                                    if defaultAppearanceSettings.isDictionaryAnimationEnabled {
+                                        withAnimation(.spring(duration: defaultAppearanceSettings.animationDuration, bounce: 0.2)) {
+                                            viewModel.showDictionary = false
+                                        }
+                                    } else {
+                                        viewModel.showDictionary = false
+                                    }
+                                },
+                                sentenceContext: viewModel.currentSentenceContext,
+                                bookTitle: viewModel.book.title,
+                                fullText: viewModel.fullTextForSelection,
+                                currentOffset: viewModel.currentTextOffset,
+                                onCharacterSelected: { offset in
+                                    viewModel.handleCharacterSelection(offset: offset)
+                                },
+                                selectedTextPosition: CGPoint(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2)
+                            )
+                            .environmentObject(savedWordsManager)
+                            Spacer()
+                        }
+                        .transition(.scale.combined(with: .opacity))
+                        .zIndex(2)
+                    } else {
+                        // Original sliding card from bottom
+                        dictionaryPopup
+                    }
                 }
             }
             .animation(
