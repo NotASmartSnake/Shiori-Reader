@@ -24,9 +24,8 @@ struct DefaultAppearanceSettingsView: View {
     private let fontSizeStep: Float = 0.1
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                VStack {
+        ZStack {
+            VStack {
                     List {
                     // MARK: - Theme Section
                     Section(header: Text("Theme")) {
@@ -183,22 +182,20 @@ struct DefaultAppearanceSettingsView: View {
                     Rectangle()
                         .fill(Color.clear)
                         .frame(height: 60)
-                }
-                .navigationBarTitle("Reader Appearance", displayMode: .inline)
-                
             }
-            .alert("Save Current Theme", isPresented: $showSaveThemeAlert, actions: {
-                TextField("Theme Name", text: $newThemeName)
-                Button("Cancel", role: .cancel) { }
-                Button("Save") {
-                    if !newThemeName.isEmpty {
-                        viewModel.saveCurrentThemeAs(name: newThemeName)
-                    }
-                }
-            }, message: {
-                Text("Enter a name for this theme.")
-            })
-
+            .navigationTitle("Reader Appearance")
+            .navigationBarTitleDisplayMode(.inline)
         }
+        .alert("Save Current Theme", isPresented: $showSaveThemeAlert, actions: {
+            TextField("Theme Name", text: $newThemeName)
+            Button("Cancel", role: .cancel) { }
+            Button("Save") {
+                if !newThemeName.isEmpty {
+                    viewModel.saveCurrentThemeAs(name: newThemeName)
+                }
+            }
+        }, message: {
+            Text("Enter a name for this theme.")
+        })
     }
 }
