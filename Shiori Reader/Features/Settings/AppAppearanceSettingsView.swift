@@ -8,13 +8,9 @@
 import SwiftUI
 
 struct AppAppearanceSettingsView: View {
-    // State to track the current appearance mode
-    @State private var appearanceMode: String
-    
-    // Initialize with the current mode from AppearanceManager
-    init() {
-        self._appearanceMode = State(initialValue: AppearanceManager.shared.getCurrentAppearanceMode())
-    }
+    // Use @AppStorage to automatically sync with UserDefaults
+    // This will automatically update when the value changes in UserDefaults
+    @AppStorage(kAppearanceModeKey) private var appearanceMode: String = "system"
     
     var body: some View {
         List {
@@ -27,7 +23,9 @@ struct AppAppearanceSettingsView: View {
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .onChange(of: appearanceMode) { oldValue, newValue in
-                    AppearanceManager.shared.setAppearanceMode(newValue)
+                    // Apply the appearance mode when changed
+                    // No need to call setAppearanceMode since @AppStorage handles UserDefaults
+                    AppearanceManager.shared.applyAppearanceMode()
                 }
                 
                 Text("This setting controls the appearance of the app's interface (light or dark mode), not the reader content.")
@@ -39,7 +37,8 @@ struct AppAppearanceSettingsView: View {
             Section {
                 Button(action: {
                     appearanceMode = "system"
-                    AppearanceManager.shared.setAppearanceMode("system")
+                    // No need to call setAppearanceMode since @AppStorage handles UserDefaults
+                    AppearanceManager.shared.applyAppearanceMode()
                 }) {
                     HStack {
                         Spacer()
