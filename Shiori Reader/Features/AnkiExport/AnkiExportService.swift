@@ -174,31 +174,36 @@ class AnkiExportService {
             "pitchAccent": pitchAccentHTML ?? ""
         ]
         
+        // Dictionary to collect all field values, allowing concatenation for duplicate field names
+        var fieldValues: [String: [String]] = [:]
+        
+        // Helper function to add field value to the collection
+        func addFieldValue(fieldName: String, value: String) {
+            guard !fieldName.isEmpty && !value.isEmpty else { return }
+            fieldValues[fieldName, default: []].append(value)
+        }
+        
         // Add primary fields
-        if !settings.wordField.isEmpty {
-            queryItems.append(URLQueryItem(name: "fld\(settings.wordField)", value: word))
-        }
-        if !settings.readingField.isEmpty {
-            queryItems.append(URLQueryItem(name: "fld\(settings.readingField)", value: reading))
-        }
-        if !settings.definitionField.isEmpty {
-            queryItems.append(URLQueryItem(name: "fld\(settings.definitionField)", value: definition))
-        }
-        if !settings.sentenceField.isEmpty {
-            queryItems.append(URLQueryItem(name: "fld\(settings.sentenceField)", value: sentence))
-        }
-        if !settings.wordWithReadingField.isEmpty {
-            queryItems.append(URLQueryItem(name: "fld\(settings.wordWithReadingField)", value: wordWithReading))
-        }
-        if !settings.pitchAccentField.isEmpty && pitchAccentHTML != nil {
-            queryItems.append(URLQueryItem(name: "fld\(settings.pitchAccentField)", value: pitchAccentHTML))
+        addFieldValue(fieldName: settings.wordField, value: word)
+        addFieldValue(fieldName: settings.readingField, value: reading)
+        addFieldValue(fieldName: settings.definitionField, value: definition)
+        addFieldValue(fieldName: settings.sentenceField, value: sentence)
+        addFieldValue(fieldName: settings.wordWithReadingField, value: wordWithReading)
+        if let pitchHTML = pitchAccentHTML {
+            addFieldValue(fieldName: settings.pitchAccentField, value: pitchHTML)
         }
         
         // Add additional fields
         for additionalField in settings.additionalFields {
-            if let content = contentMap[additionalField.type], !additionalField.fieldName.isEmpty {
-                queryItems.append(URLQueryItem(name: "fld\(additionalField.fieldName)", value: content))
+            if let content = contentMap[additionalField.type] {
+                addFieldValue(fieldName: additionalField.fieldName, value: content)
             }
+        }
+        
+        // Convert the collected field values to URLQueryItems, concatenating duplicate fields with HTML line breaks
+        for (fieldName, values) in fieldValues {
+            let concatenatedValue = values.joined(separator: "<br>")
+            queryItems.append(URLQueryItem(name: "fld\(fieldName)", value: concatenatedValue))
         }
         
         // Add x-success callback to return to Shiori after adding
