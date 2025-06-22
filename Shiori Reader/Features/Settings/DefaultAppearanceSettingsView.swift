@@ -145,7 +145,7 @@ struct DefaultAppearanceSettingsView: View {
                         }
                         .pickerStyle(SegmentedPickerStyle())
                         
-                        Text("Choose how the dictionary appears: Sliding Card slides up from the bottom, Popup appears as a centered overlay.")
+                        Text("Choose how the dictionary appears: a sliding card that slides up from the bottom, or a popup that appears as a centered overlay.")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                         
