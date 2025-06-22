@@ -77,7 +77,7 @@ struct AnkiSettingsView: View {
     // MARK: - Section Components
     
     private var ankiIntegrationSection: some View {
-        Section(header: Text("AnkiMobile Integration"), footer: Text("If you get an error fetching deck and note type information, close Shiori Reader from the app switcher and try again. AnkiMobile sometimes has issues with rapid successive requests.")) {
+        Section(header: Text("AnkiMobile Integration"), footer: Text("Deck and note type information is cached locally after the first successful sync. If you get an error fetching new data, close Shiori Reader from the app switcher and try again. AnkiMobile sometimes has issues with rapid successive requests.")) {
             // Note Type Menu
             noteTypeRow
             

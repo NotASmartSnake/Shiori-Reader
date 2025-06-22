@@ -27,6 +27,10 @@ class AnkiSettingsViewModel: ObservableObject {
         self.settingsRepository = settingsRepository
         self.settings = settingsRepository.getAnkiSettings()
         
+        // Load cached data from settings
+        self.availableDecks = settings.cachedDecks
+        self.availableNoteTypes = settings.cachedNoteTypes
+        
         // If we have a note type, load its fields
         if !settings.noteType.isEmpty, 
            let fields = availableNoteTypes[settings.noteType] {
@@ -77,6 +81,9 @@ class AnkiSettingsViewModel: ObservableObject {
                             self.selectedNoteTypeFields = fields
                         }
                     }
+                    
+                    // Refresh settings to get the updated cached data
+                    self.settings = self.settingsRepository.getAnkiSettings()
                     
                     self.alertTitle = "Success"
                     self.alertMessage = "Successfully retrieved Anki information. You can now select deck and note type."

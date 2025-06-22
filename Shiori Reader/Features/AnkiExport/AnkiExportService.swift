@@ -598,13 +598,16 @@ class AnkiExportService {
                     let deckNames = decksArray.compactMap { $0["name"] }
                     processedData["decks"] = deckNames
                     
+                    // Cache the decks data
+                    var settings = settingsRepository.getAnkiSettings()
+                    settings.cachedDecks = deckNames
+                    
                     // Store first deck as default if we don't already have one set
-                    let settings = settingsRepository.getAnkiSettings()
                     if settings.deckName.isEmpty && !deckNames.isEmpty {
-                        var updatedSettings = settings
-                        updatedSettings.deckName = deckNames.first ?? "Default"
-                        settingsRepository.updateAnkiSettings(updatedSettings)
+                        settings.deckName = deckNames.first ?? "Default"
                     }
+                    
+                    settingsRepository.updateAnkiSettings(settings)
                 }
                 
                 // Process the notetypes data (convert from array of dictionaries to dictionary of arrays)
@@ -621,12 +624,14 @@ class AnkiExportService {
                     
                     processedData["noteTypes"] = noteTypesDict
                     
+                    // Cache the note types data
+                    var settings = settingsRepository.getAnkiSettings()
+                    settings.cachedNoteTypes = noteTypesDict
+                    
                     // Store first note type as default if we don't already have one set
-                    let settings = settingsRepository.getAnkiSettings()
                     if settings.noteType.isEmpty && !noteTypesDict.isEmpty {
-                        var updatedSettings = settings
                         let firstNoteTypeName = noteTypesDict.keys.sorted().first ?? "Basic"
-                        updatedSettings.noteType = firstNoteTypeName
+                        settings.noteType = firstNoteTypeName
                         
                         // Also set default field mappings if available
                         if let fields = noteTypesDict[firstNoteTypeName], !fields.isEmpty {
@@ -637,21 +642,21 @@ class AnkiExportService {
                             let sentenceField = fields.first(where: { $0.contains("Sentence") || $0.contains("Example") }) ?? (fields.count > 3 ? fields[3] : nil)
                             
                             if let wordField = wordField {
-                                updatedSettings.wordField = wordField
+                                settings.wordField = wordField
                             }
                             if let readingField = readingField {
-                                updatedSettings.readingField = readingField
+                                settings.readingField = readingField
                             }
                             if let meaningField = meaningField {
-                                updatedSettings.definitionField = meaningField
+                                settings.definitionField = meaningField
                             }
                             if let sentenceField = sentenceField {
-                                updatedSettings.sentenceField = sentenceField
+                                settings.sentenceField = sentenceField
                             }
                         }
-                        
-                        settingsRepository.updateAnkiSettings(updatedSettings)
                     }
+                    
+                    settingsRepository.updateAnkiSettings(settings)
                 }
                 
                 // Return the processed data

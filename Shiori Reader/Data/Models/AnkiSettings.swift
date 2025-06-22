@@ -24,6 +24,10 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
     var tags: String
     var additionalFields: [AdditionalField]
     
+    // Cached Anki data
+    var cachedDecks: [String]
+    var cachedNoteTypes: [String: [String]]
+    
     // MARK: - Initialization
     
     init(id: UUID = UUID(),
@@ -38,7 +42,9 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
          pitchAccentGraphColor: String = "black",
          pitchAccentTextColor: String = "black",
          tags: String = "shiori-reader",
-         additionalFields: [AdditionalField] = []) {
+         additionalFields: [AdditionalField] = [],
+         cachedDecks: [String] = [],
+         cachedNoteTypes: [String: [String]] = [:]) {
         self.id = id
         self.deckName = deckName
         self.noteType = noteType
@@ -52,6 +58,8 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         self.pitchAccentTextColor = pitchAccentTextColor
         self.tags = tags
         self.additionalFields = additionalFields
+        self.cachedDecks = cachedDecks
+        self.cachedNoteTypes = cachedNoteTypes
     }
     
     // Initialize from Core Data entity
@@ -81,6 +89,21 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
             }
         } else {
             self.additionalFields = []
+        }
+        
+        // Load cached data
+        if let decksData = entity.cachedDecksData,
+           let decks = try? JSONDecoder().decode([String].self, from: decksData) {
+            self.cachedDecks = decks
+        } else {
+            self.cachedDecks = []
+        }
+        
+        if let noteTypesData = entity.cachedNoteTypesData,
+           let noteTypes = try? JSONDecoder().decode([String: [String]].self, from: noteTypesData) {
+            self.cachedNoteTypes = noteTypes
+        } else {
+            self.cachedNoteTypes = [:]
         }
     }
     
@@ -119,6 +142,18 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         return copy
     }
     
+    // Create a copy with updated cached data
+    func withCachedData(decks: [String]?, noteTypes: [String: [String]]?) -> AnkiSettings {
+        var copy = self
+        if let decks = decks {
+            copy.cachedDecks = decks
+        }
+        if let noteTypes = noteTypes {
+            copy.cachedNoteTypes = noteTypes
+        }
+        return copy
+    }
+    
     // MARK: - Hashable
     
     func hash(into hasher: inout Hasher) {
@@ -140,7 +175,9 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
             lhs.pitchAccentGraphColor == rhs.pitchAccentGraphColor &&
             lhs.pitchAccentTextColor == rhs.pitchAccentTextColor &&
             lhs.tags == rhs.tags &&
-            lhs.additionalFields == rhs.additionalFields
+            lhs.additionalFields == rhs.additionalFields &&
+            lhs.cachedDecks == rhs.cachedDecks &&
+            lhs.cachedNoteTypes == rhs.cachedNoteTypes
     }
     
     // MARK: - Core Data Helpers
@@ -185,6 +222,15 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
             // Update field properties
             existingField.type = field.type
             existingField.fieldName = field.fieldName
+        }
+        
+        // Save cached data
+        if let decksData = try? JSONEncoder().encode(cachedDecks) {
+            entity.cachedDecksData = decksData
+        }
+        
+        if let noteTypesData = try? JSONEncoder().encode(cachedNoteTypes) {
+            entity.cachedNoteTypesData = noteTypesData
         }
     }
 }
