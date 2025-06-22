@@ -8,6 +8,10 @@ class AnkiExportService {
     private let japaneseAnalyzer = JapaneseTextAnalyzer.shared
     private let settingsRepository = SettingsRepository()
     
+    // State management for fetchAnkiInfo
+    private var isFetchingAnkiInfo = false
+    private var currentTimeoutWorkItem: DispatchWorkItem?
+    
     private init() {}
     
     // Check if AnkiMobile is installed
@@ -474,71 +478,118 @@ class AnkiExportService {
     
     // Get deck and note type information from AnkiMobile
     func fetchAnkiInfo(completion: @escaping (Bool, [String: Any]?) -> Void) {
+        // Prevent multiple concurrent calls
+        guard !isFetchingAnkiInfo else {
+            Logger.debug(category: "AnkiExport", "Already fetching Anki info, ignoring subsequent call")
+            completion(false, nil)
+            return
+        }
+        
         let infoURL = URL(string: "anki://x-callback-url/infoForAdding?x-success=shiori://anki-info")!
         
         // Check if URL can be opened
-        if UIApplication.shared.canOpenURL(infoURL) {
+        guard UIApplication.shared.canOpenURL(infoURL) else {
+            Logger.debug(category: "AnkiExport", "Cannot open Anki info URL")
+            completion(false, nil)
+            return
+        }
+        
+        // Set fetching state
+        isFetchingAnkiInfo = true
+        
+        // Cancel any existing timeout
+        currentTimeoutWorkItem?.cancel()
+        
+        // Remove any existing observers to prevent duplicates
+        NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
+        
+        // Create a timeout mechanism
+        let timeoutWorkItem = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
             
-            // Create a timeout mechanism
-            let timeoutWorkItem = DispatchWorkItem { [weak self] in
-                guard let self = self else { return }
-                
-                // Check clipboard one last time
-                let pasteboard = UIPasteboard.general
-                if let data = pasteboard.data(forPasteboardType: "net.ankimobile.json") {
-                    self.processAnkiData(data, completion: completion)
-                } else {
-                    Logger.debug(category: "AnkiExport", "No Anki data found after timeout")
-                    completion(false, nil)
-                }
-                
-                // Remove observer
-                NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
+            Logger.debug(category: "AnkiExport", "Timeout reached, checking clipboard one last time")
+            
+            // Check clipboard one last time
+            let pasteboard = UIPasteboard.general
+            if let data = pasteboard.data(forPasteboardType: "net.ankimobile.json"), !data.isEmpty {
+                self.processAnkiData(data, completion: completion)
+            } else {
+                Logger.debug(category: "AnkiExport", "No valid Anki data found after timeout")
+                self.cleanupFetch()
+                completion(false, nil)
             }
+        }
+        
+        // Store the current timeout work item
+        currentTimeoutWorkItem = timeoutWorkItem
+        
+        // Register for becoming active notification
+        NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self = self else { return }
             
-            // Register for becoming active notification
-            NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
-                guard let self = self else { return }
-                
-                timeoutWorkItem.cancel()  // Cancel the timeout since we're back
-                
+            Logger.debug(category: "AnkiExport", "App became active, checking for Anki data")
+            
+            // Cancel the timeout since we're back
+            self.currentTimeoutWorkItem?.cancel()
+            
+            // Small delay to ensure clipboard is populated
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 // Check for clipboard data when app becomes active
                 let pasteboard = UIPasteboard.general
-                if let data = pasteboard.data(forPasteboardType: "net.ankimobile.json") {
+                if let data = pasteboard.data(forPasteboardType: "net.ankimobile.json"), !data.isEmpty {
+                    Logger.debug(category: "AnkiExport", "Found Anki data in clipboard (\(data.count) bytes)")
                     // Process the data
                     self.processAnkiData(data, completion: completion)
                 } else {
-                    completion(false, nil)
-                }
-                
-                // Remove observer
-                NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
-            }
-            
-            // Schedule timeout
-            DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: timeoutWorkItem)
-            
-            // Open AnkiMobile
-            UIApplication.shared.open(infoURL, options: [:]) { success in
-                if !success {
-                    timeoutWorkItem.cancel()
+                    Logger.debug(category: "AnkiExport", "No valid Anki data found in clipboard")
+                    self.cleanupFetch()
                     completion(false, nil)
                 }
             }
-        } else {
-            Logger.debug(category: "AnkiExport", "Cannot open Anki info URL")
-            completion(false, nil)
         }
+        
+        // Schedule timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10, execute: timeoutWorkItem)
+        
+        // Open AnkiMobile
+        UIApplication.shared.open(infoURL, options: [:]) { [weak self] success in
+            if !success {
+                Logger.debug(category: "AnkiExport", "Failed to open Anki URL")
+                self?.currentTimeoutWorkItem?.cancel()
+                self?.cleanupFetch()
+                completion(false, nil)
+            }
+        }
+    }
+    
+    // Clean up fetch state and observers
+    private func cleanupFetch() {
+        isFetchingAnkiInfo = false
+        currentTimeoutWorkItem?.cancel()
+        currentTimeoutWorkItem = nil
+        NotificationCenter.default.removeObserver(self, name: UIApplication.didBecomeActiveNotification, object: nil)
     }
     
     // Helper method to process Anki data and update settings in Core Data
     private func processAnkiData(_ data: Data, completion: @escaping (Bool, [String: Any]?) -> Void) {
-        // Clear clipboard after reading
-        UIPasteboard.general.setData(Data(), forPasteboardType: "net.ankimobile.json")
+        // Clean up fetch state first
+        cleanupFetch()
+        
+        // Clear clipboard after reading by completely removing the item
+        if UIPasteboard.general.contains(pasteboardTypes: ["net.ankimobile.json"]) {
+            // Create a new pasteboard item without the Anki data
+            let items = UIPasteboard.general.items.compactMap { item -> [String: Any]? in
+                var newItem = item
+                newItem.removeValue(forKey: "net.ankimobile.json")
+                return newItem.isEmpty ? nil : newItem
+            }
+            UIPasteboard.general.items = items
+        }
         
         do {
             // Parse the JSON data
             if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                Logger.debug(category: "AnkiExport", "Successfully parsed JSON with keys: \(json.keys.joined(separator: ", "))")
                 
                 // Process the decks data (convert from array of dictionaries to array of strings)
                 var processedData: [String: Any] = [:]
