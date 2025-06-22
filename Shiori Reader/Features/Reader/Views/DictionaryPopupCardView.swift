@@ -15,7 +15,6 @@ struct DictionaryPopupCardView: View {
     let fullText: String
     let currentOffset: Int
     let onCharacterSelected: (Int) -> Void
-    let selectedTextPosition: CGPoint // Position of selected text
     
     @State private var showAnkiSuccess = false
     @State private var showSaveSuccess = false
@@ -229,7 +228,7 @@ struct DictionaryPopupCardView: View {
         .background(Color(.secondarySystemBackground))
         .cornerRadius(16)
         .shadow(radius: 10)
-        .padding(.horizontal, 32) // Horizontal padding to leave room at edges
+        .padding(.horizontal, 24) // Reduced from 32 to make it wider
         .overlay(
             ZStack {
                 // Existing Anki success overlay
@@ -316,11 +315,8 @@ struct DictionaryPopupCardView: View {
     
     // MARK: - Computed Properties
     
-    // For now, simply center the popup on screen
-    // In the future, we could use selectedTextPosition for more intelligent positioning
-    private var popupOffset: CGSize {
-        return .zero // Center on screen
-    }
+    // Simple center positioning
+    // The popup will be centered on screen by the parent view
     
     // MARK: - Helper Functions
     

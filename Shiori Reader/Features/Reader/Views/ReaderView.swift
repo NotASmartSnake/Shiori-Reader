@@ -74,7 +74,7 @@ struct ReaderView: View {
                     
                     // Choose display mode based on user preference
                     if defaultAppearanceSettings.dictionaryDisplayMode == "popup" {
-                        // Center the popup overlay on screen
+                        // Center the popup on screen
                         VStack {
                             Spacer()
                             DictionaryPopupCardView(
@@ -94,8 +94,7 @@ struct ReaderView: View {
                                 currentOffset: viewModel.currentTextOffset,
                                 onCharacterSelected: { offset in
                                     viewModel.handleCharacterSelection(offset: offset)
-                                },
-                                selectedTextPosition: CGPoint(x: UIScreen.main.bounds.width / 2, y: UIScreen.main.bounds.height / 2)
+                                }
                             )
                             .environmentObject(savedWordsManager)
                             Spacer()
