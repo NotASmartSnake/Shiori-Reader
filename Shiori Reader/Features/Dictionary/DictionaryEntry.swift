@@ -51,6 +51,7 @@ struct DictionaryEntry: Identifiable, Equatable {
     var transformationNotes: String? = nil
     let popularity: Double?
     let source: String // Dictionary source identifier (e.g., "jmdict", "obunsha")
+    var frequencyData: FrequencyData? = nil // BCCWJ frequency data
     
     // Lazy loading helper
     private let pitchAccentLoader: PitchAccentLoader
@@ -66,7 +67,7 @@ struct DictionaryEntry: Identifiable, Equatable {
     }
     
     // Custom initializer to set up lazy loader
-    init(id: String, term: String, reading: String, meanings: [String], meaningTags: [String], termTags: [String], score: String?, rules: String?, transformed: String? = nil, transformationNotes: String? = nil, popularity: Double?, source: String = "jmdict") {
+    init(id: String, term: String, reading: String, meanings: [String], meaningTags: [String], termTags: [String], score: String?, rules: String?, transformed: String? = nil, transformationNotes: String? = nil, popularity: Double?, source: String = "jmdict", frequencyData: FrequencyData? = nil) {
         self.id = id
         self.term = term
         self.reading = reading
@@ -79,6 +80,7 @@ struct DictionaryEntry: Identifiable, Equatable {
         self.transformationNotes = transformationNotes
         self.popularity = popularity
         self.source = source
+        self.frequencyData = frequencyData
         self.pitchAccentLoader = PitchAccentLoader(term: term, reading: reading)
     }
     
@@ -94,7 +96,8 @@ struct DictionaryEntry: Identifiable, Equatable {
                lhs.transformed == rhs.transformed &&
                lhs.transformationNotes == rhs.transformationNotes &&
                lhs.popularity == rhs.popularity &&
-               lhs.source == rhs.source
+               lhs.source == rhs.source &&
+               lhs.frequencyData?.word == rhs.frequencyData?.word
     }
     
     /// Returns true if this entry has pitch accent information
@@ -111,5 +114,23 @@ struct DictionaryEntry: Identifiable, Equatable {
     var pitchAccentString: String? {
         guard let accents = pitchAccents?.allPatterns, !accents.isEmpty else { return nil }
         return accents.map { "[\($0)]" }.joined(separator: ", ")
+    }
+    
+    /// Returns frequency rank as a formatted string for display
+    var frequencyRankString: String? {
+        guard let freqData = frequencyData else { return nil }
+        
+        if freqData.rank > 0 {
+            return "\(freqData.rank)"
+        } else if freqData.frequency > 0 {
+            return "\(freqData.frequency)"
+        }
+        
+        return nil
+    }
+    
+    /// Returns true if this entry has frequency data
+    var hasFrequencyData: Bool {
+        return frequencyData != nil
     }
 }

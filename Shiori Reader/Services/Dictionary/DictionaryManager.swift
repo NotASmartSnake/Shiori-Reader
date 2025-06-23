@@ -8,6 +8,7 @@ class DictionaryManager {
     private var obunshaQueue: DatabaseQueue?
     private var deinflector: Deinflector?
     private let pitchAccentManager = PitchAccentManager.shared
+    private let frequencyManager = FrequencyManager.shared
     private let settingsKey = "dictionarySettings"
     
     private init() {
@@ -70,7 +71,7 @@ class DictionaryManager {
         return ["jmdict", "obunsha"]
     }
     
-    /// Create dictionary entry with lazy-loaded pitch accents
+    /// Create dictionary entry with lazy-loaded pitch accents and frequency data
     private func createDictionaryEntry(
         id: String,
         term: String,
@@ -86,7 +87,7 @@ class DictionaryManager {
         source: String = "jmdict"
     ) -> DictionaryEntry {
         // Create entry without pitch accents - they will load lazily when accessed
-        let entry = DictionaryEntry(
+        var entry = DictionaryEntry(
             id: id,
             term: term,
             reading: reading,
@@ -100,6 +101,11 @@ class DictionaryManager {
             popularity: popularity,
             source: source
         )
+        
+        // Add frequency data if available
+        if let frequencyData = frequencyManager.getFrequencyData(for: term) {
+            entry.frequencyData = frequencyData
+        }
         
         // Pitch accents will be loaded lazily via the computed property
         return entry
@@ -169,53 +175,12 @@ class DictionaryManager {
     
     /// Lookup from Obunsha dictionary database
     private func lookupObunsha(word: String) -> [DictionaryEntry] {
-        guard let db = obunshaQueue else { 
-            print("🔍 [OBUNSHA DEBUG] Database queue is nil")
-            return [] 
-        }
+        guard let db = obunshaQueue else { return [] }
         
-        print("🔍 [OBUNSHA DEBUG] Looking up word: '\(word)'")
         var entries: [DictionaryEntry] = []
         
         do {
             try db.read { db in
-                // First, let's check what tables exist
-                let tableRows = try Row.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type='table'")
-                let tableNames = tableRows.map { $0["name"] as? String ?? "unknown" }
-                print("🔍 [OBUNSHA DEBUG] Available tables: \(tableNames)")
-                
-                // Check if 'terms' table exists
-                if !tableNames.contains("terms") {
-                    print("🔍 [OBUNSHA DEBUG] No 'terms' table found! Available tables: \(tableNames)")
-                    return
-                }
-                
-                // Check the schema of the terms table
-                let schemaRows = try Row.fetchAll(db, sql: "PRAGMA table_info(terms)")
-                print("🔍 [OBUNSHA DEBUG] Terms table schema:")
-                for row in schemaRows {
-                    let name = row["name"] as? String ?? "unknown"
-                    let type = row["type"] as? String ?? "unknown"
-                    print("  - \(name): \(type)")
-                }
-                
-                // Count total entries
-                let countRow = try Row.fetchOne(db, sql: "SELECT COUNT(*) as count FROM terms")
-                let totalCount = countRow?["count"] as? Int64 ?? 0
-                print("🔍 [OBUNSHA DEBUG] Total entries in database: \(totalCount)")
-                
-                // Try a sample query to see what data looks like
-                let sampleRows = try Row.fetchAll(db, sql: "SELECT * FROM terms LIMIT 3")
-                print("🔍 [OBUNSHA DEBUG] Sample entries:")
-                for (index, row) in sampleRows.enumerated() {
-                    print("  Sample \(index + 1):")
-                    for column in row.columnNames {
-                        let value = row[column]
-                        print("    \(column): \(value ?? "NULL")")
-                    }
-                }
-                
-                // Now try the actual query
                 let rows = try Row.fetchAll(db, sql: """
                     SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
                     FROM terms
@@ -223,10 +188,7 @@ class DictionaryManager {
                     ORDER BY id
                     """, arguments: [word, word])
                 
-                print("🔍 [OBUNSHA DEBUG] Found \(rows.count) matches for '\(word)'")
-                
-                for (index, row) in rows.enumerated() {
-                    print("🔍 [OBUNSHA DEBUG] Processing row \(index + 1):")
+                for row in rows {
                     let termId = row["id"] as? Int64 ?? 0
                     let expression = row["expression"] as? String ?? ""
                     let reading = row["reading"] as? String ?? ""
@@ -234,11 +196,6 @@ class DictionaryManager {
                     let score = row["score"] as? String
                     let rules = row["rules"] as? String
                     let definitionsText = row["definitions"] as? String ?? ""
-                    
-                    print("  - id: \(termId)")
-                    print("  - expression: '\(expression)'")
-                    print("  - reading: '\(reading)'")
-                    print("  - definitions: '\(definitionsText.prefix(100))...'")
                     
                     // Handle popularity stored as string in database
                     let popularity: Double
@@ -250,7 +207,6 @@ class DictionaryManager {
                     
                     // For Obunsha, keep definitions as single entries (long definitions)
                     let meanings = [definitionsText].filter { !$0.isEmpty }
-                    print("  - meanings count: \(meanings.count)")
                     
                     // Create a new entry
                     let entry = createDictionaryEntry(
@@ -267,49 +223,38 @@ class DictionaryManager {
                     )
                     
                     entries.append(entry)
-                    print("🔍 [OBUNSHA DEBUG] Created entry with source: \(entry.source)")
                 }
             }
         } catch {
             print("🔍 [OBUNSHA DEBUG] Error looking up word in Obunsha: \(error)")
         }
         
-        print("🔍 [OBUNSHA DEBUG] Returning \(entries.count) entries")
         return entries
     }
     
     /// Main lookup function that searches all enabled dictionaries
     func lookup(word: String) -> [DictionaryEntry] {
         let enabledDictionaries = getEnabledDictionaries()
-        print("🔍 [LOOKUP DEBUG] Enabled dictionaries: \(enabledDictionaries)")
         var allEntries: [DictionaryEntry] = []
         
         // Search JMdict if enabled
         if enabledDictionaries.contains("jmdict") {
-            print("🔍 [LOOKUP DEBUG] Searching JMdict for '\(word)'")
             let jmdictEntries = lookupJMdict(word: word)
-            print("🔍 [LOOKUP DEBUG] JMdict returned \(jmdictEntries.count) entries")
             allEntries.append(contentsOf: jmdictEntries)
         }
         
         // Search Obunsha if enabled
         if enabledDictionaries.contains("obunsha") {
-            print("🔍 [LOOKUP DEBUG] Searching Obunsha for '\(word)'")
             let obunshaEntries = lookupObunsha(word: word)
-            print("🔍 [LOOKUP DEBUG] Obunsha returned \(obunshaEntries.count) entries")
             allEntries.append(contentsOf: obunshaEntries)
         }
         
-        print("🔍 [LOOKUP DEBUG] Total entries before sorting: \(allEntries.count)")
         let sortedEntries = sortEntriesByPopularity(allEntries, searchTerm: word)
-        print("🔍 [LOOKUP DEBUG] Total entries after sorting: \(sortedEntries.count)")
         
         return sortedEntries
     }
     
     func lookupWithDeinflection(word: String) -> [DictionaryEntry] {
-        let startTime = CFAbsoluteTimeGetCurrent()
-        
         var allEntries: [DictionaryEntry] = []
         
         // First try direct lookup
@@ -354,9 +299,6 @@ class DictionaryManager {
         
         // Sort the final combined results
         let finalSortedEntries = sortEntriesByPopularity(filteredEntries, searchTerm: word)
-        
-        let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-        Logger.debug(category: "Performance", "Dictionary lookup for '\(word)' completed in \(String(format: "%.3f", timeElapsed))s with \(finalSortedEntries.count) entries (lazy pitch accent loading)")
         
         return finalSortedEntries
     }
@@ -932,6 +874,28 @@ class DictionaryManager {
     }
     
     // MARK: - Testing Functions
+    
+    /// Test the BCCWJ frequency integration
+    func testFrequencyIntegration() {
+        print("🧪 [FREQUENCY TEST] Testing BCCWJ frequency integration...")
+        
+        let testWords = ["猫", "日本", "最初", "食べる", "本", "私", "今日"]
+        
+        for word in testWords {
+            if let frequencyData = frequencyManager.getFrequencyData(for: word) {
+                print("🧪 [FREQUENCY TEST] '\(word)': rank=\(frequencyData.rank), freq=\(frequencyData.frequency), source=\(frequencyData.source)")
+            } else {
+                print("🧪 [FREQUENCY TEST] '\(word)': No frequency data found")
+            }
+        }
+        
+        // Test with actual dictionary lookup
+        print("🧪 [FREQUENCY TEST] Testing with dictionary lookup...")
+        let testEntries = lookupWithDeinflection(word: "猫")
+        for entry in testEntries {
+            print("🧪 [FREQUENCY TEST] Entry '\(entry.term)' has frequency: \(entry.hasFrequencyData ? entry.frequencyRankString ?? "unknown" : "none")")
+        }
+    }
     
     /// Test the Obunsha database integration
     func testObunshaDatabaseIntegration() {

@@ -33,6 +33,18 @@ struct DebugMenu: View {
                 Logger.error(category: "Test", "Error log test")
             }
             
+            Button("Test BCCWJ Database") {
+                FrequencyManager.shared.testBCCWJDatabaseIntegration()
+            }
+            
+            Button("Test Frequency Integration") {
+                DictionaryManager.shared.testFrequencyIntegration()
+            }
+            
+            Button("Test Obunsha Database") {
+                DictionaryManager.shared.testObunshaDatabaseIntegration()
+            }
+            
             Spacer()
         }
         .padding()

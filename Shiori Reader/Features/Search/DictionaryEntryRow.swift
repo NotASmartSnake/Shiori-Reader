@@ -66,8 +66,19 @@ struct DictionaryEntryRow: View {
                 }
             }
             
-            // Dictionary source badges on their own line
-            HStack {
+            // Dictionary source badges and frequency data on their own line
+            HStack(spacing: 4) {
+                // Frequency data first (if available)
+                if let frequencyRank = entry.frequencyRankString {
+                    Text(frequencyRank)
+                        .font(.caption2)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Color.green.opacity(0.2))
+                        .foregroundColor(.green)
+                        .cornerRadius(4)
+                }
+                
                 if entry.source == "obunsha" {
                     Text("旺文社")
                         .font(.caption2)

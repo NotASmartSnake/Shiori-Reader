@@ -13,6 +13,10 @@ class SearchViewModel: ObservableObject {
     @Published var searchResults: [DictionaryEntry] = []
     @Published var isSearching: Bool = false
     @Published var selectedEntry: DictionaryEntry?
+    @Published var showingAllResults: Bool = false
+    
+    private var allSearchResults: [DictionaryEntry] = [] // Store all results
+    let initialResultsLimit = 30
     
     private var searchTask: DispatchWorkItem?
     private var cancellables = Set<AnyCancellable>()
@@ -35,41 +39,45 @@ class SearchViewModel: ObservableObject {
         // Reset search results if query is empty
         guard !query.isEmpty else {
             self.searchResults = []
+            self.allSearchResults = []
             self.isSearching = false
+            self.showingAllResults = false
             return
         }
         
         // Set searching state
         self.isSearching = true
+        self.showingAllResults = false
         
         // Create a new search task
         let task = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            
             // Decide which search method to use based on query
             let hasJapaneseCharacters = query.containsJapaneseCharacters()
+            
+            var results: [DictionaryEntry] = []
             
             if hasJapaneseCharacters {
                 // Use direct lookup or prefix search for Japanese
                 let exactResults = DictionaryManager.shared.lookupWithDeinflection(word: query)
                 if !exactResults.isEmpty {
-                    DispatchQueue.main.async {
-                        self?.searchResults = self?.groupAndMergeEntries(exactResults) ?? []
-                        self?.isSearching = false
-                    }
+                    results = exactResults
                 } else {
                     // Try prefix search if exact match fails
-                    let prefixResults = DictionaryManager.shared.searchByPrefix(prefix: query, limit: 50)
-                    DispatchQueue.main.async {
-                        self?.searchResults = self?.groupAndMergeEntries(prefixResults) ?? []
-                        self?.isSearching = false
-                    }
+                    results = DictionaryManager.shared.searchByPrefix(prefix: query, limit: 100)
                 }
             } else {
                 // Use meaning search for English
-                let meaningResults = DictionaryManager.shared.searchByMeaning(text: query, limit: 50)
-                DispatchQueue.main.async {
-                    self?.searchResults = self?.groupAndMergeEntries(meaningResults) ?? []
-                    self?.isSearching = false
-                }
+                results = DictionaryManager.shared.searchByMeaning(text: query, limit: 100)
+            }
+            
+            let groupedResults = self.groupAndMergeEntries(results)
+            
+            DispatchQueue.main.async {
+                self.allSearchResults = groupedResults
+                self.updateDisplayedResults()
+                self.isSearching = false
             }
         }
         
@@ -77,9 +85,41 @@ class SearchViewModel: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async(execute: task)
     }
     
+    func showAllResults() {
+        showingAllResults = true
+        updateDisplayedResults()
+    }
+    
+    func showLessResults() {
+        showingAllResults = false
+        updateDisplayedResults()
+    }
+    
+    private func updateDisplayedResults() {
+        if showingAllResults {
+            searchResults = allSearchResults
+        } else {
+            searchResults = Array(allSearchResults.prefix(initialResultsLimit))
+        }
+    }
+    
+    var hasMoreResults: Bool {
+        return allSearchResults.count > initialResultsLimit && !showingAllResults
+    }
+    
+    var remainingResultsCount: Int {
+        return max(0, allSearchResults.count - initialResultsLimit)
+    }
+    
+    var totalResultsCount: Int {
+        return allSearchResults.count
+    }
+    
     func clearSearch() {
         searchText = ""
         searchResults = []
+        allSearchResults = []
+        showingAllResults = false
     }
     
     // MARK: - Helper Functions

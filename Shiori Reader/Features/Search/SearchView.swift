@@ -100,6 +100,80 @@ struct SearchView: View {
                                 .buttonStyle(PlainButtonStyle())
                             }
                             
+                            // Show "Show More" button if there are more results
+                            if viewModel.hasMoreResults {
+                                VStack(spacing: 12) {
+                                    Divider()
+                                        .padding(.horizontal)
+                                    
+                                    Button(action: {
+                                        viewModel.showAllResults()
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "chevron.down")
+                                                .font(.caption)
+                                            Text("Show \(viewModel.remainingResultsCount) more results")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                        }
+                                        .foregroundColor(.blue)
+                                        .padding(.vertical, 8)
+                                        .padding(.horizontal, 16)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 20)
+                                                .fill(Color.blue.opacity(0.1))
+                                        )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    Text("Showing first \(viewModel.searchResults.count) of \(viewModel.totalResultsCount) results")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets())
+                            }
+                            
+                            // Show "Show Less" button if showing all results and there are many
+                            if viewModel.showingAllResults && viewModel.totalResultsCount > viewModel.initialResultsLimit {
+                                VStack(spacing: 12) {
+                                    Divider()
+                                        .padding(.horizontal)
+                                    
+                                    Button(action: {
+                                        viewModel.showLessResults()
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "chevron.up")
+                                                .font(.caption)
+                                            Text("Show fewer results")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                        }
+                                        .foregroundColor(.gray)
+                                        .padding(.vertical, 8)
+                                        .padding(.horizontal, 16)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 20)
+                                                .fill(Color.gray.opacity(0.1))
+                                        )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    Text("Showing all \(viewModel.totalResultsCount) results")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets())
+                            }
+                            
                             // Add bottom spacer to prevent tab bar overlap
                             Color.clear
                                 .frame(height: 80)
