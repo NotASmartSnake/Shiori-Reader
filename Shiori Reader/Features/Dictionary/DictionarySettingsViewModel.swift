@@ -18,9 +18,12 @@ class DictionarySettingsViewModel: ObservableObject {
     
     private let userDefaults = UserDefaults.standard
     private let dictionarySettingsKey = "dictionarySettings"
+    private let migrationKey = "dictionarySettingsMigrated_v2" // Version key for migrations
     private var cancellables = Set<AnyCancellable>()
     
     init() {
+        print("📚 [SETTINGS] Initializing DictionarySettingsViewModel")
+        
         // Initialize with default settings first
         self.settings = DictionarySettings()
         
@@ -28,8 +31,8 @@ class DictionarySettingsViewModel: ObservableObject {
         self.availableDictionaries = [
             DictionaryInfo(
                 id: "jmdict",
-                name: "JMdict (English)",
-                description: "Japanese-English dictionary",
+                name: "JMdict",
+                description: "English-Japanese bilingual dictionary",
                 isBuiltIn: true,
                 isEnabled: true,
                 canDisable: true
@@ -37,7 +40,15 @@ class DictionarySettingsViewModel: ObservableObject {
             DictionaryInfo(
                 id: "obunsha",
                 name: "旺文社国語辞典 第十一版",
-                description: "Japanese monolingual dictionary",
+                description: "Japanese-Japanese monolingual dictionary",
+                isBuiltIn: true,
+                isEnabled: true,
+                canDisable: true
+            ),
+            DictionaryInfo(
+                id: "bccwj",
+                name: "BCCWJ Frequency Data",
+                description: "Word frequency rankings from Japanese corpus",
                 isBuiltIn: true,
                 isEnabled: true,
                 canDisable: true
@@ -45,20 +56,7 @@ class DictionarySettingsViewModel: ObservableObject {
         ]
         
         // Now load the saved settings after initializing properties
-        if let data = userDefaults.data(forKey: dictionarySettingsKey),
-           let savedSettings = try? JSONDecoder().decode(DictionarySettings.self, from: data) {
-            self.settings = savedSettings
-            
-            // Migration: Add obunsha to existing settings if it's not there
-            if !savedSettings.enabledDictionaries.contains("obunsha") {
-                print("📚 [SETTINGS] Migrating settings to include Obunsha dictionary")
-                self.settings.enabledDictionaries.append("obunsha")
-                saveSettings()
-            }
-        } else {
-            // No saved settings, use defaults
-            print("📚 [SETTINGS] No saved settings found, using defaults")
-        }
+        loadSettings()
         
         // Sync the dictionary enabled state with settings
         syncDictionaryStatesWithSettings()
@@ -68,21 +66,39 @@ class DictionarySettingsViewModel: ObservableObject {
     }
     
     private func syncDictionaryStatesWithSettings() {
+        // This will trigger UI updates since availableDictionaries is @Published
         for index in availableDictionaries.indices {
             let dictionaryId = availableDictionaries[index].id
             let isEnabled = settings.enabledDictionaries.contains(dictionaryId)
             availableDictionaries[index].isEnabled = isEnabled
             
-            // Ensure at least one dictionary can't be disabled if it's the only one enabled
-            let enabledCount = availableDictionaries.filter { $0.isEnabled }.count
-            if enabledCount <= 1 {
-                // If this is the only enabled dictionary, it can't be disabled
-                if availableDictionaries[index].isEnabled {
+            // Ensure at least one dictionary with definitions is always enabled (JMdict or Obunsha)
+            let definitionDictionaries = ["jmdict", "obunsha"]
+            let enabledDefinitionDictionaries = availableDictionaries.filter { 
+                definitionDictionaries.contains($0.id) && $0.isEnabled 
+            }
+            
+            if enabledDefinitionDictionaries.count <= 1 {
+                // If this is the only enabled definition dictionary, it can't be disabled
+                if definitionDictionaries.contains(availableDictionaries[index].id) && availableDictionaries[index].isEnabled {
                     availableDictionaries[index].canDisable = false
+                } else {
+                    availableDictionaries[index].canDisable = true
                 }
             } else {
+                // Multiple definition dictionaries enabled, all can be disabled
                 availableDictionaries[index].canDisable = true
             }
+            
+            // BCCWJ can always be disabled since it's not a definition dictionary
+            if availableDictionaries[index].id == "bccwj" {
+                availableDictionaries[index].canDisable = true
+            }
+        }
+        
+        // Force UI update
+        DispatchQueue.main.async { [weak self] in
+            self?.objectWillChange.send()
         }
     }
     
@@ -97,6 +113,61 @@ class DictionarySettingsViewModel: ObservableObject {
     }
     
     // MARK: - Settings Management
+    
+    private func loadSettings() {
+        let hasMigrated = userDefaults.bool(forKey: migrationKey)
+        print("📚 [SETTINGS] Loading settings (hasMigrated: \(hasMigrated))")
+        
+        if let data = userDefaults.data(forKey: dictionarySettingsKey),
+           let savedSettings = try? JSONDecoder().decode(DictionarySettings.self, from: data) {
+            self.settings = savedSettings
+            print("📚 [SETTINGS] Loaded settings: \(savedSettings.enabledDictionaries)")
+            
+            // Migration: Only run once per device/app install
+            if !hasMigrated {
+                var needsMigration = false
+                if !savedSettings.enabledDictionaries.contains("obunsha") {
+                    print("📚 [SETTINGS] Migrating settings to include Obunsha dictionary")
+                    self.settings.enabledDictionaries.append("obunsha")
+                    needsMigration = true
+                }
+                if !savedSettings.enabledDictionaries.contains("bccwj") {
+                    print("📚 [SETTINGS] Migrating settings to include BCCWJ frequency data")
+                    self.settings.enabledDictionaries.append("bccwj")
+                    needsMigration = true
+                }
+                if needsMigration {
+                    saveSettings()
+                    print("📚 [SETTINGS] Migration completed")
+                }
+                userDefaults.set(true, forKey: migrationKey)
+            }
+        } else {
+            // No saved settings, use defaults
+            print("📚 [SETTINGS] No saved settings found, using defaults")
+            self.settings = DictionarySettings()
+            userDefaults.set(true, forKey: migrationKey) // Mark as migrated since we're using defaults
+        }
+    }
+    
+    func refreshSettings() {
+        let hasMigrated = userDefaults.bool(forKey: migrationKey)
+        print("📚 [SETTINGS] Refreshing settings (hasMigrated: \(hasMigrated))")
+        
+        // Simple reload without migration logic
+        if let data = userDefaults.data(forKey: dictionarySettingsKey),
+           let savedSettings = try? JSONDecoder().decode(DictionarySettings.self, from: data) {
+            self.settings = savedSettings
+            print("📚 [SETTINGS] Refreshed settings: \(savedSettings.enabledDictionaries)")
+        } else {
+            // If no saved settings, use defaults
+            self.settings = DictionarySettings()
+            print("📚 [SETTINGS] No saved settings during refresh, using defaults")
+        }
+        
+        // Re-sync the dictionary states with the refreshed settings
+        syncDictionaryStatesWithSettings()
+    }
     
     private func getDictionarySettings() -> DictionarySettings {
         if let data = userDefaults.data(forKey: dictionarySettingsKey),
@@ -117,6 +188,23 @@ class DictionarySettingsViewModel: ObservableObject {
     func toggleDictionary(id: String, isEnabled: Bool) {
         // Find the dictionary in our list
         if let index = availableDictionaries.firstIndex(where: { $0.id == id }) {
+            
+            // Check if this would leave us with no definition dictionaries
+            let definitionDictionaries = ["jmdict", "obunsha"]
+            if !isEnabled && definitionDictionaries.contains(id) {
+                let remainingDefinitionDictionaries = availableDictionaries.filter { 
+                    definitionDictionaries.contains($0.id) && $0.isEnabled && $0.id != id
+                }
+                
+                if remainingDefinitionDictionaries.isEmpty {
+                    // Show alert - can't disable the last definition dictionary
+                    alertTitle = "Cannot Disable Dictionary"
+                    alertMessage = "At least one dictionary with definitions (JMdict or Obunsha) must remain enabled."
+                    showAlert = true
+                    return
+                }
+            }
+            
             // Update the entry
             availableDictionaries[index].isEnabled = isEnabled
             
@@ -138,6 +226,13 @@ class DictionarySettingsViewModel: ObservableObject {
             // Update canDisable states for all dictionaries
             syncDictionaryStatesWithSettings()
         }
+    }
+    
+    // MARK: - Testing Helper
+    
+    func resetMigrationForTesting() {
+        userDefaults.removeObject(forKey: migrationKey)
+        print("📚 [SETTINGS] Migration flag reset for testing")
     }
 }
 
@@ -163,7 +258,7 @@ struct DictionarySettings: Equatable, Codable {
         return lhs.enabledDictionaries == rhs.enabledDictionaries
     }
     
-    init(enabledDictionaries: [String] = ["jmdict", "obunsha"]) {
+    init(enabledDictionaries: [String] = ["jmdict", "obunsha", "bccwj"]) {
         self.enabledDictionaries = enabledDictionaries
     }
 }

@@ -35,6 +35,9 @@ struct DictionarySettingsView: View {
             }
             .navigationTitle("Dictionary Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                viewModel.refreshSettings()
+            }
             .alert(isPresented: $viewModel.showAlert) {
                 Alert(
                     title: Text(viewModel.alertTitle),
@@ -53,9 +56,17 @@ struct DictionarySettingsView: View {
     // MARK: - UI Components
     
     private func dictionaryRow(_ dictionary: DictionaryInfo) -> some View {
-        HStack {
+        HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(dictionary.name)
+                    .font(.body)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text(dictionary.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
             
             Spacer()
@@ -64,8 +75,10 @@ struct DictionarySettingsView: View {
                 get: { dictionary.isEnabled },
                 set: { viewModel.toggleDictionary(id: dictionary.id, isEnabled: $0) }
             ))
-            .disabled(!dictionary.canDisable) // Can't disable if it's the only enabled dictionary
+            .disabled(!dictionary.canDisable)
+            .fixedSize()
         }
+        .padding(.vertical, 6)
     }
     
     private var customFooter: some View {

@@ -67,8 +67,13 @@ class DictionaryManager {
            let settings = try? JSONDecoder().decode(SimpleDictionarySettings.self, from: data) {
             return settings.enabledDictionaries
         }
-        // Default to both dictionaries enabled
-        return ["jmdict", "obunsha"]
+        // Default to all dictionaries enabled
+        return ["jmdict", "obunsha", "bccwj"]
+    }
+    
+    /// Check if BCCWJ frequency data is enabled
+    private func isBCCWJEnabled() -> Bool {
+        return getEnabledDictionaries().contains("bccwj")
     }
     
     /// Create dictionary entry with lazy-loaded pitch accents and frequency data
@@ -102,8 +107,8 @@ class DictionaryManager {
             source: source
         )
         
-        // Add frequency data if available
-        if let frequencyData = frequencyManager.getFrequencyData(for: term) {
+        // Add frequency data if available and BCCWJ is enabled
+        if isBCCWJEnabled(), let frequencyData = frequencyManager.getFrequencyData(for: term) {
             entry.frequencyData = frequencyData
         }
         
