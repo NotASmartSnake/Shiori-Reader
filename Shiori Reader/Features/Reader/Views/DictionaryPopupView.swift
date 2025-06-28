@@ -456,9 +456,6 @@ struct DictionaryPopupView: View {
     }
     
     private func exportToAnki(_ entry: DictionaryEntry) {
-        // Set the saved words manager in the service
-        AnkiExportService.shared.setSavedWordsManager(wordsManager)
-        
         // Get the root view controller to present from
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first,
@@ -477,7 +474,12 @@ struct DictionaryPopupView: View {
             match.entries.filter { $0.term == entry.term && $0.reading == entry.reading }
         }
         
-        // Use the new exportWordToAnki method
+        // Create save callback that calls the same save method as the bookmark button
+        let saveCallback = {
+            self.saveWordToVocabulary(entry)
+        }
+        
+        // Use the new exportWordToAnki method with save callback
         AnkiExportService.shared.exportWordToAnki(
             word: entry.term,
             reading: entry.reading,
@@ -485,6 +487,7 @@ struct DictionaryPopupView: View {
             sentence: sentenceContext,
             pitchAccents: entry.pitchAccents,
             sourceView: topViewController,
+            onSaveToVocab: saveCallback,
             completion: { success in
                 if success {
                     withAnimation {
@@ -515,11 +518,43 @@ struct DictionaryPopupView: View {
     }
     
     private func saveWordToVocabulary(_ entry: DictionaryEntry) {
+        // Format definitions with source title and proper newlines
+        let formattedDefinitions: [String]
+        
+        if entry.source == "combined" {
+            // For combined entries, we need to get the original separate entries to properly format
+            let wordEntries = matches.flatMap { match in
+                match.entries.filter { $0.term == entry.term && $0.reading == entry.reading }
+            }
+            
+            // Group by source and format
+            let groupedBySource = Dictionary(grouping: wordEntries) { $0.source }
+            var sourceSections: [String] = []
+            
+            // Process in preferred order: jmdict first, then obunsha, then others
+            let sourceOrder = ["jmdict", "obunsha"] + groupedBySource.keys.filter { !["jmdict", "obunsha"].contains($0) }.sorted()
+            
+            for source in sourceOrder {
+                guard let entries = groupedBySource[source], !entries.isEmpty else { continue }
+                let sourceTitle = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : source.capitalized)
+                let allMeanings = entries.flatMap { $0.meanings }
+                let definitionsText = allMeanings.joined(separator: "\n")
+                sourceSections.append("\(sourceTitle)\n\(definitionsText)")
+            }
+            
+            formattedDefinitions = sourceSections
+        } else {
+            // Single source entry
+            let sourceTitle = entry.source == "jmdict" ? "JMdict" : (entry.source == "obunsha" ? "旺文社" : entry.source.capitalized)
+            let definitionsText = entry.meanings.joined(separator: "\n")
+            formattedDefinitions = ["\(sourceTitle)\n\(definitionsText)"]
+        }
+        
         // Create a new SavedWord
         let newWord = SavedWord(
             word: entry.term,
             reading: entry.reading,
-            definitions: entry.meanings,
+            definitions: formattedDefinitions,
             sentence: sentenceContext,
             sourceBook: bookTitle,
             timeAdded: Date(),

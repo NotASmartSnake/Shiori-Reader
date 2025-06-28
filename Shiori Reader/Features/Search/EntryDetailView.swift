@@ -273,11 +273,42 @@ struct EntryDetailView: View {
         // MARK: - Actions
         
         private func saveWordAction() {
+            // Format definitions with source title and proper newlines
+            let formattedDefinitions: [String]
+            
+            if entry.source == "combined" {
+                // For combined entries, get original entries and group by source
+                let originalEntries = DictionaryManager.shared.lookup(word: entry.term)
+                let matchingEntries = originalEntries.filter { $0.term == entry.term && $0.reading == entry.reading }
+                
+                // Group by source and format
+                let groupedBySource = Dictionary(grouping: matchingEntries) { $0.source }
+                var sourceSections: [String] = []
+                
+                // Process in preferred order: jmdict first, then obunsha, then others
+                let sourceOrder = ["jmdict", "obunsha"] + groupedBySource.keys.filter { !["jmdict", "obunsha"].contains($0) }.sorted()
+                
+                for source in sourceOrder {
+                    guard let entries = groupedBySource[source], !entries.isEmpty else { continue }
+                    let sourceTitle = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : source.capitalized)
+                    let allMeanings = entries.flatMap { $0.meanings }
+                    let definitionsText = allMeanings.joined(separator: "\n")
+                    sourceSections.append("\(sourceTitle)\n\(definitionsText)")
+                }
+                
+                formattedDefinitions = sourceSections
+            } else {
+                // Single source entry
+                let sourceTitle = entry.source == "jmdict" ? "JMdict" : (entry.source == "obunsha" ? "旺文社" : entry.source.capitalized)
+                let definitionsText = entry.meanings.joined(separator: "\n")
+                formattedDefinitions = ["\(sourceTitle)\n\(definitionsText)"]
+            }
+            
             // Create a new SavedWord
             let newSavedWord = SavedWord(
                 word: entry.term,
                 reading: entry.reading,
-                definitions: entry.meanings,
+                definitions: formattedDefinitions,
                 sentence: "", // Empty for now, user can add later
                 sourceBook: "Search", // Indicate this was from search
                 timeAdded: Date(),
@@ -297,9 +328,6 @@ struct EntryDetailView: View {
         
         // Function to handle exporting to Anki
         private func exportToAnki() {
-            // Set the saved words manager in the service
-            AnkiExportService.shared.setSavedWordsManager(savedWordsManager)
-            
             // Get the root view controller to present from
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                   let window = windowScene.windows.first,
@@ -311,6 +339,11 @@ struct EntryDetailView: View {
             var topViewController = rootViewController
             while let presentedViewController = topViewController.presentedViewController {
                 topViewController = presentedViewController
+            }
+            
+            // Create save callback that calls the same save method as the bookmark button
+            let saveCallback = {
+                self.saveWordAction()
             }
             
             // Check if this is a combined entry from multiple dictionaries
@@ -327,6 +360,7 @@ struct EntryDetailView: View {
                     sentence: "", // No sentence from search results
                     pitchAccents: entry.pitchAccents,
                     sourceView: topViewController,
+                    onSaveToVocab: saveCallback,
                     completion: { success in
                         if success {
                             withAnimation {
@@ -344,6 +378,7 @@ struct EntryDetailView: View {
                     sentence: "", // No sentence from search results
                     pitchAccents: entry.pitchAccents,
                     sourceView: topViewController,
+                    onSaveToVocab: saveCallback,
                     completion: { success in
                         if success {
                             withAnimation {

@@ -184,10 +184,45 @@ struct SavedWordDetailView: View {
                                 }
                             }
                         } else {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 12) {
                                 ForEach(editedWord.definitions.indices, id: \.self) { index in
-                                    Text("• \(editedWord.definitions[index])")
-                                        .padding(.leading, 4)
+                                    let definitionText = editedWord.definitions[index]
+                                    let lines = definitionText.components(separatedBy: "\n")
+                                    
+                                    if lines.count > 1 {
+                                        // This is a formatted definition with source title
+                                        let sourceTitle = lines[0]
+                                        let definitions = Array(lines.dropFirst())
+                                        
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            // Dictionary source badge
+                                            HStack {
+                                                Text(getDictionaryBadgeText(for: sourceTitle))
+                                                    .font(.caption2)
+                                                    .padding(.horizontal, 6)
+                                                    .padding(.vertical, 2)
+                                                    .background(getDictionaryColor(for: sourceTitle).opacity(0.2))
+                                                    .foregroundColor(getDictionaryColor(for: sourceTitle))
+                                                    .cornerRadius(4)
+                                                
+                                                Spacer()
+                                            }
+                                            
+                                            // Definitions
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                ForEach(definitions.indices, id: \.self) { defIndex in
+                                                    Text(definitions[defIndex])
+                                                        .font(.body)
+                                                        .padding(.leading, 8)
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        // Legacy format or single line definition
+                                        Text(definitionText)
+                                            .font(.body)
+                                            .padding(.leading, 4)
+                                    }
                                 }
                             }
                         }
@@ -357,6 +392,30 @@ struct SavedWordDetailView: View {
         }
     }
     
+    /// Get dictionary badge text for display
+    private func getDictionaryBadgeText(for sourceTitle: String) -> String {
+        switch sourceTitle.lowercased() {
+        case "jmdict":
+            return "JMdict"
+        case "旺文社":
+            return "旺文社"
+        default:
+            return sourceTitle.capitalized
+        }
+    }
+    
+    /// Get dictionary color for badges
+    private func getDictionaryColor(for sourceTitle: String) -> Color {
+        switch sourceTitle.lowercased() {
+        case "jmdict":
+            return .blue
+        case "旺文社":
+            return .orange
+        default:
+            return .gray
+        }
+    }
+    
     // MARK: - Actions
     
     private func saveChanges() {
@@ -387,7 +446,7 @@ struct SavedWordDetailView: View {
         let matchingEntries = originalEntries.filter { $0.term == editedWord.word && $0.reading == editedWord.reading }
         
         if !matchingEntries.isEmpty {
-            // Use the new method with fresh dictionary data
+            // Use the new method with fresh dictionary data (no auto-save needed since word is already saved)
             AnkiExportService.shared.exportWordToAnki(
                 word: editedWord.word,
                 reading: editedWord.reading,
@@ -395,6 +454,7 @@ struct SavedWordDetailView: View {
                 sentence: editedWord.sentence,
                 pitchAccents: editedWord.pitchAccents,
                 sourceView: topViewController,
+                onSaveToVocab: nil, // Already saved
                 completion: { success in
                     if success {
                         withAnimation {
@@ -421,6 +481,7 @@ struct SavedWordDetailView: View {
                 sentence: editedWord.sentence,
                 pitchAccents: editedWord.pitchAccents,
                 sourceView: topViewController,
+                onSaveToVocab: nil, // Already saved
                 completion: { success in
                     if success {
                         withAnimation {

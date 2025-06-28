@@ -7,18 +7,12 @@ class AnkiExportService {
     static let shared = AnkiExportService()
     private let japaneseAnalyzer = JapaneseTextAnalyzer.shared
     private let settingsRepository = SettingsRepository()
-    private var savedWordsManager: SavedWordsManager?
     
     // State management for fetchAnkiInfo
     private var isFetchingAnkiInfo = false
     private var currentTimeoutWorkItem: DispatchWorkItem?
     
     private init() {}
-    
-    // Set the saved words manager (called from views that have access to it)
-    func setSavedWordsManager(_ manager: SavedWordsManager) {
-        self.savedWordsManager = manager
-    }
     
     // Check if AnkiMobile is installed
     func isAnkiInstalled() -> Bool {
@@ -38,7 +32,8 @@ class AnkiExportService {
     /// - If popup setting is enabled, shows selection popup
     /// - If popup setting is disabled, exports all definitions directly
     func exportWordToAnki(word: String, reading: String, entries: [DictionaryEntry], sentence: String = "",
-                         pitchAccents: PitchAccentData? = nil, sourceView: UIViewController? = nil, completion: ((Bool) -> Void)? = nil) {
+                         pitchAccents: PitchAccentData? = nil, sourceView: UIViewController? = nil, 
+                         onSaveToVocab: (() -> Void)? = nil, completion: ((Bool) -> Void)? = nil) {
         
         // Check if Anki is configured
         if !isConfigured() {
@@ -76,6 +71,7 @@ class AnkiExportService {
                 sentence: sentence,
                 pitchAccents: pitchAccents,
                 sourceView: sourceView,
+                onSaveToVocab: onSaveToVocab,
                 completion: completion
             )
         } else {
@@ -87,6 +83,7 @@ class AnkiExportService {
                 sentence: sentence,
                 pitchAccents: pitchAccents,
                 sourceView: sourceView,
+                onSaveToVocab: onSaveToVocab,
                 completion: completion
             )
         }
@@ -95,7 +92,7 @@ class AnkiExportService {
     // Create a full vocabulary card in Anki using repository data
     func addVocabularyCard(word: String, reading: String, definition: String, sentence: String,
                          pitchAccents: PitchAccentData? = nil, sourceView: UIViewController? = nil, 
-                         sourceBook: String = "Anki Export", completion: ((Bool) -> Void)? = nil) {
+                         sourceBook: String = "Anki Export", onSaveToVocab: (() -> Void)? = nil, completion: ((Bool) -> Void)? = nil) {
         // Check if Anki is configured
         if !isConfigured() {
             showAnkiSetupAlert(sourceView: sourceView)
@@ -126,23 +123,9 @@ class AnkiExportService {
                         // Check if auto-save to vocab list is enabled
                         let autoSaveEnabled = UserDefaults.standard.bool(forKey: "autoSaveToVocabOnAnkiExport")
                         
-                        if autoSaveEnabled, let wordsManager = self.savedWordsManager {
-                            // Only save if the word isn't already saved
-                            if !wordsManager.isWordSaved(word, reading: reading) {
-                                // Strip HTML tags from definition for plain text storage
-                                let plainTextDefinition = self.stripHTMLTags(from: definition)
-                                
-                                let savedWord = SavedWord(
-                                    word: word,
-                                    reading: reading,
-                                    definitions: [plainTextDefinition],
-                                    sentence: sentence,
-                                    sourceBook: sourceBook,
-                                    timeAdded: Date(),
-                                    pitchAccents: pitchAccents
-                                )
-                                wordsManager.addWord(savedWord)
-                            }
+                        if autoSaveEnabled, let saveCallback = onSaveToVocab {
+                            // Use the callback to trigger the same save action as the bookmark button
+                            saveCallback()
                         }
                     }
                     completion?(success)
@@ -296,24 +279,6 @@ class AnkiExportService {
     
     // MARK: - Helper Methods
     
-    /// Strip HTML tags from a string to get plain text
-    private func stripHTMLTags(from htmlString: String) -> String {
-        // Simple regex to remove HTML tags
-        let regex = try! NSRegularExpression(pattern: "<[^>]+>", options: .caseInsensitive)
-        let range = NSRange(location: 0, length: htmlString.utf16.count)
-        let plainText = regex.stringByReplacingMatches(in: htmlString, options: [], range: range, withTemplate: "")
-        
-        // Replace common HTML entities
-        return plainText
-            .replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&amp;", with: "&")
-            .replacingOccurrences(of: "&quot;", with: "\"")
-            .replacingOccurrences(of: "&#39;", with: "'")
-            .replacingOccurrences(of: "&nbsp;", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    
     /// Group dictionary entries by source and extract their definitions
     private func getDefinitionsBySource(from entries: [DictionaryEntry]) -> [String: [String]] {
         var definitionsBySource: [String: [String]] = [:]
@@ -343,6 +308,7 @@ class AnkiExportService {
         sentence: String,
         pitchAccents: PitchAccentData?,
         sourceView: UIViewController?,
+        onSaveToVocab: (() -> Void)?,
         completion: ((Bool) -> Void)?
     ) {
         // Ensure JMdict comes first, then Obunsha, then others
@@ -376,6 +342,7 @@ class AnkiExportService {
             pitchAccents: pitchAccents,
             sourceView: sourceView,
             sourceBook: "Dictionary Search",
+            onSaveToVocab: onSaveToVocab,
             completion: completion
         )
     }
@@ -388,6 +355,7 @@ class AnkiExportService {
         sentence: String,
         pitchAccents: PitchAccentData?,
         sourceView: UIViewController?,
+        onSaveToVocab: (() -> Void)?,
         completion: ((Bool) -> Void)?
     ) {
         guard let sourceViewController = sourceView else {
@@ -454,6 +422,7 @@ class AnkiExportService {
                         pitchAccents: pitchAccents,
                         sourceView: sourceView,
                         sourceBook: "Dictionary Popup",
+                        onSaveToVocab: onSaveToVocab,
                         completion: completion
                     )
                 }

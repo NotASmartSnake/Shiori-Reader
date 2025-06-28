@@ -204,10 +204,26 @@ struct SavedWordRow: View {
                     .cornerRadius(4)
             }
             
-            Text(word.definition)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
+            // Display first definition with proper formatting
+            if let firstDefinition = word.definitions.first {
+                let lines = firstDefinition.components(separatedBy: "\n")
+                if lines.count > 1 {
+                    // Formatted definition with source - show first actual definition
+                    let definitions = Array(lines.dropFirst())
+                    if let firstActualDefinition = definitions.first {
+                        Text(firstActualDefinition)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                } else {
+                    // Legacy format or single line
+                    Text(firstDefinition)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
         }
         .padding(.vertical, 4)
     }
