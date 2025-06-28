@@ -207,8 +207,8 @@ struct SavedWordRow: View {
             // Display first definition with proper formatting
             if let firstDefinition = word.definitions.first {
                 let lines = firstDefinition.components(separatedBy: "\n")
-                if lines.count > 1 {
-                    // Formatted definition with source - show first actual definition
+                if lines.count > 1 && isValidDictionarySource(lines[0]) {
+                    // Formatted definition with valid dictionary source - show first actual definition
                     let definitions = Array(lines.dropFirst())
                     if let firstActualDefinition = definitions.first {
                         Text(firstActualDefinition)
@@ -217,15 +217,24 @@ struct SavedWordRow: View {
                             .lineLimit(1)
                     }
                 } else {
-                    // Legacy format or single line
-                    Text(firstDefinition)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
+                    // Legacy format, single line, or multi-line without dictionary source
+                    // Show first line only
+                    if let firstLine = lines.first {
+                        Text(firstLine)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
                 }
             }
         }
         .padding(.vertical, 4)
+    }
+    
+    /// Check if a line is a valid dictionary source title
+    private func isValidDictionarySource(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return trimmedText == "jmdict" || trimmedText == "旺文社"
     }
 }
 

@@ -189,8 +189,8 @@ struct SavedWordDetailView: View {
                                     let definitionText = editedWord.definitions[index]
                                     let lines = definitionText.components(separatedBy: "\n")
                                     
-                                    if lines.count > 1 {
-                                        // This is a formatted definition with source title
+                                    if lines.count > 1 && isValidDictionarySource(lines[0]) {
+                                        // This is a formatted definition with valid dictionary source title
                                         let sourceTitle = lines[0]
                                         let definitions = Array(lines.dropFirst())
                                         
@@ -218,10 +218,15 @@ struct SavedWordDetailView: View {
                                             }
                                         }
                                     } else {
-                                        // Legacy format or single line definition
-                                        Text(definitionText)
-                                            .font(.body)
-                                            .padding(.leading, 4)
+                                        // Legacy format, single line, or multi-line without dictionary source
+                                        // Display as plain text, preserving line breaks
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            ForEach(lines.indices, id: \.self) { lineIndex in
+                                                Text(lines[lineIndex])
+                                                    .font(.body)
+                                                    .padding(.leading, 4)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -414,6 +419,12 @@ struct SavedWordDetailView: View {
         default:
             return .gray
         }
+    }
+    
+    /// Check if a line is a valid dictionary source title
+    private func isValidDictionarySource(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return trimmedText == "jmdict" || trimmedText == "旺文社"
     }
     
     // MARK: - Actions
