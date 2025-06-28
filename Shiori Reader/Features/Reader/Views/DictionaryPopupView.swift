@@ -74,7 +74,7 @@ struct DictionaryPopupView: View {
                         ForEach(displayedEntries, id: \.id) { entry in
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(alignment: .center) {
-                                    // Term with furigana reading above it
+                                    // Term with furigana reading above it - gets layout priority
                                     VStack(alignment: .leading, spacing: 0) {
                                         if !entry.reading.isEmpty && entry.reading != entry.term {
                                             // Furigana reading
@@ -89,8 +89,10 @@ struct DictionaryPopupView: View {
                                             .font(.headline)
                                             .foregroundColor(.blue)
                                     }
+                                    .layoutPriority(1) // Give term highest priority
+                                    .fixedSize(horizontal: false, vertical: true)
                                     
-                                    // Pitch accent graphs right after the word/reading (left-aligned)
+                                    // Pitch accent graphs in horizontal scroll view
                                     if entry.hasPitchAccent, let pitchAccents = entry.pitchAccents {
                                         
                                         // Filter to only show graphs that match both term AND reading
@@ -99,23 +101,28 @@ struct DictionaryPopupView: View {
                                         }
                                         
                                         if !matchingAccents.isEmpty {
-                                            // Show matching graphs side by side
-                                            HStack(alignment: .top, spacing: 8) {
-                                                ForEach(Array(matchingAccents.prefix(3)), id: \.id) { accent in
-                                                    SimplePitchAccentGraphView(
-                                                        word: accent.term,
-                                                        reading: accent.reading,
-                                                        pitchValue: accent.pitchAccent
-                                                    )
+                                            // Scrollable container for pitch accent graphs
+                                            ScrollView(.horizontal, showsIndicators: false) {
+                                                HStack(alignment: .top, spacing: 8) {
+                                                    ForEach(Array(matchingAccents), id: \.id) { accent in
+                                                        SimplePitchAccentGraphView(
+                                                            word: accent.term,
+                                                            reading: accent.reading,
+                                                            pitchValue: accent.pitchAccent
+                                                        )
+                                                    }
                                                 }
+                                                .padding(.horizontal, 4)
                                             }
+                                            .frame(maxWidth: 200) // Limit width so term gets priority
                                             .padding(.leading, 12) // Small gap from the word
+                                            .layoutPriority(0) // Lower priority than term
                                         } else {
                                             let _ = print("⚠️ [POPUP DEBUG] No matching accents found after filtering!")
                                         }
                                     }
                                     
-                                    Spacer()
+                                    Spacer(minLength: 8)
                                     
                                     // Action buttons
                                     HStack(spacing: 10) {
@@ -145,6 +152,7 @@ struct DictionaryPopupView: View {
                                         }
                                         .buttonStyle(PlainButtonStyle())
                                     }
+                                    .layoutPriority(1) // Also give buttons high priority
                                 }
                                 .padding(.vertical, 4)
                                 

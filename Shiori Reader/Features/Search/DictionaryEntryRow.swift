@@ -14,7 +14,7 @@ struct DictionaryEntryRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center) {
-                // Term with furigana reading above it
+                // Term with furigana reading above it - gets layout priority
                 VStack(alignment: .leading, spacing: 0) {
                     if !entry.reading.isEmpty && entry.reading != entry.term {
                         // Furigana reading
@@ -29,8 +29,10 @@ struct DictionaryEntryRow: View {
                         .font(.headline)
                         .foregroundColor(.primary)
                 }
+                .layoutPriority(1) // Give term highest priority
+                .fixedSize(horizontal: false, vertical: true)
                 
-                // Pitch accent graphs right after the word/reading (left-aligned)
+                // Pitch accent graphs in horizontal scroll view
                 if entry.hasPitchAccent, let pitchAccents = entry.pitchAccents {
                     // Filter to only show graphs that match both term AND reading
                     let matchingAccents = pitchAccents.accents.filter { accent in
@@ -38,21 +40,25 @@ struct DictionaryEntryRow: View {
                     }
                     
                     if !matchingAccents.isEmpty {
-                        // Show matching graphs side by side
-                        HStack(alignment: .top, spacing: 6) {
-                            ForEach(Array(matchingAccents.prefix(2)), id: \.id) { accent in
-                                SimplePitchAccentGraphView(
-                                    word: accent.term,
-                                    reading: accent.reading,
-                                    pitchValue: accent.pitchAccent
-                                )
+                        // Scrollable container for pitch accent graphs
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(alignment: .top, spacing: 6) {
+                                ForEach(Array(matchingAccents), id: \.id) { accent in
+                                    SimplePitchAccentGraphView(
+                                        word: accent.term,
+                                        reading: accent.reading,
+                                        pitchValue: accent.pitchAccent
+                                    )
+                                }
                             }
+                            .padding(.horizontal, 4)
                         }
                         .padding(.leading, 8) // Small gap from the word
+                        .layoutPriority(0) // Lower priority than term
                     }
                 }
                 
-                Spacer()
+                Spacer(minLength: 8)
                 
                 // Optional: Show tags or indicators for word types
                 if !entry.termTags.isEmpty {
