@@ -31,6 +31,7 @@ struct AnkiSettingsView: View {
                 
                 // MARK: - Test Connection Section
                 testConnectionSection
+                
             }
             .navigationTitle("Anki Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -58,19 +59,66 @@ struct AnkiSettingsView: View {
     }
     
     private var appSettingsSection: some View {
-        Section(header: Text("App Settings"), footer: Text("Show a popup to select which definitions to export to Anki. When disabled, all definitions will be exported automatically.")) {
-            Toggle("Show Definition Selection Popup", isOn: Binding(
-                get: { 
-                    // Return true if no value has been set (first time), otherwise return stored value
-                    if UserDefaults.standard.object(forKey: "showDefinitionSelectionPopup") == nil {
-                        return true // Default to enabled
-                    }
-                    return UserDefaults.standard.bool(forKey: "showDefinitionSelectionPopup")
-                },
-                set: { 
-                    UserDefaults.standard.set($0, forKey: "showDefinitionSelectionPopup")
+        Section(header: Text("App Settings")) {
+            // Definition Selection Popup setting
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Show Definition Selection Popup")
+                        .font(.body)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Text("Show a popup to select which definitions to export to Anki. When disabled, all definitions are exported automatically.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(nil)
+                        .truncationMode(.tail)
                 }
-            ))
+                
+                Spacer()
+                
+                Toggle("", isOn: Binding(
+                    get: { 
+                        // Return true if no value has been set (first time), otherwise return stored value
+                        if UserDefaults.standard.object(forKey: "showDefinitionSelectionPopup") == nil {
+                            return true // Default to enabled
+                        }
+                        return UserDefaults.standard.bool(forKey: "showDefinitionSelectionPopup")
+                    },
+                    set: { 
+                        UserDefaults.standard.set($0, forKey: "showDefinitionSelectionPopup")
+                    }
+                ))
+                .fixedSize()
+            }
+            .padding(.vertical, 6)
+            
+            // Auto-save setting
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Auto-save to Vocab List")
+                        .font(.body)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Text("Automatically save words to your vocabulary list when successfully exporting to Anki.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(nil)
+                        .truncationMode(.tail)
+                }
+                
+                Spacer()
+                
+                Toggle("", isOn: Binding(
+                    get: {
+                        return UserDefaults.standard.bool(forKey: "autoSaveToVocabOnAnkiExport")
+                    },
+                    set: {
+                        UserDefaults.standard.set($0, forKey: "autoSaveToVocabOnAnkiExport")
+                    }
+                ))
+                .fixedSize()
+            }
+            .padding(.vertical, 6)
         }
     }
     
@@ -341,6 +389,8 @@ struct AnkiSettingsView: View {
                 Text("Test AnkiMobile Connection")
             }
         }
+        
+        
     }
     
     // MARK: - Helper Functions

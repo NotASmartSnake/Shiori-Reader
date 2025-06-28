@@ -297,6 +297,9 @@ struct EntryDetailView: View {
         
         // Function to handle exporting to Anki
         private func exportToAnki() {
+            // Set the saved words manager in the service
+            AnkiExportService.shared.setSavedWordsManager(savedWordsManager)
+            
             // Get the root view controller to present from
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                   let window = windowScene.windows.first,
