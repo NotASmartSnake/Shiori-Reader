@@ -21,8 +21,11 @@ struct DictionaryPopupCardView: View {
     @State private var showingAnkiSettings = false
     @State private var showDuplicateAlert = false
     @State private var pendingEntryToSave: DictionaryEntry? = nil
-    @State private var expandedDefinitions: Set<String> = []
+    @State private var expandedDefinitions: Set<String> = [] // Track which definitions are expanded
+    @State private var showingAllEntries = false // Track if showing all entries or just the first few
     @EnvironmentObject private var wordsManager: SavedWordsManager
+    
+    private let initialEntriesLimit = 20 // Show first 20 entries initially
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -67,9 +70,10 @@ struct DictionaryPopupCardView: View {
                     } else {
                         // Group entries by term-reading combination and merge definitions from different sources
                         let mergedEntries = groupAndMergeEntries(matches.flatMap { $0.entries })
+                        let displayedEntries = showingAllEntries ? mergedEntries : Array(mergedEntries.prefix(initialEntriesLimit))
                         
                         // Display merged entries
-                        ForEach(mergedEntries, id: \.id) { entry in
+                        ForEach(displayedEntries, id: \.id) { entry in
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack(alignment: .center) {
                                     // Term with furigana reading above it
@@ -88,7 +92,7 @@ struct DictionaryPopupCardView: View {
                                             .foregroundColor(.blue)
                                     }
                                     
-                                    // Pitch accent graphs right after the word/reading (left-aligned)
+                                    // Pitch accent graphs in horizontal scroll view
                                     if entry.hasPitchAccent, let pitchAccents = entry.pitchAccents {
                                         
                                         // Filter to only show graphs that match both term AND reading
@@ -97,17 +101,24 @@ struct DictionaryPopupCardView: View {
                                         }
                                         
                                         if !matchingAccents.isEmpty {
-                                            // Show matching graphs side by side
-                                            HStack(alignment: .top, spacing: 8) {
-                                                ForEach(Array(matchingAccents.prefix(3)), id: \.id) { accent in
-                                                    SimplePitchAccentGraphView(
-                                                        word: accent.term,
-                                                        reading: accent.reading,
-                                                        pitchValue: accent.pitchAccent
-                                                    )
+                                            // Scrollable container for pitch accent graphs
+                                            ScrollView(.horizontal, showsIndicators: false) {
+                                                HStack(alignment: .top, spacing: 8) {
+                                                    ForEach(Array(matchingAccents), id: \.id) { accent in
+                                                        SimplePitchAccentGraphView(
+                                                            word: accent.term,
+                                                            reading: accent.reading,
+                                                            pitchValue: accent.pitchAccent
+                                                        )
+                                                    }
                                                 }
+                                                .padding(.horizontal, 4)
                                             }
+                                            .frame(maxWidth: 200) // Limit width so term gets priority
                                             .padding(.leading, 12) // Small gap from the word
+                                            .layoutPriority(0) // Lower priority than term
+                                        } else {
+                                            let _ = print("⚠️ [POPUP DEBUG] No matching accents found after filtering!")
                                         }
                                     }
                                     
@@ -216,6 +227,78 @@ struct DictionaryPopupCardView: View {
                                 Divider()
                                     .padding(.vertical, 4)
                             }
+                        }
+                        
+                        // Show "Show More" button if there are more entries
+                        if !showingAllEntries && mergedEntries.count > initialEntriesLimit {
+                            VStack(spacing: 8) {
+                                Divider()
+                                    .padding(.horizontal)
+                                
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        showingAllEntries = true
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: "chevron.down")
+                                            .font(.caption)
+                                        Text("Show \(mergedEntries.count - initialEntriesLimit) more entries")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                    }
+                                    .foregroundColor(.blue)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .fill(Color.blue.opacity(0.1))
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                Text("Showing first \(min(initialEntriesLimit, mergedEntries.count)) of \(mergedEntries.count) entries")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                        }
+                        
+                        // Show "Show Less" button if showing all entries and there are many
+                        if showingAllEntries && mergedEntries.count > initialEntriesLimit {
+                            VStack(spacing: 8) {
+                                Divider()
+                                    .padding(.horizontal)
+                                
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        showingAllEntries = false
+                                    }
+                                }) {
+                                    HStack {
+                                        Image(systemName: "chevron.up")
+                                            .font(.caption)
+                                        Text("Show fewer entries")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                    }
+                                    .foregroundColor(.gray)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 16)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .fill(Color.gray.opacity(0.1))
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                Text("Showing all \(mergedEntries.count) entries")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
                         }
                     }
                 }
