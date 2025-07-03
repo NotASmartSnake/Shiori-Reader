@@ -114,7 +114,7 @@ struct DictionaryPopupView: View {
                                                 }
                                                 .padding(.horizontal, 4)
                                             }
-                                            .frame(maxWidth: 200) // Limit width so term gets priority
+                                            .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 400 : 200) // Wider on iPad
                                             .padding(.leading, 12) // Small gap from the word
                                             .layoutPriority(0) // Lower priority than term
                                         } else {
