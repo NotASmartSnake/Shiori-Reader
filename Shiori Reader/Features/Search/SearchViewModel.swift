@@ -64,12 +64,16 @@ class SearchViewModel: ObservableObject {
                 if !exactResults.isEmpty {
                     results = exactResults
                 } else {
-                    // Try prefix search if exact match fails
-                    results = DictionaryManager.shared.searchByPrefix(prefix: query, limit: 100)
+                    // Try prefix search if exact match fails - include imported dictionaries
+                    let builtInResults = DictionaryManager.shared.searchByPrefix(prefix: query, limit: 50)
+                    let importedResults = DictionaryManager.shared.searchImportedDictionariesByPrefix(prefix: query, limit: 50)
+                    results = builtInResults + importedResults
+                    results = Array(results.prefix(100)) // Limit total results
                 }
             } else {
                 // Use meaning search for English
                 results = DictionaryManager.shared.searchByMeaning(text: query, limit: 100)
+                // Note: Imported dictionaries may not have English meanings, so built-in search is primary
             }
             
             let groupedResults = self.groupAndMergeEntries(results)

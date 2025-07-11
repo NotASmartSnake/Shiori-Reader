@@ -262,9 +262,13 @@ class DictionaryManager {
     func lookupWithDeinflection(word: String) -> [DictionaryEntry] {
         var allEntries: [DictionaryEntry] = []
         
-        // First try direct lookup
+        // First try direct lookup from built-in dictionaries
         let directEntries = lookup(word: word)
         allEntries.append(contentsOf: directEntries)
+        
+        // Add direct lookup from imported dictionaries
+        let importedDirectEntries = lookupImportedDictionaries(word: word)
+        allEntries.append(contentsOf: importedDirectEntries)
         
         // Always try deinflections if we have them
         if let deinflector = self.deinflector {
@@ -276,6 +280,7 @@ class DictionaryManager {
                     continue
                 }
                 
+                // Look up deinflected forms in built-in dictionaries
                 let entries = lookup(word: result.term)
                 
                 // Add entries found through deinflection
@@ -293,6 +298,27 @@ class DictionaryManager {
                         transformationNotes: result.reasons.joined(separator: " ← "),
                         popularity: entry.popularity,
                         source: entry.source
+                    )
+                    allEntries.append(enhancedEntry)
+                }
+                
+                // Look up deinflected forms in imported dictionaries
+                let importedEntries = lookupImportedDictionaries(word: result.term)
+                
+                for importedEntry in importedEntries {
+                    let enhancedEntry = createImportedDictionaryEntry(
+                        id: importedEntry.id,
+                        term: importedEntry.term,
+                        reading: importedEntry.reading,
+                        meanings: importedEntry.meanings,
+                        meaningTags: importedEntry.meaningTags,
+                        termTags: importedEntry.termTags,
+                        score: importedEntry.score,
+                        rules: importedEntry.rules,
+                        transformed: word,
+                        transformationNotes: result.reasons.joined(separator: " ← "),
+                        popularity: importedEntry.popularity,
+                        source: importedEntry.source
                     )
                     allEntries.append(enhancedEntry)
                 }

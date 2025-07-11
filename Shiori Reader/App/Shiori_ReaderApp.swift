@@ -28,6 +28,10 @@ struct Shiori_ReaderApp: App {
                     .environmentObject(savedWordsManager)
                     .environment(\.managedObjectContext, coreDataManager.viewContext)
                     .withAppearanceSettings() // Apply custom appearance settings
+                    .onAppear {
+                        // Initialize imported dictionaries on app launch
+                        DictionaryManager.shared.setupImportedDictionaries()
+                    }
                 
                 // Welcome view overlay on first launch
                 if userPreferences.isFirstLaunch {

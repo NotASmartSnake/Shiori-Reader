@@ -5,7 +5,6 @@
 //  Created by Russell Graviet on 2/13/25.
 //
 
-
 import SwiftUI
 import Foundation
 import SafariServices
@@ -47,6 +46,7 @@ struct SettingsView: View {
                             }
                         }
                         .listRowBackground(Color(.systemGray6))
+                        
 
                         NavigationLink(destination: AnkiSettingsView()) {
                             HStack {
@@ -84,7 +84,6 @@ struct SettingsView: View {
                             }
                         }
                         .listRowBackground(Color(.systemGray6))
-                        
                         
                     }
                     .listStyle(PlainListStyle())
