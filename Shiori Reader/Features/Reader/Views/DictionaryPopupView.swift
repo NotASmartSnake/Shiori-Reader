@@ -117,8 +117,6 @@ struct DictionaryPopupView: View {
                                             .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 400 : 200) // Wider on iPad
                                             .padding(.leading, 12) // Small gap from the word
                                             .layoutPriority(0) // Lower priority than term
-                                        } else {
-                                            let _ = print("⚠️ [POPUP DEBUG] No matching accents found after filtering!")
                                         }
                                     }
                                     
@@ -156,10 +154,9 @@ struct DictionaryPopupView: View {
                                 }
                                 .padding(.vertical, 4)
                                 
-                                // Dictionary source badges and frequency data on their own line
-                                HStack(spacing: 4) {
-                                    // Frequency data first (if available)
-                                    if let frequencyRank = entry.frequencyRankString {
+                                // Display frequency data if available
+                                if let frequencyRank = entry.frequencyRankString {
+                                    HStack {
                                         Text(frequencyRank)
                                             .font(.caption2)
                                             .padding(.horizontal, 4)
@@ -167,73 +164,54 @@ struct DictionaryPopupView: View {
                                             .background(Color.green.opacity(0.2))
                                             .foregroundColor(.green)
                                             .cornerRadius(4)
+                                        Spacer()
                                     }
-                                    
-                                    if entry.source == "obunsha" {
-                                        Text("旺文社")
-                                            .font(.caption2)
-                                            .padding(.horizontal, 4)
-                                            .padding(.vertical, 1)
-                                            .background(Color.orange.opacity(0.2))
-                                            .foregroundColor(.orange)
-                                            .cornerRadius(4)
-                                    } else if entry.source == "jmdict" {
-                                        Text("JMdict")
-                                            .font(.caption2)
-                                            .padding(.horizontal, 4)
-                                            .padding(.vertical, 1)
-                                            .background(Color.blue.opacity(0.2))
-                                            .foregroundColor(.blue)
-                                            .cornerRadius(4)
-                                    } else if entry.source == "combined" {
-                                        HStack(spacing: 4) {
-                                            Text("JMdict")
-                                                .font(.caption2)
-                                                .padding(.horizontal, 3)
-                                                .padding(.vertical, 1)
-                                                .background(Color.blue.opacity(0.2))
-                                                .foregroundColor(.blue)
-                                                .cornerRadius(3)
-                                            Text("旺文社")
-                                                .font(.caption2)
-                                                .padding(.horizontal, 3)
-                                                .padding(.vertical, 1)
-                                                .background(Color.orange.opacity(0.2))
-                                                .foregroundColor(.orange)
-                                                .cornerRadius(3)
-                                        }
-                                    }
-                                    
-                                    Spacer()
+                                    .padding(.bottom, 4)
                                 }
-                                .padding(.bottom, 4)
                                 
-                                // Display meaning entries with expandable functionality
-                                ForEach(entry.meanings.indices, id: \.self) { index in
-                                    let definitionId = "\(entry.id)_\(index)" // Unique ID for each definition
-                                    let isExpanded = expandedDefinitions.contains(definitionId)
-                                    
-                                    // For Obunsha entries or combined entries, show only 2 lines initially; for JMdict, show 1 line
-                                    let lineLimit = if entry.source == "obunsha" || entry.source == "combined" {
-                                        isExpanded ? nil : 2
-                                    } else {
-                                        isExpanded ? nil : 1
-                                    }
-                                    
-                                    Text(entry.meanings[index])
-                                        .font(.body)
-                                        .lineLimit(lineLimit)
-                                        .padding(.leading, 8)
-                                        .contentShape(Rectangle()) // Make entire area tappable
-                                        .onTapGesture {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                if isExpanded {
-                                                    expandedDefinitions.remove(definitionId)
+                                // Display meanings grouped by source
+                                let entriesBySource = Dictionary(grouping: getAllEntriesForTerm(entry.term, reading: entry.reading, from: matches)) { $0.source }
+                                let sourceOrder = ["jmdict", "obunsha"] + entriesBySource.keys.filter { !["jmdict", "obunsha"].contains($0) }.sorted()
+                                
+                                ForEach(sourceOrder, id: \.self) { source in
+                                    if let sourceEntries = entriesBySource[source], !sourceEntries.isEmpty {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            // Dictionary source badge
+                                            HStack {
+                                                getDictionarySourceBadge(for: source)
+                                                Spacer()
+                                            }
+                                            
+                                            // Meanings from this source
+                                            ForEach(sourceEntries.flatMap { $0.meanings }.indices, id: \.self) { meaningIndex in
+                                                let meaning = sourceEntries.flatMap { $0.meanings }[meaningIndex]
+                                                let definitionId = "\(entry.id)_\(source)_\(meaningIndex)"
+                                                let isExpanded = expandedDefinitions.contains(definitionId)
+                                                
+                                                let lineLimit = if source == "obunsha" || source.hasPrefix("imported_") {
+                                                    isExpanded ? nil : 2
                                                 } else {
-                                                    expandedDefinitions.insert(definitionId)
+                                                    isExpanded ? nil : 1
                                                 }
+                                                
+                                                Text(meaning)
+                                                    .font(.body)
+                                                    .lineLimit(lineLimit)
+                                                    .padding(.leading, 8)
+                                                    .contentShape(Rectangle())
+                                                    .onTapGesture {
+                                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                                            if isExpanded {
+                                                                expandedDefinitions.remove(definitionId)
+                                                            } else {
+                                                                expandedDefinitions.insert(definitionId)
+                                                            }
+                                                        }
+                                                    }
                                             }
                                         }
+                                        .padding(.bottom, 4)
+                                    }
                                 }
                                 
                                 Divider()
@@ -410,6 +388,7 @@ struct DictionaryPopupView: View {
     // MARK: - Helper Functions
     
     private func groupAndMergeEntries(_ entries: [DictionaryEntry]) -> [DictionaryEntry] {
+        // Group entries by term-reading combination, keeping one representative per group
         let groupedEntries = Dictionary(grouping: entries) { entry in
             "\(entry.term)-\(entry.reading)"
         }
@@ -423,32 +402,8 @@ struct DictionaryPopupView: View {
             if !processedKeys.contains(groupKey) {
                 processedKeys.insert(groupKey)
                 
-                if let groupEntries = groupedEntries[groupKey], groupEntries.count > 1 {
-                    // Multiple entries with same term/reading - merge their meanings
-                    let allMeanings = groupEntries.flatMap { $0.meanings }
-                    let allSources = groupEntries.map { $0.source }
-                    let combinedSource = allSources.contains("jmdict") && allSources.contains("obunsha") ? "combined" : entry.source
-                    
-                    let mergedEntry = DictionaryEntry(
-                        id: "merged_\(groupKey)",
-                        term: entry.term,
-                        reading: entry.reading,
-                        meanings: allMeanings,
-                        meaningTags: entry.meaningTags,
-                        termTags: entry.termTags,
-                        score: entry.score,
-                        rules: entry.rules,
-                        transformed: entry.transformed,
-                        transformationNotes: entry.transformationNotes,
-                        popularity: entry.popularity,
-                        source: combinedSource,
-                        frequencyData: entry.frequencyData
-                    )
-                    mergedEntries.append(mergedEntry)
-                } else {
-                    // Single entry - use as is
-                    mergedEntries.append(entry)
-                }
+                // Use the first entry as representative, but the actual meanings will be displayed grouped by source
+                mergedEntries.append(entry)
             }
         }
         
@@ -536,7 +491,7 @@ struct DictionaryPopupView: View {
             
             for source in sourceOrder {
                 guard let entries = groupedBySource[source], !entries.isEmpty else { continue }
-                let sourceTitle = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : source.capitalized)
+                let sourceTitle = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : (source.hasPrefix("imported_") ? getImportedDictionaryDisplayName(source: source) : source.capitalized))
                 let allMeanings = entries.flatMap { $0.meanings }
                 let definitionsText = allMeanings.joined(separator: "\n")
                 sourceSections.append("\(sourceTitle)\n\(definitionsText)")
@@ -545,7 +500,7 @@ struct DictionaryPopupView: View {
             formattedDefinitions = sourceSections
         } else {
             // Single source entry
-            let sourceTitle = entry.source == "jmdict" ? "JMdict" : (entry.source == "obunsha" ? "旺文社" : entry.source.capitalized)
+            let sourceTitle = entry.source == "jmdict" ? "JMdict" : (entry.source == "obunsha" ? "旺文社" : (entry.source.hasPrefix("imported_") ? getImportedDictionaryDisplayName(source: entry.source) : entry.source.capitalized))
             let definitionsText = entry.meanings.joined(separator: "\n")
             formattedDefinitions = ["\(sourceTitle)\n\(definitionsText)"]
         }
@@ -574,6 +529,65 @@ struct DictionaryPopupView: View {
                     showSaveSuccess = false
                 }
             }
+        }
+    }
+    
+    // MARK: - Imported Dictionary Helpers
+    
+    private func getImportedDictionaryDisplayName(source: String) -> String {
+        // Extract UUID from source string (format: "imported_UUID")
+        let importedId = source.replacingOccurrences(of: "imported_", with: "")
+        if let uuid = UUID(uuidString: importedId) {
+            let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+            if let dict = importedDictionaries.first(where: { $0.id == uuid }) {
+                return dict.title
+            }
+        }
+        return "Imported"
+    }
+    
+    private func getImportedDictionaryColor(source: String) -> Color {
+        // Assign colors based on hash of the source string for consistency
+        let availableColors: [Color] = [.purple, .pink, .indigo, .teal, .cyan, .mint, .brown]
+        let hash = abs(source.hashValue)
+        return availableColors[hash % availableColors.count]
+    }
+    
+    // MARK: - Source Display Helpers
+    
+    private func getAllEntriesForTerm(_ term: String, reading: String, from matches: [DictionaryMatch]) -> [DictionaryEntry] {
+        return matches.flatMap { $0.entries }.filter { $0.term == term && $0.reading == reading }
+    }
+    
+    @ViewBuilder
+    private func getDictionarySourceBadge(for source: String) -> some View {
+        if source == "obunsha" {
+            Text("旺文社")
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(Color.orange.opacity(0.2))
+                .foregroundColor(.orange)
+                .cornerRadius(4)
+        } else if source == "jmdict" {
+            Text("JMdict")
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(Color.blue.opacity(0.2))
+                .foregroundColor(.blue)
+                .cornerRadius(4)
+        } else if source.hasPrefix("imported_") {
+            let displayName = getImportedDictionaryDisplayName(source: source)
+            let color = getImportedDictionaryColor(source: source)
+            
+            Text(displayName)
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
         }
     }
 }

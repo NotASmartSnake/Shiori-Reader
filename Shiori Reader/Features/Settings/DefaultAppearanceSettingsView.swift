@@ -195,7 +195,7 @@ struct DefaultAppearanceSettingsView: View {
                     // Bottom spacer to prevent overlap with tab bar
                     Rectangle()
                         .fill(Color.clear)
-                        .frame(height: 60)
+                        .frame(height: 40)
             }
             .navigationTitle("Reader Appearance")
             .navigationBarTitleDisplayMode(.inline)

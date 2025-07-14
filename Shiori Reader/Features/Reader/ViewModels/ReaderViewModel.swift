@@ -647,28 +647,32 @@ class ReaderViewModel: ObservableObject {
                 
                 // If we found matches, add this as a valid match
                 if !entries.isEmpty {
-                    // Group entries by their base term to avoid duplicates
+                    // Group entries by their base term and reading to avoid duplicates
                     // Use order-preserving approach instead of Dictionary(grouping:)
-                    var seenBaseTerms: Set<String> = []
+                    var seenTermReadings: Set<String> = []
                     var orderedGroups: [(String, [DictionaryEntry])] = []
                     
                     for entry in entries {
-                        if !seenBaseTerms.contains(entry.term) {
-                            seenBaseTerms.insert(entry.term)
-                            let termEntries = entries.filter { $0.term == entry.term }
+                        let termReadingKey = "\(entry.term)-\(entry.reading)"
+                        if !seenTermReadings.contains(termReadingKey) {
+                            seenTermReadings.insert(termReadingKey)
+                            // Collect ALL entries for this term-reading combination from ALL sources
+                            let termEntries = entries.filter { $0.term == entry.term && $0.reading == entry.reading }
                             orderedGroups.append((entry.term, termEntries))
                         }
                     }
                     
                     var addedFromThisLength = 0
                     for (baseTerm, termEntries) in orderedGroups {
-                        // Only add if we haven't found this base term already
-                        if !foundWords.contains(baseTerm) {
+                        // Create a unique key based on term and reading to avoid duplicates
+                        let uniqueKey = "\(baseTerm)-\(termEntries.first?.reading ?? "")"
+                        
+                        // Only add if we haven't found this specific term-reading combination already
+                        if !foundWords.contains(uniqueKey) {
                             let match = DictionaryMatch(word: candidateWord, entries: termEntries)
                             matches.append(match)
-                            foundWords.insert(baseTerm)
+                            foundWords.insert(uniqueKey)
                             addedFromThisLength += 1
-                            
                         }
                     }
                     // No match limit - try all possible lengths

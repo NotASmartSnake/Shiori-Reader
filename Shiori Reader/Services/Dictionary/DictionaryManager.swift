@@ -231,7 +231,7 @@ class DictionaryManager {
                 }
             }
         } catch {
-            print("🔍 [OBUNSHA DEBUG] Error looking up word in Obunsha: \(error)")
+            print("Error looking up word in Obunsha: \(error)")
         }
         
         return entries
@@ -330,6 +330,12 @@ class DictionaryManager {
         
         // Sort the final combined results
         let finalSortedEntries = sortEntriesByPopularity(filteredEntries, searchTerm: word)
+        
+        // Only log when we actually found results
+        if !finalSortedEntries.isEmpty {
+            let sourcesFound = Set(finalSortedEntries.map { $0.source }).sorted()
+            print("📚 [DICT] Found \(finalSortedEntries.count) results for '\(word)' from: \(sourcesFound.joined(separator: ", "))")
+        }
         
         return finalSortedEntries
     }

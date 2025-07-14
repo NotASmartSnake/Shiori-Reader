@@ -58,6 +58,9 @@ class DictionarySettingsViewModel: ObservableObject {
         // Now load the saved settings after initializing properties
         loadSettings()
         
+        // Load imported dictionaries
+        loadImportedDictionaries()
+        
         // Sync the dictionary enabled state with settings
         syncDictionaryStatesWithSettings()
         
@@ -226,6 +229,51 @@ class DictionarySettingsViewModel: ObservableObject {
             // Update canDisable states for all dictionaries
             syncDictionaryStatesWithSettings()
         }
+    }
+    
+    // MARK: - Imported Dictionary Management
+    
+    func loadImportedDictionaries() {
+        let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+        
+        for importedDict in importedDictionaries {
+            let dictionaryInfo = DictionaryInfo(
+                id: "imported_\(importedDict.id.uuidString)",
+                name: importedDict.title,
+                description: importedDict.detailText,
+                isBuiltIn: false,
+                isEnabled: settings.enabledDictionaries.contains("imported_\(importedDict.id.uuidString)"),
+                canDisable: true
+            )
+            
+            if !availableDictionaries.contains(dictionaryInfo) {
+                availableDictionaries.append(dictionaryInfo)
+            }
+        }
+    }
+    
+    func deleteImportedDictionary(_ info: ImportedDictionaryInfo) {
+        Task {
+            do {
+                try await DictionaryImportManager.shared.deleteImportedDictionary(info)
+                
+                DispatchQueue.main.async { [weak self] in
+                    self?.removeFromAvailableDictionaries(id: "imported_\(info.id.uuidString)")
+                    self?.settings.enabledDictionaries.removeAll(where: { $0 == "imported_\(info.id.uuidString)" })
+                    self?.saveSettings()
+                }
+            } catch {
+                DispatchQueue.main.async { [weak self] in
+                    self?.alertTitle = "Delete Error"
+                    self?.alertMessage = "Failed to delete dictionary: \(error.localizedDescription)"
+                    self?.showAlert = true
+                }
+            }
+        }
+    }
+    
+    private func removeFromAvailableDictionaries(id: String) {
+        availableDictionaries.removeAll { $0.id == id }
     }
     
     // MARK: - Testing Helper

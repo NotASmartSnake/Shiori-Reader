@@ -6,10 +6,13 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct DictionarySettingsView: View {
     @StateObject private var viewModel = DictionarySettingsViewModel()
+    @StateObject private var importManager = DictionaryImportManager.shared
     @Environment(\.presentationMode) var presentationMode
+    @State private var showFileImporter = false
     
     var body: some View {
         VStack {
@@ -19,18 +22,27 @@ struct DictionarySettingsView: View {
                     ForEach(viewModel.availableDictionaries) { dictionary in
                         dictionaryRow(dictionary)
                     }
+                    .onDelete(perform: deleteDictionary)
                 }
                 
-                // MARK: - Future Features Section
-                Section(footer: customFooter) {
-                    // Future: Add button to import custom dictionaries
-                    HStack {
-                        Text("Import Custom Dictionary")
-                        Spacer()
-                        Image(systemName: "plus.circle")
-                            .foregroundColor(.gray)
+                // MARK: - Import Dictionary Section
+                Section("Import Dictionary") {
+                    Button(action: {
+                        showFileImporter = true
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.blue)
+                            Text("Import Yomitan Dictionary")
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
                     }
-                    .disabled(true) // Disabled for now
+                    .disabled(importManager.isImporting)
+                    
+                    if importManager.isImporting {
+                        importProgressView
+                    }
                 }
             }
             .navigationTitle("Dictionary Settings")
@@ -38,12 +50,36 @@ struct DictionarySettingsView: View {
             .onAppear {
                 viewModel.refreshSettings()
             }
-            .alert(isPresented: $viewModel.showAlert) {
-                Alert(
-                    title: Text(viewModel.alertTitle),
-                    message: Text(viewModel.alertMessage),
-                    dismissButton: .default(Text("OK"))
-                )
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: [UTType.zip],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    if let url = urls.first {
+                        Task {
+                            await importManager.importDictionary(from: url)
+                            DispatchQueue.main.async {
+                                viewModel.loadImportedDictionaries()
+                            }
+                        }
+                    }
+                case .failure(let error):
+                    importManager.lastImportError = error
+                }
+            }
+            .alert("Dictionary Settings", isPresented: $viewModel.showAlert) {
+                Button("OK") { }
+            } message: {
+                Text(viewModel.alertMessage)
+            }
+            .alert("Import Error", isPresented: .constant(importManager.lastImportError != nil)) {
+                Button("OK") {
+                    importManager.lastImportError = nil
+                }
+            } message: {
+                Text(importManager.lastImportError?.localizedDescription ?? "")
             }
             
             // Spacer at the bottom for tab bar
@@ -81,11 +117,51 @@ struct DictionarySettingsView: View {
         .padding(.vertical, 6)
     }
     
-    private var customFooter: some View {
-        Text("Support for additional dictionaries will be added in future updates. Stay tuned for the ability to import custom dictionaries to enhance your reading experience.")
-            .font(.footnote)
-            .foregroundColor(.secondary)
-            .padding(.top, 4)
+    private var importProgressView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Importing...")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button("Cancel") {
+                    importManager.cancelImport()
+                }
+                .font(.caption)
+                .foregroundColor(.blue)
+            }
+            
+            if let progress = importManager.importProgress {
+                ProgressView(value: progress.overallProgress) {
+                    Text(progress.currentStep)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                ProgressView()
+                    .progressViewStyle(LinearProgressViewStyle())
+            }
+        }
+        .padding(.vertical, 4)
+    }
+    
+    private func deleteDictionary(at offsets: IndexSet) {
+        for index in offsets {
+            let dictionary = viewModel.availableDictionaries[index]
+            
+            // Only allow deletion of imported dictionaries
+            if !dictionary.isBuiltIn {
+                // Extract the original UUID from the ID
+                let importedId = dictionary.id.replacingOccurrences(of: "imported_", with: "")
+                if let uuid = UUID(uuidString: importedId) {
+                    // Find the ImportedDictionaryInfo with this UUID
+                    let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+                    if let importedDict = importedDictionaries.first(where: { $0.id == uuid }) {
+                        viewModel.deleteImportedDictionary(importedDict)
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -27,11 +27,13 @@ extension DictionaryManager {
         let importManager = DictionaryImportManager.shared
         let importedDictionaries = importManager.getImportedDictionaries()
         
-        
         for dictionary in importedDictionaries {
             loadImportedDictionary(dictionary)
         }
         
+        if !Self.importedDictionaryQueues.isEmpty {
+            print("📚 [DICT] Loaded \(Self.importedDictionaryQueues.count) imported dictionaries: \(Array(Self.importedDictionaryQueues.keys).sorted().joined(separator: ", "))")
+        }
         Self.importedDictionariesSetup = true
     }
     
@@ -48,7 +50,9 @@ extension DictionaryManager {
             var configuration = Configuration()
             configuration.readonly = true
             let queue = try DatabaseQueue(path: databaseURL.path, configuration: configuration)
-            Self.importedDictionaryQueues[info.title] = queue
+            // Use the UUID as the key to match the source format
+            let dictionaryKey = "imported_\(info.id.uuidString)"
+            Self.importedDictionaryQueues[dictionaryKey] = queue
         } catch {
         }
     }
@@ -57,10 +61,10 @@ extension DictionaryManager {
     func getAllEnabledDictionaries() -> [String] {
         var enabled = ["jmdict", "obunsha", "bccwj"] // Default built-in dictionaries
         
-        // Add imported dictionaries
+        // Add imported dictionaries using the UUID format
         let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
         for dictionary in importedDictionaries {
-            enabled.append(dictionary.title)
+            enabled.append("imported_\(dictionary.id.uuidString)")
         }
         
         return enabled
@@ -73,10 +77,10 @@ extension DictionaryManager {
         var allEntries: [DictionaryEntry] = []
         let enabledDictionaries = getAllEnabledDictionaries()
         
-        for (dictionaryTitle, queue) in Self.importedDictionaryQueues {
-            guard enabledDictionaries.contains(dictionaryTitle) else { continue }
+        for (dictionaryKey, queue) in Self.importedDictionaryQueues {
+            guard enabledDictionaries.contains(dictionaryKey) else { continue }
             
-            let entries = lookupImportedDictionary(word: word, queue: queue, dictionaryTitle: dictionaryTitle)
+            let entries = lookupImportedDictionary(word: word, queue: queue, dictionaryKey: dictionaryKey)
             allEntries.append(contentsOf: entries)
         }
         
@@ -126,7 +130,7 @@ extension DictionaryManager {
     private func lookupImportedDictionary(
         word: String,
         queue: DatabaseQueue,
-        dictionaryTitle: String
+        dictionaryKey: String
     ) -> [DictionaryEntry] {
         
         var entries: [DictionaryEntry] = []
@@ -162,9 +166,9 @@ extension DictionaryManager {
                     // Split definitions by newline separator
                     let meanings = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
                     
-                    // Create entry
+                    // Create entry with the UUID-based source
                     let entry = createImportedDictionaryEntry(
-                        id: "\(dictionaryTitle)_\(termId)",
+                        id: "\(dictionaryKey)_\(termId)",
                         term: expression,
                         reading: reading,
                         meanings: meanings,
@@ -173,7 +177,7 @@ extension DictionaryManager {
                         score: score,
                         rules: rules,
                         popularity: popularity,
-                        source: dictionaryTitle
+                        source: dictionaryKey
                     )
                     
                     entries.append(entry)
@@ -190,13 +194,13 @@ extension DictionaryManager {
         var allEntries: [DictionaryEntry] = []
         let enabledDictionaries = getAllEnabledDictionaries()
         
-        for (dictionaryTitle, queue) in Self.importedDictionaryQueues {
-            guard enabledDictionaries.contains(dictionaryTitle) else { continue }
+        for (dictionaryKey, queue) in Self.importedDictionaryQueues {
+            guard enabledDictionaries.contains(dictionaryKey) else { continue }
             
             let entries = searchImportedDictionaryByPrefix(
                 prefix: prefix,
                 queue: queue,
-                dictionaryTitle: dictionaryTitle,
+                dictionaryKey: dictionaryKey,
                 limit: limit
             )
             allEntries.append(contentsOf: entries)
@@ -209,7 +213,7 @@ extension DictionaryManager {
     private func searchImportedDictionaryByPrefix(
         prefix: String,
         queue: DatabaseQueue,
-        dictionaryTitle: String,
+        dictionaryKey: String,
         limit: Int
     ) -> [DictionaryEntry] {
         
@@ -244,7 +248,7 @@ extension DictionaryManager {
                     let meanings = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
                     
                     let entry = createImportedDictionaryEntry(
-                        id: "\(dictionaryTitle)_\(termId)",
+                        id: "\(dictionaryKey)_\(termId)",
                         term: expression,
                         reading: reading,
                         meanings: meanings,
@@ -253,7 +257,7 @@ extension DictionaryManager {
                         score: score,
                         rules: rules,
                         popularity: popularity,
-                        source: dictionaryTitle
+                        source: dictionaryKey
                     )
                     
                     entries.append(entry)

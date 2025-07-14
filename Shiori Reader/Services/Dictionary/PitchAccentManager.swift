@@ -171,7 +171,6 @@ class PitchAccentManager {
         let uniqueAccents = Array(Set(accents)).sorted { $0.pitchAccent < $1.pitchAccent }
         
         let timeElapsed = CFAbsoluteTimeGetCurrent() - startTime
-        Logger.debug(category: "Performance", "Pitch accent lookup for '\(term)'/\"\(reading)\" found \(uniqueAccents.count) accents in \(String(format: "%.3f", timeElapsed))s")
         
         return PitchAccentData(accents: uniqueAccents)
     }
