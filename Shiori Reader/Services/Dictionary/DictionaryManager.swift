@@ -325,8 +325,16 @@ class DictionaryManager {
             }
         }
         
+        // Debug: Log entries before filtering
+        let sourcesBefore = Set(allEntries.map { $0.source }).sorted()
+        print("🔍 [DEBUG] Before filtering - found \(allEntries.count) entries from: \(sourcesBefore.joined(separator: ", "))")
+        
         // Apply conservative filtering to reduce false positives
         let filteredEntries = applyConservativeFiltering(allEntries, originalWord: word)
+        
+        // Debug: Log entries after filtering
+        let sourcesAfter = Set(filteredEntries.map { $0.source }).sorted()
+        print("🔍 [DEBUG] After filtering - \(filteredEntries.count) entries from: \(sourcesAfter.joined(separator: ", "))")
         
         // Sort the final combined results
         let finalSortedEntries = sortEntriesByPopularity(filteredEntries, searchTerm: word)
@@ -346,6 +354,8 @@ class DictionaryManager {
         if entries.count <= 3 {
             return entries
         }
+        
+        print("🔍 [DEBUG] Conservative filtering \(entries.count) entries for '\(originalWord)'")
         
         var groupedEntries: [String: [DictionaryEntry]] = [:]
         
@@ -375,10 +385,16 @@ class DictionaryManager {
         // Now process groups in the order they first appeared
         for groupKey in orderedKeys {
             if let groupEntries = groupedEntries[groupKey] {
-                // Sort group entries and take the first (best) one
+                // Sort group entries and keep one per dictionary source
                 let sortedGroup = sortEntriesByPopularity(groupEntries, searchTerm: originalWord)
-                if let bestEntry = sortedGroup.first {
-                    filteredResults.append(bestEntry)
+                
+                // Keep the best entry from each unique dictionary source
+                var seenSources: Set<String> = []
+                for entry in sortedGroup {
+                    if !seenSources.contains(entry.source) {
+                        seenSources.insert(entry.source)
+                        filteredResults.append(entry)
+                    }
                 }
             }
         }
@@ -388,69 +404,98 @@ class DictionaryManager {
         
         // Only apply part-of-speech filtering for deinflected entries to avoid breaking direct lookups
         let conservativeFiltered = finalFilteredResults.filter { entry in
-            // Always keep direct matches (no transformation)
-            if entry.transformed == nil {
-                return true
-            }
-            
-            // For transformed entries, check if the deinflected form matches the original search term
-            if entry.term == originalWord {
-                return true
-            }
-            
-            // For transformed entries that are NOT the original search term (true deinflections),
-            // check if they can actually be conjugated
-            
-            // First check rules field (most reliable for conjugatable entries)
-            if let rules = entry.rules, !rules.isEmpty {
-                let lowerRules = rules.lowercased()
-                // If it has conjugatable rules, keep it
-                if lowerRules.contains("v1") || lowerRules.contains("v5") || lowerRules.contains("vs") ||
-                   lowerRules.contains("vk") || lowerRules.contains("vz") || lowerRules.contains("adj-i") {
-                    return true
+            let shouldKeep = shouldKeepEntry(entry, originalWord: originalWord)
+            if !shouldKeep {
+                print("🔍 [DEBUG] FILTERED OUT: \(entry.source) - \(entry.term) (\(entry.reading)) - transformed: \(entry.transformed ?? "nil")")
+                if let rules = entry.rules {
+                    print("🔍 [DEBUG]   rules: \(rules)")
                 }
+                print("🔍 [DEBUG]   termTags: \(entry.termTags)")
             }
-            
-            // Parse termTags properly
+            return shouldKeep
+        }
+        
+        return conservativeFiltered
+    }
+    
+    private func shouldKeepEntry(_ entry: DictionaryEntry, originalWord: String) -> Bool {
+        // Always keep direct matches (no transformation)
+        if entry.transformed == nil {
+            return true
+        }
+        
+        // For transformed entries, check if the deinflected form matches the original search term
+        if entry.term == originalWord {
+            return true
+        }
+        
+        // Trust results from built-in dictionaries (jmdict, obunsha) and be less strict
+        if entry.source == "jmdict" || entry.source == "obunsha" {
+            // For built-in dictionaries, only filter out obvious non-conjugatable entries
             let tagString = entry.termTags.joined(separator: " ")
             let cleanedTagString = tagString.replacingOccurrences(of: "\"", with: "")
             let individualTags = cleanedTagString.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
             
-            // Check for conjugatable tags
-            let hasConjugatableTags = individualTags.contains { tag in
-                let lowerTag = tag.lowercased()
-                return lowerTag == "v1" || lowerTag == "v5" || lowerTag == "vs" ||
-                       lowerTag == "vk" || lowerTag == "vz" || lowerTag == "vi" ||
-                       lowerTag == "vt" || lowerTag == "adj-i" ||
-                       lowerTag.hasPrefix("v5") || lowerTag.hasPrefix("v1")
-            }
-            
-            if hasConjugatableTags {
-                return true
-            }
-            
-            // Filter out entries that are clearly non-conjugatable
-            let hasNonConjugatableTags = individualTags.contains { tag in
+            let hasObviousNonConjugatableTags = individualTags.contains { tag in
                 let lowerTag = tag.lowercased()
                 return lowerTag == "n" || lowerTag == "pn" || lowerTag == "num" ||
                        lowerTag == "ctr" || lowerTag == "exp" || lowerTag == "int" ||
                        lowerTag == "conj" || lowerTag == "part" || lowerTag == "pref" ||
-                       lowerTag == "suf" || lowerTag == "n-suf" || lowerTag == "adv" ||
-                       lowerTag == "aux-v" || lowerTag == "adj-t" || lowerTag == "adj-no" ||
-                       lowerTag == "adj-na" || lowerTag == "adj-pn" || lowerTag == "adj-f" ||
-                       (lowerTag.hasPrefix("adj-") && lowerTag != "adj-i")
+                       lowerTag == "suf" || lowerTag == "n-suf" || lowerTag == "adv"
             }
             
-            // If it has non-conjugatable tags and no conjugatable ones, filter it out
-            if hasNonConjugatableTags {
-                return false
+            // For built-in dictionaries, err on the side of inclusion
+            return !hasObviousNonConjugatableTags
+        }
+        
+        // For imported dictionaries, apply stricter filtering
+        // First check rules field (most reliable for conjugatable entries)
+        if let rules = entry.rules, !rules.isEmpty {
+            let lowerRules = rules.lowercased()
+            // If it has conjugatable rules, keep it
+            if lowerRules.contains("v1") || lowerRules.contains("v5") || lowerRules.contains("vs") ||
+               lowerRules.contains("vk") || lowerRules.contains("vz") || lowerRules.contains("adj-i") {
+                return true
             }
-            
-            // If we can't determine, err on the side of caution and keep it
+        }
+        
+        // Parse termTags properly
+        let tagString = entry.termTags.joined(separator: " ")
+        let cleanedTagString = tagString.replacingOccurrences(of: "\"", with: "")
+        let individualTags = cleanedTagString.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+        
+        // Check for conjugatable tags
+        let hasConjugatableTags = individualTags.contains { tag in
+            let lowerTag = tag.lowercased()
+            return lowerTag == "v1" || lowerTag == "v5" || lowerTag == "vs" ||
+                   lowerTag == "vk" || lowerTag == "vz" || lowerTag == "vi" ||
+                   lowerTag == "vt" || lowerTag == "adj-i" ||
+                   lowerTag.hasPrefix("v5") || lowerTag.hasPrefix("v1")
+        }
+        
+        if hasConjugatableTags {
             return true
         }
         
-        return conservativeFiltered
+        // Filter out entries that are clearly non-conjugatable
+        let hasNonConjugatableTags = individualTags.contains { tag in
+            let lowerTag = tag.lowercased()
+            return lowerTag == "n" || lowerTag == "pn" || lowerTag == "num" ||
+                   lowerTag == "ctr" || lowerTag == "exp" || lowerTag == "int" ||
+                   lowerTag == "conj" || lowerTag == "part" || lowerTag == "pref" ||
+                   lowerTag == "suf" || lowerTag == "n-suf" || lowerTag == "adv" ||
+                   lowerTag == "aux-v" || lowerTag == "adj-t" || lowerTag == "adj-no" ||
+                   lowerTag == "adj-na" || lowerTag == "adj-pn" || lowerTag == "adj-f" ||
+                   (lowerTag.hasPrefix("adj-") && lowerTag != "adj-i")
+        }
+        
+        // If it has non-conjugatable tags and no conjugatable ones, filter it out
+        if hasNonConjugatableTags {
+            return false
+        }
+        
+        // If we can't determine, err on the side of caution and keep it
+        return true
     }
     
     // Advanced lookup with prefix matching
