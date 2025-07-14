@@ -31,7 +31,7 @@ function shioriLog(message) {
     }
 }
 
-shioriLog("Script initialized");
+// shioriLog("Script initialized");
 
 // Pattern to detect Japanese text
 const japanesePattern = /[\u3000-\u303F]|[\u3040-\u309F]|[\u30A0-\u30FF]|[\uFF00-\uFFEF]|[\u4E00-\u9FAF]|[\u2605-\u2606]|[\u2190-\u2195]|\u203B/g;
@@ -45,7 +45,7 @@ function dismissDictionary() {
         }
         return false;
     } catch(e) {
-        shioriLog("Error dismissing dictionary: " + e);
+        // shioriLog("Error dismissing dictionary: " + e);
         return false;
     }
 }
@@ -97,7 +97,7 @@ function getImprovedCaretPosition(point) {
 
 // Define the click handler function
 documentClickListener = function(event) {
-    shioriLog("Click detected at " + event.clientX + "," + event.clientY);
+    // shioriLog("Click detected at " + event.clientX + "," + event.clientY);
     
     // Skip interactive elements
     if (event.target.tagName === 'A' ||
@@ -105,7 +105,7 @@ documentClickListener = function(event) {
         event.target.tagName === 'INPUT' ||
         event.target.closest('a') ||
         event.target.closest('button')) {
-        shioriLog("Skipping interactive element");
+        // shioriLog("Skipping interactive element");
         dismissDictionary();
         return;
     }
@@ -116,7 +116,7 @@ documentClickListener = function(event) {
                         event.target.closest('ruby');
                         
     if (rubyElement) {
-        shioriLog("Ruby element detected, handling specially");
+        // shioriLog("Ruby element detected, handling specially");
         handleRubyClick(event, rubyElement);
         return;
     }
@@ -124,12 +124,12 @@ documentClickListener = function(event) {
     // Standard text node handling for non-ruby elements using improved caret position
     let range = getImprovedCaretPosition({x: event.clientX, y: event.clientY});
     if (!range) {
-        shioriLog("No text range found at click point");
+        // shioriLog("No text range found at click point");
         dismissDictionary();
         return;
     }
     
-    shioriLog("Text node found, looking for Japanese text");
+    // shioriLog("Text node found, looking for Japanese text");
     
     let node = range.startContainer;
     if (node.nodeType !== Node.TEXT_NODE) {
@@ -142,11 +142,11 @@ documentClickListener = function(event) {
     
     if (offset < text.length) {
         let contextText = text.substring(offset, Math.min(text.length, offset + 30));
-        shioriLog("Text at click: " + contextText);
+        // shioriLog("Text at click: " + contextText);
         
         // Check for Japanese text
         if (japanesePattern.test(contextText)) {
-            shioriLog("Japanese text found");
+            // shioriLog("Japanese text found");
             
             // Get surrounding sentence for better context
             const surroundingText = getExtendedSurroundingText(node.parentNode, contextText, 250);
@@ -194,10 +194,10 @@ documentClickListener = function(event) {
                         }
                     }
                 } else {
-                    shioriLog(`⚠️ WARNING: Calculated offset ${absoluteOffset} is out of bounds for text length ${cleanParagraphText.length}`);
+                    // shioriLog(`⚠️ WARNING: Calculated offset ${absoluteOffset} is out of bounds for text length ${cleanParagraphText.length}`);
                 }
             } catch (error) {
-                shioriLog(`Error calculating offset, using simple offset: ${error}`);
+                // shioriLog(`Error calculating offset, using simple offset: ${error}`);
                 absoluteOffset = offset;
             }
                         
@@ -209,7 +209,7 @@ documentClickListener = function(event) {
                 rawFullText: paragraph.textContent
             });
         } else {
-            shioriLog("No Japanese text found in: " + contextText);
+            // shioriLog("No Japanese text found in: " + contextText);
             dismissDictionary();
         }
     } else {
@@ -351,11 +351,11 @@ function calculateCleanOffsetOfElement(targetElement, containerElement) {
     
     // Safety check to prevent infinite recursion
     if (!targetElement || !containerElement || targetElement === containerElement) {
-        shioriLog(`Safety check failed: targetElement=${!!targetElement}, containerElement=${!!containerElement}, same=${targetElement === containerElement}`);
+        // shioriLog(`Safety check failed: targetElement=${!!targetElement}, containerElement=${!!containerElement}, same=${targetElement === containerElement}`);
         return 0;
     }
     
-    shioriLog(`🔧 OFFSET CALC START: Target=${targetElement.tagName || 'TEXT'}, Container=${containerElement.tagName}`);
+    // shioriLog(`🔧 OFFSET CALC START: Target=${targetElement.tagName || 'TEXT'}, Container=${containerElement.tagName}`);
     
     // First, let's try a different approach - manually walk through nodes
     // and build the clean text while tracking our target
@@ -363,19 +363,19 @@ function calculateCleanOffsetOfElement(targetElement, containerElement) {
         let currentOffset = 0;
         let found = false;
         
-        shioriLog(`🔍 Starting walkAndCount for target in container`);
+        // shioriLog(`🔍 Starting walkAndCount for target in container`);
         
         function processNode(currentNode, depth = 0) {
             // If we found our target, stop
             if (found) return;
             
             const indent = '  '.repeat(depth);
-            shioriLog(`${indent}Processing node: ${currentNode.nodeType === Node.TEXT_NODE ? 'TEXT' : currentNode.tagName || 'UNKNOWN'} - offset: ${currentOffset}`);
+            // shioriLog(`${indent}Processing node: ${currentNode.nodeType === Node.TEXT_NODE ? 'TEXT' : currentNode.tagName || 'UNKNOWN'} - offset: ${currentOffset}`);
             
             // Check if this is our target
             if (currentNode === target) {
                 found = true;
-                shioriLog(`${indent}🎯 FOUND TARGET at offset ${currentOffset}`);
+                // shioriLog(`${indent}🎯 FOUND TARGET at offset ${currentOffset}`);
                 return;
             }
             
@@ -384,7 +384,7 @@ function calculateCleanOffsetOfElement(targetElement, containerElement) {
                 // For text nodes, check if they contain our target
                 if (target.nodeType === Node.TEXT_NODE && currentNode === target) {
                     found = true;
-                    shioriLog(`${indent}🎯 FOUND TARGET TEXT NODE at offset ${currentOffset}`);
+                    // shioriLog(`${indent}🎯 FOUND TARGET TEXT NODE at offset ${currentOffset}`);
                     return;
                 }
                 
@@ -402,42 +402,42 @@ function calculateCleanOffsetOfElement(targetElement, containerElement) {
                 if (!insideRubyReading) {
                     const textLength = currentNode.textContent.length;
                     currentOffset += textLength;
-                    shioriLog(`${indent}📝 Added text node (length=${textLength}): "${currentNode.textContent.substring(0, 20)}..." -> offset=${currentOffset}`);
+                    // shioriLog(`${indent}📝 Added text node (length=${textLength}): "${currentNode.textContent.substring(0, 20)}..." -> offset=${currentOffset}`);
                 } else {
-                    shioriLog(`${indent}⏭️ Skipping text node inside RT/RP: "${currentNode.textContent.substring(0, 20)}..."`);
+                    // shioriLog(`${indent}⏭️ Skipping text node inside RT/RP: "${currentNode.textContent.substring(0, 20)}..."`);
                 }
             }
             else if (currentNode.nodeType === Node.ELEMENT_NODE) {
                 if (currentNode.tagName === 'RT' || currentNode.tagName === 'RP') {
                     // Skip RT and RP elements entirely
-                    shioriLog(`${indent}⏭️ Skipping ${currentNode.tagName} element`);
+                    // shioriLog(`${indent}⏭️ Skipping ${currentNode.tagName} element`);
                     return;
                 }
                 else if (currentNode.tagName && currentNode.tagName.toUpperCase() === 'RUBY') {
-                    shioriLog(`${indent}💎 Processing RUBY element`);
+                    // shioriLog(`${indent}💎 Processing RUBY element`);
                     
                     // Check if our target is inside this ruby
                     if (currentNode.contains(target)) {
-                        shioriLog(`${indent}💎 This RUBY contains our target`);
+                        // shioriLog(`${indent}💎 This RUBY contains our target`);
                         
                         // We need to count characters within this ruby up to our target
                         // Get the base text without furigana
                         const rubyBaseText = getFullRubyBaseText(currentNode);
-                        shioriLog(`${indent}💎 Ruby base text: "${rubyBaseText}"`);
+                        // shioriLog(`${indent}💎 Ruby base text: "${rubyBaseText}"`);
                         
                         // Check if we have explicit rb elements
                         const rbElements = currentNode.querySelectorAll('rb');
                         
                         if (rbElements.length > 0) {
-                            shioriLog(`${indent}💎 Found ${rbElements.length} RB elements`);
+                            // shioriLog(`${indent}💎 Found ${rbElements.length} RB elements`);
                             // Explicit rb structure - count rb elements until we find our target
                             for (let i = 0; i < rbElements.length; i++) {
                                 const rb = rbElements[i];
                                 const rbText = cleanRubyText(rb.textContent);
-                                shioriLog(`${indent}💎 Processing RB[${i}]: "${rbText}"`);
+                                // shioriLog(`${indent}💎 Processing RB[${i}]: "${rbText}"`);
                                 
                                 if (rb.contains(target) || rb === target) {
-                                    shioriLog(`${indent}💎 Target found in RB[${i}]`);
+                                    // shioriLog(`${indent}💎 Target found in RB[${i}]`);
                                     
                                     if (target.nodeType === Node.TEXT_NODE && rb.contains(target)) {
                                         // Target is a text node within this rb
@@ -447,7 +447,7 @@ function calculateCleanOffsetOfElement(targetElement, containerElement) {
                                             if (child === target) {
                                                 currentOffset += rbOffset;
                                                 found = true;
-                                                shioriLog(`${indent}🎯 FOUND TARGET within RB at offset ${currentOffset}`);
+                                                // shioriLog(`${indent}🎯 FOUND TARGET within RB at offset ${currentOffset}`);
                                                 return;
                                             }
                                             if (child.nodeType === Node.TEXT_NODE) {
@@ -458,47 +458,47 @@ function calculateCleanOffsetOfElement(targetElement, containerElement) {
                                         // Target is the rb element itself or direct text
                                         currentOffset += rbText.length;
                                         found = true;
-                                        shioriLog(`${indent}🎯 FOUND TARGET RB at offset ${currentOffset}`);
+                                        // shioriLog(`${indent}🎯 FOUND TARGET RB at offset ${currentOffset}`);
                                         return;
                                     }
                                     break;
                                 } else {
                                     // This rb comes before our target, count its characters
                                     currentOffset += rbText.length;
-                                    shioriLog(`${indent}💎 Added previous RB[${i}] (length=${rbText.length}): "${rbText}" -> offset=${currentOffset}`);
+                                    // shioriLog(`${indent}💎 Added previous RB[${i}] (length=${rbText.length}): "${rbText}" -> offset=${currentOffset}`);
                                 }
                             }
                         } else {
-                            shioriLog(`${indent}💎 Implicit ruby structure, processing text nodes`);
+                            // shioriLog(`${indent}💎 Implicit ruby structure, processing text nodes`);
                             // Implicit ruby structure - need to process text nodes directly
                             for (const child of currentNode.childNodes) {
                                 if (child.nodeType === Node.ELEMENT_NODE && 
                                     (child.tagName === 'RT' || child.tagName === 'RP')) {
                                     // Skip RT and RP elements
-                                    shioriLog(`${indent}💎 Skipping ${child.tagName} in implicit ruby`);
+                                    // shioriLog(`${indent}💎 Skipping ${child.tagName} in implicit ruby`);
                                     continue;
                                 }
                                 
                                 if (child === target) {
                                     found = true;
-                                    shioriLog(`${indent}🎯 FOUND TARGET in implicit ruby at offset ${currentOffset}`);
+                                    // shioriLog(`${indent}🎯 FOUND TARGET in implicit ruby at offset ${currentOffset}`);
                                     return;
                                 }
                                 
                                 if (child.nodeType === Node.TEXT_NODE) {
                                     if (child === target) {
                                         found = true;
-                                        shioriLog(`${indent}🎯 FOUND TARGET TEXT in implicit ruby at offset ${currentOffset}`);
+                                        // shioriLog(`${indent}🎯 FOUND TARGET TEXT in implicit ruby at offset ${currentOffset}`);
                                         return;
                                     }
                                     currentOffset += child.textContent.length;
-                                    shioriLog(`${indent}💎 Added implicit ruby text (length=${child.textContent.length}): "${child.textContent}" -> offset=${currentOffset}`);
+                                    // shioriLog(`${indent}💎 Added implicit ruby text (length=${child.textContent.length}): "${child.textContent}" -> offset=${currentOffset}`);
                                 }
                             }
                         }
                         
                         if (!found) {
-                            shioriLog(`${indent}⚠️ Target not found within ruby, this shouldn't happen`);
+                            // shioriLog(`${indent}⚠️ Target not found within ruby, this shouldn't happen`);
                         }
                         return; // Don't process children again
                     } else {
@@ -506,13 +506,13 @@ function calculateCleanOffsetOfElement(targetElement, containerElement) {
                         const rubyBaseText = getFullRubyBaseText(currentNode);
                         const rubyLength = rubyBaseText.length;
                         currentOffset += rubyLength;
-                        shioriLog(`${indent}💎 Added complete ruby element (length=${rubyLength}): "${rubyBaseText}" -> offset=${currentOffset}`);
+                        // shioriLog(`${indent}💎 Added complete ruby element (length=${rubyLength}): "${rubyBaseText}" -> offset=${currentOffset}`);
                         return; // CRITICAL: Don't process children - we've already counted the base text
                     }
                 }
                 
                 // For other elements, process children
-                shioriLog(`${indent}Processing children of ${currentNode.tagName}`);
+                // shioriLog(`${indent}Processing children of ${currentNode.tagName}`);
                 for (const child of currentNode.childNodes) {
                     processNode(child, depth + 1);
                     if (found) return;
@@ -530,7 +530,7 @@ function calculateCleanOffsetOfElement(targetElement, containerElement) {
     }
     
     const result = walkAndCount(containerElement, targetElement);
-    shioriLog(`🏁 FINAL OFFSET: ${result}`);
+    // shioriLog(`🏁 FINAL OFFSET: ${result}`);
     return result;
 }
 
@@ -565,7 +565,7 @@ function processTappedRubyTextUnified(baseText, reading, rubyElement, rubyIntern
     try {
         absoluteOffset = calculateCleanOffsetOfElement(rubyElement, paragraph) + rubyInternalOffset;
     } catch (error) {
-        shioriLog(`Error calculating ruby offset: ${error}`);
+        // shioriLog(`Error calculating ruby offset: ${error}`);
         absoluteOffset = rubyInternalOffset;
     }
     
@@ -575,7 +575,7 @@ function processTappedRubyTextUnified(baseText, reading, rubyElement, rubyIntern
     // Get the text to search from the clicked position for dictionary lookup
     const searchText = cleanParagraphText.substring(absoluteOffset);
     
-    shioriLog(`Ruby context: baseText='${baseText}', cleanText length=${cleanParagraphText.length}, absoluteOffset=${absoluteOffset}`);
+    // shioriLog(`Ruby context: baseText='${baseText}', cleanText length=${cleanParagraphText.length}, absoluteOffset=${absoluteOffset}`);
     
     // Send the search text for dictionary lookup, but provide paragraph context for character picker
     sendWordToSwift(searchText, {
@@ -1009,13 +1009,13 @@ function sendWordToSwift(text, options = {}) {
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.wordTapped) {
             // Combine text with options
             const data = { text, ...options };
-            shioriLog("Sending word to Swift: " + text);
+            // shioriLog("Sending word to Swift: " + text);
             window.webkit.messageHandlers.wordTapped.postMessage(data);
             return true;
         }
         return false;
     } catch(e) {
-        shioriLog("Error sending word to Swift: " + e);
+        // shioriLog("Error sending word to Swift: " + e);
         return false;
     }
 }
@@ -1100,7 +1100,7 @@ function getFullContextWithFuriganaHandling(textNode, clickOffset) {
 // Send a ready notification
 try {
     sendWordToSwift("WordSelection script ready", { type: "initialization" });
-    shioriLog("Ready notification sent successfully");
+    // shioriLog("Ready notification sent successfully");
 } catch(e) {
-    shioriLog("Error sending ready notification: " + e);
+    // shioriLog("Error sending ready notification: " + e);
 }

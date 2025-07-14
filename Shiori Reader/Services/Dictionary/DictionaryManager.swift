@@ -326,24 +326,24 @@ class DictionaryManager {
         }
         
         // Debug: Log entries before filtering
-        let sourcesBefore = Set(allEntries.map { $0.source }).sorted()
-        print("🔍 [DEBUG] Before filtering - found \(allEntries.count) entries from: \(sourcesBefore.joined(separator: ", "))")
+        // let sourcesBefore = Set(allEntries.map { $0.source }).sorted()
+        // print("🔍 [DEBUG] Before filtering - found \(allEntries.count) entries from: \(sourcesBefore.joined(separator: ", "))")
         
         // Apply conservative filtering to reduce false positives
         let filteredEntries = applyConservativeFiltering(allEntries, originalWord: word)
         
         // Debug: Log entries after filtering
-        let sourcesAfter = Set(filteredEntries.map { $0.source }).sorted()
-        print("🔍 [DEBUG] After filtering - \(filteredEntries.count) entries from: \(sourcesAfter.joined(separator: ", "))")
+        // let sourcesAfter = Set(filteredEntries.map { $0.source }).sorted()
+        // print("🔍 [DEBUG] After filtering - \(filteredEntries.count) entries from: \(sourcesAfter.joined(separator: ", "))")
         
         // Sort the final combined results
         let finalSortedEntries = sortEntriesByPopularity(filteredEntries, searchTerm: word)
         
         // Only log when we actually found results
-        if !finalSortedEntries.isEmpty {
-            let sourcesFound = Set(finalSortedEntries.map { $0.source }).sorted()
-            print("📚 [DICT] Found \(finalSortedEntries.count) results for '\(word)' from: \(sourcesFound.joined(separator: ", "))")
-        }
+        // if !finalSortedEntries.isEmpty {
+        //     let sourcesFound = Set(finalSortedEntries.map { $0.source }).sorted()
+        //     print("📚 [DICT] Found \(finalSortedEntries.count) results for '\(word)' from: \(sourcesFound.joined(separator: ", "))")
+        // }
         
         return finalSortedEntries
     }
@@ -355,7 +355,7 @@ class DictionaryManager {
             return entries
         }
         
-        print("🔍 [DEBUG] Conservative filtering \(entries.count) entries for '\(originalWord)'")
+        // print("🔍 [DEBUG] Conservative filtering \(entries.count) entries for '\(originalWord)'")
         
         var groupedEntries: [String: [DictionaryEntry]] = [:]
         
@@ -405,13 +405,13 @@ class DictionaryManager {
         // Only apply part-of-speech filtering for deinflected entries to avoid breaking direct lookups
         let conservativeFiltered = finalFilteredResults.filter { entry in
             let shouldKeep = shouldKeepEntry(entry, originalWord: originalWord)
-            if !shouldKeep {
-                print("🔍 [DEBUG] FILTERED OUT: \(entry.source) - \(entry.term) (\(entry.reading)) - transformed: \(entry.transformed ?? "nil")")
-                if let rules = entry.rules {
-                    print("🔍 [DEBUG]   rules: \(rules)")
-                }
-                print("🔍 [DEBUG]   termTags: \(entry.termTags)")
-            }
+            // if !shouldKeep {
+            //     print("🔍 [DEBUG] FILTERED OUT: \(entry.source) - \(entry.term) (\(entry.reading)) - transformed: \(entry.transformed ?? "nil")")
+            //     if let rules = entry.rules {
+            //         print("🔍 [DEBUG]   rules: \(rules)")
+            //     }
+            //     print("🔍 [DEBUG]   termTags: \(entry.termTags)")
+            // }
             return shouldKeep
         }
         

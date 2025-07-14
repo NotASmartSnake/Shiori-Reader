@@ -32,7 +32,7 @@ extension DictionaryManager {
         }
         
         if !Self.importedDictionaryQueues.isEmpty {
-            print("📚 [DICT] Loaded \(Self.importedDictionaryQueues.count) imported dictionaries: \(Array(Self.importedDictionaryQueues.keys).sorted().joined(separator: ", "))")
+            // print("📚 [DICT] Loaded \(Self.importedDictionaryQueues.count) imported dictionaries: \(Array(Self.importedDictionaryQueues.keys).sorted().joined(separator: ", "))")
         }
         Self.importedDictionariesSetup = true
     }
