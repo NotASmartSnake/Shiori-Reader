@@ -48,11 +48,11 @@ struct DefinitionSelectionPopupView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
-                Text("Select definitions from each dictionary to add to your Anki card:")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+//                Text("Select definitions from each dictionary to add to your Anki card:")
+//                    .font(.subheadline)
+//                    .foregroundColor(.secondary)
+//                    .multilineTextAlignment(.leading)
+//                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -230,8 +230,19 @@ struct DefinitionSelectionPopupView: View {
         case "jmdict":
             return "JMdict"
         case "obunsha":
-            return "Obunsha"
+            return "旺文社"
         default:
+            if source.hasPrefix("imported_") {
+                // Extract UUID and get display name
+                let importedId = source.replacingOccurrences(of: "imported_", with: "")
+                if let uuid = UUID(uuidString: importedId) {
+                    let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+                    if let dict = importedDictionaries.first(where: { $0.id == uuid }) {
+                        return dict.title
+                    }
+                }
+                return "Imported"
+            }
             return source.capitalized
         }
     }
@@ -243,7 +254,18 @@ struct DefinitionSelectionPopupView: View {
         case "obunsha":
             return "旺文社"
         default:
-            return source.uppercased()
+            if source.hasPrefix("imported_") {
+                // Extract UUID and get display name
+                let importedId = source.replacingOccurrences(of: "imported_", with: "")
+                if let uuid = UUID(uuidString: importedId) {
+                    let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+                    if let dict = importedDictionaries.first(where: { $0.id == uuid }) {
+                        return dict.title
+                    }
+                }
+                return "Imported"
+            }
+            return source.capitalized
         }
     }
     

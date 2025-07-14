@@ -153,6 +153,21 @@ struct DictionaryPopupCardView: View {
                                 }
                                 .padding(.vertical, 4)
                                 
+                                // Display frequency data if available
+                                if let frequencyRank = entry.frequencyRankString {
+                                    HStack {
+                                        Text(frequencyRank)
+                                            .font(.caption2)
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(Color.green.opacity(0.2))
+                                            .foregroundColor(.green)
+                                            .cornerRadius(4)
+                                        Spacer()
+                                    }
+                                    .padding(.bottom, 4)
+                                }
+                                
                                 // Display meanings grouped by source
                                 let entriesBySource = Dictionary(grouping: getAllEntriesForTerm(entry.term, reading: entry.reading, from: matches)) { $0.source }
                                 let sourceOrder = ["jmdict", "obunsha"] + entriesBySource.keys.filter { !["jmdict", "obunsha"].contains($0) }.sorted()
@@ -499,10 +514,15 @@ struct DictionaryPopupCardView: View {
     }
     
     private func getImportedDictionaryColor(source: String) -> Color {
-        // Assign colors based on hash of the source string for consistency
+        // Assign colors based on stable hash of the source string for consistency
         let availableColors: [Color] = [.purple, .pink, .indigo, .teal, .cyan, .mint, .brown]
-        let hash = abs(source.hashValue)
-        return availableColors[hash % availableColors.count]
+        
+        // Use a simple stable hash based on string content
+        let hash = source.unicodeScalars.reduce(0) { result, scalar in
+            return result &+ Int(scalar.value)
+        }
+        
+        return availableColors[abs(hash) % availableColors.count]
     }
     
     // MARK: - Source Display Helpers

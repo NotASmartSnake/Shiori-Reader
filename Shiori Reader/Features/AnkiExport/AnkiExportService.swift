@@ -300,6 +300,27 @@ class AnkiExportService {
         return definitionsBySource
     }
     
+    /// Get display name for dictionary source
+    private func getDictionaryDisplayName(for source: String) -> String {
+        if source == "jmdict" {
+            return "JMdict"
+        } else if source == "obunsha" {
+            return "旺文社"
+        } else if source.hasPrefix("imported_") {
+            // Extract UUID from source string (format: "imported_UUID")
+            let importedId = source.replacingOccurrences(of: "imported_", with: "")
+            if let uuid = UUID(uuidString: importedId) {
+                let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+                if let dict = importedDictionaries.first(where: { $0.id == uuid }) {
+                    return dict.title
+                }
+            }
+            return "Imported"
+        } else {
+            return source // fallback to original source name
+        }
+    }
+    
     /// Export all definitions from all sources directly without showing popup
     private func exportAllDefinitionsDirectly(
         word: String,
@@ -328,7 +349,7 @@ class AnkiExportService {
         
         let formattedDefinitions = sortedSources.compactMap { source -> String? in
             guard let definitions = definitionsBySource[source], !definitions.isEmpty else { return nil }
-            let sourceLabel = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : source.capitalized)
+            let sourceLabel = self.getDictionaryDisplayName(for: source)
             let combinedDefs = definitions.joined(separator: "<br>")
             return "<b>\(sourceLabel):</b><br>\(combinedDefs)"
         }.joined(separator: "<br><br>")
@@ -406,7 +427,7 @@ class AnkiExportService {
                 
                 let formattedDefinitions = sortedSources.compactMap { source -> String? in
                     guard let definitions = selectedDefinitions[source], !definitions.isEmpty else { return nil }
-                    let sourceLabel = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : source.capitalized)
+                    let sourceLabel = self.getDictionaryDisplayName(for: source)
                     let combinedDefs = definitions.joined(separator: "<br>")
                     return "<b>\(sourceLabel):</b><br>\(combinedDefs)"
                 }.joined(separator: "<br><br>")

@@ -547,10 +547,15 @@ struct DictionaryPopupView: View {
     }
     
     private func getImportedDictionaryColor(source: String) -> Color {
-        // Assign colors based on hash of the source string for consistency
+        // Assign colors based on stable hash of the source string for consistency
         let availableColors: [Color] = [.purple, .pink, .indigo, .teal, .cyan, .mint, .brown]
-        let hash = abs(source.hashValue)
-        return availableColors[hash % availableColors.count]
+        
+        // Use a simple stable hash based on string content
+        let hash = source.unicodeScalars.reduce(0) { result, scalar in
+            return result &+ Int(scalar.value)
+        }
+        
+        return availableColors[abs(hash) % availableColors.count]
     }
     
     // MARK: - Source Display Helpers
