@@ -47,39 +47,6 @@ Shiori Reader is an iOS application designed for Japanese language learners to r
 - SQLite (dictionary backend)
 - Anki Integration
 
-## Getting Started
-
-**Recommended:** [Download from the App Store](https://apps.apple.com/us/app/shiori-reader/id6744979827)
-
-### Local Development (Optional)
-
-If you want to build from source:
-
-#### Prerequisites
-
-- Xcode 15+
-- iOS 17+
-- AnkiMobile (optional, for Anki export)
-
-#### Installation
-
-1. Clone the repository
-2. Open `Shiori Reader.xcodeproj` in Xcode
-3. Install dependencies via Swift Package Manager
-4. Build and run on simulator or device
-
-## Configuration
-
-### Dictionary
-
-- Pre-configured JMdict database
-- Deinflection rules for comprehensive Japanese word lookup
-
-### Anki Integration
-
-- Configure note types and field mappings
-- Customize export settings
-
 ## Issues & Support
 
 If you run into a bug or have a feature request, feel free to open an issue!
@@ -112,14 +79,6 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## Credits
 
 Created by Russell Graviet
-
-## Roadmap
-
-- [ ] Enhanced dictionary caching
-- [ ] More theme options
-- [ ] Cloud sync for saved words
-- [ ] Machine translation integration
-- [ ] Improved Anki sync
 
 ## Disclaimer
 
