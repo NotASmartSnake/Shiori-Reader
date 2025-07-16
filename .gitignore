@@ -1,7 +1,7 @@
 # Ignore Claude files
 .claudesync/
 .claudeignore
-.claude
+.claude/
 
 # Ignore macOS system files
 .DS_Store
