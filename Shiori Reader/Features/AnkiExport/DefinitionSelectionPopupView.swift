@@ -47,12 +47,6 @@ struct DefinitionSelectionPopupView: View {
                         .foregroundColor(.blue)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
-//                Text("Select definitions from each dictionary to add to your Anki card:")
-//                    .font(.subheadline)
-//                    .foregroundColor(.secondary)
-//                    .multilineTextAlignment(.leading)
-//                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
