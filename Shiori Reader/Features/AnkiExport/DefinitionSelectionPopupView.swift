@@ -15,7 +15,7 @@ struct DefinitionSelectionPopupView: View {
     let onDefinitionsSelected: ([String: [String]]) -> Void
     let onCancel: () -> Void
     
-    @State private var selectedDefinitions: [String: Set<String>] = [:]
+    @State private var selectedDefinitions: [String: [String]] = [:]
     
     var body: some View {
         VStack(spacing: 0) {
@@ -150,9 +150,8 @@ struct DefinitionSelectionPopupView: View {
                     .cornerRadius(8)
                     
                     Button("Add to Anki") {
-                        // Convert Set<String> to [String] for each source
-                        let definitionsArray = selectedDefinitions.mapValues { Array($0) }
-                        onDefinitionsSelected(definitionsArray)
+                        // selectedDefinitions is already [String: [String]]
+                        onDefinitionsSelected(selectedDefinitions)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -174,7 +173,7 @@ struct DefinitionSelectionPopupView: View {
         .onAppear {
             // Pre-select ALL definitions from each dictionary by default
             for dictionaryDef in availableDefinitions {
-                selectedDefinitions[dictionaryDef.source] = Set(dictionaryDef.definitions)
+                selectedDefinitions[dictionaryDef.source] = dictionaryDef.definitions
             }
         }
     }
@@ -199,23 +198,36 @@ struct DefinitionSelectionPopupView: View {
     
     private func toggleDefinitionSelection(for source: String, definition: String) {
         if selectedDefinitions[source] == nil {
-            selectedDefinitions[source] = Set<String>()
+            selectedDefinitions[source] = []
         }
         
         if selectedDefinitions[source]!.contains(definition) {
-            selectedDefinitions[source]!.remove(definition)
+            selectedDefinitions[source]!.removeAll { $0 == definition }
         } else {
-            selectedDefinitions[source]!.insert(definition)
+            // Find the source definitions to maintain original order
+            if let sourceDefinitions = availableDefinitions.first(where: { $0.source == source })?.definitions {
+                // Rebuild the selection array maintaining the original order
+                var newSelection: [String] = []
+                for originalDef in sourceDefinitions {
+                    if originalDef == definition || selectedDefinitions[source]!.contains(originalDef) {
+                        newSelection.append(originalDef)
+                    }
+                }
+                selectedDefinitions[source] = newSelection
+            } else {
+                // Fallback to append if we can't find the source
+                selectedDefinitions[source]!.append(definition)
+            }
         }
     }
     
     private func toggleAllDefinitions(for source: String, definitions: [String]) {
         if isAllSelected(for: source, totalCount: definitions.count) {
             // Deselect all
-            selectedDefinitions[source] = Set<String>()
+            selectedDefinitions[source] = []
         } else {
             // Select all
-            selectedDefinitions[source] = Set(definitions)
+            selectedDefinitions[source] = definitions
         }
     }
     
