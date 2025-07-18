@@ -24,6 +24,7 @@ Books/
 
 # Documentation
 Documentation/
+Features/DictionaryImport/Reference/
 
 # Ignore binary or local databases
 *.db
