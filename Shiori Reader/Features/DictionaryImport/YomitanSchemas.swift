@@ -185,6 +185,10 @@ struct YomitanStructuredContent: Codable {
     let type: String?
     let content: YomitanStructuredContentData?
     let text: String?
+    let tag: String?
+    let path: String?
+    let collapsed: Bool?
+    let collapsible: Bool?
     
     func flattenToText() -> String {
         if let text = text {
@@ -195,6 +199,11 @@ struct YomitanStructuredContent: Codable {
             return content.flattenToText()
         }
         
+        // For image tags, return empty string or alt text
+        if tag == "img" {
+            return "[Image: \(path ?? "unknown")]"
+        }
+        
         return ""
     }
 }
@@ -202,14 +211,14 @@ struct YomitanStructuredContent: Codable {
 /// Content data for structured content
 enum YomitanStructuredContentData: Codable {
     case string(String)
-    case array([YomitanStructuredContent])
+    case array([YomitanStructuredContentElement])
     
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         
         if let stringValue = try? container.decode(String.self) {
             self = .string(stringValue)
-        } else if let arrayValue = try? container.decode([YomitanStructuredContent].self) {
+        } else if let arrayValue = try? container.decode([YomitanStructuredContentElement].self) {
             self = .array(arrayValue)
         } else {
             throw DecodingError.typeMismatch(YomitanStructuredContentData.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Could not decode YomitanStructuredContentData"))
@@ -233,6 +242,44 @@ enum YomitanStructuredContentData: Codable {
             return value
         case .array(let values):
             return values.map { $0.flattenToText() }.joined(separator: " ")
+        }
+    }
+}
+
+/// Element in structured content that can be either a string or structured content object
+enum YomitanStructuredContentElement: Codable {
+    case string(String)
+    case structured(YomitanStructuredContent)
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        
+        if let stringValue = try? container.decode(String.self) {
+            self = .string(stringValue)
+        } else if let structuredValue = try? container.decode(YomitanStructuredContent.self) {
+            self = .structured(structuredValue)
+        } else {
+            throw DecodingError.typeMismatch(YomitanStructuredContentElement.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Could not decode YomitanStructuredContentElement"))
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        
+        switch self {
+        case .string(let value):
+            try container.encode(value)
+        case .structured(let value):
+            try container.encode(value)
+        }
+    }
+    
+    func flattenToText() -> String {
+        switch self {
+        case .string(let value):
+            return value
+        case .structured(let content):
+            return content.flattenToText()
         }
     }
 }

@@ -179,8 +179,16 @@ class YomitanDictionaryImporter {
             return index
             
         } catch let decodingError as DecodingError {
+            let jsonString = String(data: data, encoding: .utf8) ?? "<unable to decode data as UTF-8>"
+            print("❌ Failed to parse index.json:")
+            print("   Error: \(decodingError.localizedDescription)")
+            print("   JSON content: \(jsonString.prefix(500))...")
             throw YomitanImportError.invalidIndexFile(decodingError.localizedDescription)
         } catch {
+            let jsonString = String(data: data, encoding: .utf8) ?? "<unable to decode data as UTF-8>"
+            print("❌ Failed to parse index.json:")
+            print("   Error: \(error.localizedDescription)")
+            print("   JSON content: \(jsonString.prefix(500))...")
             throw YomitanImportError.invalidIndexFile(error.localizedDescription)
         }
     }
@@ -306,6 +314,13 @@ class YomitanDictionaryImporter {
             return processedTerms
             
         } catch {
+            let jsonString = String(data: data, encoding: .utf8) ?? "<unable to decode data as UTF-8>"
+            print("❌ Failed to parse term bank JSON:")
+            print("   Error: \(error.localizedDescription)")
+            print("   JSON content (first 500 chars): \(jsonString.prefix(500))...")
+            if let decodingError = error as? DecodingError {
+                print("   Decoding error details: \(decodingError)")
+            }
             throw YomitanImportError.invalidJSONFile("term_bank", error)
         }
     }
@@ -326,6 +341,13 @@ class YomitanDictionaryImporter {
             return processedTags
             
         } catch {
+            let jsonString = String(data: data, encoding: .utf8) ?? "<unable to decode data as UTF-8>"
+            print("❌ Failed to parse tag bank JSON:")
+            print("   Error: \(error.localizedDescription)")
+            print("   JSON content (first 500 chars): \(jsonString.prefix(500))...")
+            if let decodingError = error as? DecodingError {
+                print("   Decoding error details: \(decodingError)")
+            }
             throw YomitanImportError.invalidJSONFile("tag_bank", error)
         }
     }
@@ -346,6 +368,13 @@ class YomitanDictionaryImporter {
             return processedTermMeta
             
         } catch {
+            let jsonString = String(data: data, encoding: .utf8) ?? "<unable to decode data as UTF-8>"
+            print("❌ Failed to parse term meta bank JSON:")
+            print("   Error: \(error.localizedDescription)")
+            print("   JSON content (first 500 chars): \(jsonString.prefix(500))...")
+            if let decodingError = error as? DecodingError {
+                print("   Decoding error details: \(decodingError)")
+            }
             throw YomitanImportError.invalidJSONFile("term_meta_bank", error)
         }
     }
