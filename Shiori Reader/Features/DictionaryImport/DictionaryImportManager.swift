@@ -214,6 +214,67 @@ class DictionaryImportManager: ObservableObject {
         throw ImportError.unsupportedJSONFormat("JSON format not recognized. Only single JSON dictionaries with term/definition format are currently supported.")
     }
     
+    /// Check if a term contains only hiragana characters
+    private func isHiraganaOnly(_ text: String) -> Bool {
+        guard !text.isEmpty else { return false }
+        
+        let hiraganaRange = 0x3040...0x309F
+        
+        for scalar in text.unicodeScalars {
+            let value = Int(scalar.value)
+            if !hiraganaRange.contains(value) {
+                return false
+            }
+        }
+        
+        return true
+    }
+    
+    /// Extract kanji from definition HTML (e.g., "[愛]" or "[会い|逢い]")
+    private func extractKanjiFromDefinition(_ definition: String) -> [String] {
+        // Look for pattern like <b>term</b>[kanji] or <b>term</b>[kanji1|kanji2]
+        let pattern = #"<b>[^<]+</b>\[([^\]]+)\]"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return []
+        }
+        
+        let range = NSRange(definition.startIndex..., in: definition)
+        guard let match = regex.firstMatch(in: definition, options: [], range: range),
+              match.numberOfRanges > 1 else {
+            return []
+        }
+        
+        let kanjiRange = Range(match.range(at: 1), in: definition)!
+        let kanjiString = String(definition[kanjiRange])
+        
+        // Split on "|" for multiple variants and clean up
+        return kanjiString.components(separatedBy: "|")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .compactMap { cleanKanjiExpression($0) }
+            .filter { !$0.isEmpty }
+    }
+    
+    /// Clean kanji expression by removing Korean annotations and other noise
+    private func cleanKanjiExpression(_ expression: String) -> String? {
+        // Remove Korean annotations like "(인명용 한자)" 
+        let cleanedExpression = expression
+            .replacingOccurrences(of: #"\([^)]*한자[^)]*\)"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Return nil if the cleaned expression is empty or has no kanji/hiragana/katakana
+        guard !cleanedExpression.isEmpty,
+              cleanedExpression.unicodeScalars.contains(where: { scalar in
+                  let value = Int(scalar.value)
+                  return (0x3040...0x309F).contains(value) ||  // Hiragana
+                         (0x30A0...0x30FF).contains(value) ||  // Katakana
+                         (0x4E00...0x9FFF).contains(value)     // Kanji
+              }) else {
+            return nil
+        }
+        
+        return cleanedExpression
+    }
+    
     /// Convert single JSON dictionary format to Yomitan ZIP
     private func convertSingleJSONToYomitanZip(entries: [[String: Any]], filename: String) throws -> Data {
         // Extract dictionary name from filename
@@ -255,19 +316,54 @@ class DictionaryImportManager: ObservableObject {
                 .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             
-            // Create Yomitan V3 format: [expression, reading, definitionTags, rules, score, glossary, sequence, termTags]
-            let yomitanTerm: [Any] = [
-                term,                    // expression
-                reading,                 // reading
-                pos.isEmpty ? "" : pos,  // definitionTags
-                "",                      // rules
-                0,                       // score
-                [cleanDefinition],       // glossary (array of definitions)
-                0,                       // sequence
-                ""                       // termTags
-            ]
-            
-            yomitanTerms.append(yomitanTerm)
+            // Check if term is hiragana-only and try to extract kanji from definition
+            if isHiraganaOnly(term) && altterm.isEmpty {
+                let extractedKanji = extractKanjiFromDefinition(definition)
+                
+                if !extractedKanji.isEmpty {
+                    // Create separate entries for each kanji variant
+                    for kanjiExpression in extractedKanji {
+                        let yomitanTerm: [Any] = [
+                            kanjiExpression,         // expression (kanji)
+                            term,                    // reading (original hiragana)
+                            pos.isEmpty ? "" : pos,  // definitionTags
+                            "",                      // rules
+                            0,                       // score
+                            [cleanDefinition],       // glossary (array of definitions)
+                            0,                       // sequence
+                            ""                       // termTags
+                        ]
+                        yomitanTerms.append(yomitanTerm)
+                    }
+                    print("📝 Extracted kanji variants for '\(term)': \(extractedKanji)")
+                } else {
+                    // No kanji found, create entry with original hiragana term
+                    let yomitanTerm: [Any] = [
+                        term,                    // expression
+                        reading,                 // reading
+                        pos.isEmpty ? "" : pos,  // definitionTags
+                        "",                      // rules
+                        0,                       // score
+                        [cleanDefinition],       // glossary (array of definitions)
+                        0,                       // sequence
+                        ""                       // termTags
+                    ]
+                    yomitanTerms.append(yomitanTerm)
+                }
+            } else {
+                // Term is not hiragana-only or has altterm, use standard processing
+                let yomitanTerm: [Any] = [
+                    term,                    // expression
+                    reading,                 // reading
+                    pos.isEmpty ? "" : pos,  // definitionTags
+                    "",                      // rules
+                    0,                       // score
+                    [cleanDefinition],       // glossary (array of definitions)
+                    0,                       // sequence
+                    ""                       // termTags
+                ]
+                yomitanTerms.append(yomitanTerm)
+            }
         }
         
         print("✅ Converted \(yomitanTerms.count) terms successfully")
