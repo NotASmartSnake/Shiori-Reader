@@ -75,7 +75,7 @@ extension DictionaryManager {
     /// Lookup from imported dictionaries only
     func lookupImportedDictionaries(word: String) -> [DictionaryEntry] {
         var allEntries: [DictionaryEntry] = []
-        let enabledDictionaries = getAllEnabledDictionaries()
+        let enabledDictionaries = getEnabledDictionaries()
         
         for (dictionaryKey, queue) in Self.importedDictionaryQueues {
             guard enabledDictionaries.contains(dictionaryKey) else { continue }

@@ -57,7 +57,7 @@ class DictionaryManager {
     }
     
     /// Get currently enabled dictionaries from user settings
-    private func getEnabledDictionaries() -> [String] {
+    func getEnabledDictionaries() -> [String] {
         // Simple struct to decode settings
         struct SimpleDictionarySettings: Codable {
             var enabledDictionaries: [String]
