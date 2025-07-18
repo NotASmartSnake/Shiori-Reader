@@ -283,30 +283,12 @@ class AnkiExportService {
     private func getDefinitionsBySource(from entries: [DictionaryEntry]) -> [String: [String]] {
         var definitionsBySource: [String: [String]] = [:]
         
-        print("🔍 AnkiExport: Processing \(entries.count) dictionary entries for ordering")
-        
-        for (index, entry) in entries.enumerated() {
-            print("📖 Entry \(index): source=\(entry.source), meanings=\(entry.meanings.count)")
-            print("   Term: '\(entry.term)' Reading: '\(entry.reading)'")
-            print("   Meanings order: \(entry.meanings.prefix(3).map { "[\($0.prefix(50))]" })")
-            
+        for entry in entries {
             if definitionsBySource[entry.source] == nil {
                 definitionsBySource[entry.source] = []
-                print("   🆕 First entry for source \(entry.source)")
-            } else {
-                print("   ➕ Adding to existing source \(entry.source) (current count: \(definitionsBySource[entry.source]?.count ?? 0))")
             }
             
-            let beforeCount = definitionsBySource[entry.source]?.count ?? 0
             definitionsBySource[entry.source]?.append(contentsOf: entry.meanings)
-            let afterCount = definitionsBySource[entry.source]?.count ?? 0
-            print("   📊 Source \(entry.source): \(beforeCount) -> \(afterCount) definitions")
-        }
-        
-        print("📝 Final definitions by source:")
-        for (source, definitions) in definitionsBySource {
-            print("   \(source): \(definitions.count) definitions")
-            print("   Order: \(definitions.prefix(3).map { "[\($0.prefix(50))]" })")
         }
         
         return definitionsBySource
