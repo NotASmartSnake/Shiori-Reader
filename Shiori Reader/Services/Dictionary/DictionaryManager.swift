@@ -126,8 +126,7 @@ class DictionaryManager {
         
         do {
             try db.read { db in
-                // Query terms that match the word (either expression or reading)
-                // Updated to work with consolidated terms table
+                // Simple query that matches both expression and reading
                 let rows = try Row.fetchAll(db, sql: """
                     SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
                     FROM terms

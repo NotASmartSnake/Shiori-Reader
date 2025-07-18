@@ -137,14 +137,13 @@ extension DictionaryManager {
         
         do {
             try queue.read { db in
-                // Only exact match - same as built-in dictionaries
+                // Simple query - same as built-in dictionaries
                 let rows = try Row.fetchAll(db, sql: """
                     SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
                     FROM terms
                     WHERE expression = ? OR reading = ?
                     ORDER BY id
                     """, arguments: [word, word])
-                
                 
                 for row in rows {
                     let termId = row["id"] as? Int64 ?? 0
@@ -184,6 +183,7 @@ extension DictionaryManager {
                 }
             }
         } catch {
+            // Log error but continue
         }
         
         return entries
