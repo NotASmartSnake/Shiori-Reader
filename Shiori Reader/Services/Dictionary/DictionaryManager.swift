@@ -209,8 +209,8 @@ class DictionaryManager {
                         popularity = 0.0
                     }
                     
-                    // For Obunsha, keep definitions as single entries (long definitions)
-                    let meanings = [definitionsText].filter { !$0.isEmpty }
+                    // Split definitions by newline separator (same as imported dictionaries)
+                    let meanings = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
                     
                     // Create a new entry
                     let entry = createDictionaryEntry(
@@ -601,8 +601,8 @@ class DictionaryManager {
                         popularity = 0.0
                     }
                     
-                    // For Obunsha, keep definitions as single entries
-                    let definitions = [definitionsText].filter { !$0.isEmpty }
+                    // Split definitions by newline separator (same as imported dictionaries)
+                    let definitions = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
                     
                     let entry = createDictionaryEntry(
                         id: "obunsha_\(termId)",
@@ -769,8 +769,8 @@ class DictionaryManager {
                         popularity = 0.0
                     }
                     
-                    // For Obunsha, keep definitions as single entries
-                    let definitions = [definitionsText].filter { !$0.isEmpty }
+                    // Split definitions by newline separator (same as imported dictionaries)
+                    let definitions = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
                     
                     let entry = createDictionaryEntry(
                         id: "obunsha_\(termId)",

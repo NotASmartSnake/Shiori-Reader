@@ -181,21 +181,15 @@ struct DictionaryPopupCardView: View {
                                                 Spacer()
                                             }
                                             
-                                            // Meanings from this source
+                                            // All dictionaries treated identically - no special obunsha logic
                                             ForEach(sourceEntries.flatMap { $0.meanings }.indices, id: \.self) { meaningIndex in
                                                 let meaning = sourceEntries.flatMap { $0.meanings }[meaningIndex]
                                                 let definitionId = "\(entry.id)_\(source)_\(meaningIndex)"
                                                 let isExpanded = expandedDefinitions.contains(definitionId)
                                                 
-                                                let lineLimit = if source == "obunsha" || source.hasPrefix("imported_") {
-                                                    isExpanded ? nil : 2
-                                                } else {
-                                                    isExpanded ? nil : 1
-                                                }
-                                                
                                                 Text(meaning)
                                                     .font(.body)
-                                                    .lineLimit(lineLimit)
+                                                    .lineLimit(isExpanded ? nil : 1)
                                                     .padding(.leading, 8)
                                                     .contentShape(Rectangle())
                                                     .onTapGesture {
