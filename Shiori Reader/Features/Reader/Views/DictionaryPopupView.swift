@@ -24,6 +24,7 @@ struct DictionaryPopupView: View {
     @State private var pendingEntryToSave: DictionaryEntry? = nil
     @State private var expandedDefinitions: Set<String> = [] // Track which definitions are expanded
     @State private var showingAllEntries = false // Track if showing all entries or just the first few
+    @State private var collapsedSources: Set<String> = [] // Track which dictionary sources are collapsed
     @EnvironmentObject private var wordsManager: SavedWordsManager
     
     private let initialEntriesLimit = 20 // Show first 20 entries initially
@@ -175,6 +176,9 @@ struct DictionaryPopupView: View {
                                 
                                 ForEach(sourceOrder, id: \.self) { source in
                                     if let sourceEntries = entriesBySource[source], !sourceEntries.isEmpty {
+                                        let sourceId = "\(entry.term)_\(entry.reading)_\(source)"
+                                        let isSourceCollapsed = collapsedSources.contains(sourceId)
+                                        
                                         VStack(alignment: .leading, spacing: 4) {
                                             // Dictionary source badge
                                             HStack {
@@ -182,29 +186,44 @@ struct DictionaryPopupView: View {
                                                 Spacer()
                                             }
                                             
-                                            // All dictionaries treated identically - no special obunsha logic
-                                            ForEach(sourceEntries.flatMap { $0.meanings }.indices, id: \.self) { meaningIndex in
-                                                let meaning = sourceEntries.flatMap { $0.meanings }[meaningIndex]
-                                                let definitionId = "\(entry.id)_\(source)_\(meaningIndex)"
-                                                let isExpanded = expandedDefinitions.contains(definitionId)
-                                                
-                                                Text(meaning)
-                                                    .font(.body)
-                                                    .lineLimit(isExpanded ? nil : 1)
-                                                    .padding(.leading, 8)
-                                                    .contentShape(Rectangle())
-                                                    .onTapGesture {
-                                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                                            if isExpanded {
-                                                                expandedDefinitions.remove(definitionId)
-                                                            } else {
-                                                                expandedDefinitions.insert(definitionId)
+                                            if !isSourceCollapsed {
+                                                // All dictionaries treated identically - no special obunsha logic
+                                                ForEach(sourceEntries.flatMap { $0.meanings }.indices, id: \.self) { meaningIndex in
+                                                    let meaning = sourceEntries.flatMap { $0.meanings }[meaningIndex]
+                                                    let definitionId = "\(entry.id)_\(source)_\(meaningIndex)"
+                                                    let isExpanded = expandedDefinitions.contains(definitionId)
+                                                    
+                                                    Text(meaning)
+                                                        .font(.body)
+                                                        .lineLimit(isExpanded ? nil : 1)
+                                                        .padding(.leading, 8)
+                                                        .contentShape(Rectangle())
+                                                        .onTapGesture {
+                                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                                if isExpanded {
+                                                                    expandedDefinitions.remove(definitionId)
+                                                                } else {
+                                                                    expandedDefinitions.insert(definitionId)
+                                                                }
                                                             }
                                                         }
-                                                    }
+                                                }
                                             }
                                         }
                                         .padding(.bottom, 4)
+                                        .contentShape(Rectangle())
+                                        .onLongPressGesture {
+                                            let impact = UIImpactFeedbackGenerator(style: .medium)
+                                            impact.impactOccurred()
+                                            
+                                            withAnimation(.easeInOut(duration: 0.3)) {
+                                                if isSourceCollapsed {
+                                                    collapsedSources.remove(sourceId)
+                                                } else {
+                                                    collapsedSources.insert(sourceId)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                                 
