@@ -414,6 +414,7 @@ struct DictionaryPopupCardView: View {
     
     // MARK: - Helper Functions
     
+    
     private func toggleAllSourcesForTerm(_ term: String, reading: String) {
         // Get all available sources for this term-reading combination
         let entriesBySource = Dictionary(grouping: getAllEntriesForTerm(term, reading: reading, from: matches)) { $0.source }
@@ -451,7 +452,55 @@ struct DictionaryPopupCardView: View {
             }
         }
         
-        return mergedEntries
+        // Now apply post-grouping sorting to fix just the JMnedict and no-reading issues
+        return mergedEntries.sorted { first, second in
+            // 1. Prioritize entries with readings over no reading
+            let firstHasReading = !first.reading.isEmpty && first.reading != first.term
+            let secondHasReading = !second.reading.isEmpty && second.reading != second.term
+            if firstHasReading != secondHasReading {
+                return firstHasReading
+            }
+            
+            // 2. Among entries with readings, prioritize non-JMnedict entries
+            if firstHasReading && secondHasReading {
+                let firstIsJMnedict = isJMnedictEntry(first)
+                let secondIsJMnedict = isJMnedictEntry(second)
+                if firstIsJMnedict != secondIsJMnedict {
+                    return !firstIsJMnedict
+                }
+            }
+            
+            // 3. Preserve original order for everything else
+            return false
+        }
+    }
+    
+    private func isJMnedictEntry(_ entry: DictionaryEntry) -> Bool {
+        // Check if this term-reading combination ONLY has JMnedict definitions
+        let allEntries = getAllEntriesForTerm(entry.term, reading: entry.reading, from: matches)
+        let entriesBySource = Dictionary(grouping: allEntries) { $0.source }
+        
+        // Check if we have any non-JMnedict sources
+        for (source, _) in entriesBySource {
+            if source == "jmdict" || source == "obunsha" {
+                // Built-in dictionary sources - not JMnedict-only
+                return false
+            } else if source.hasPrefix("imported_") {
+                let importedId = source.replacingOccurrences(of: "imported_", with: "")
+                if let uuid = UUID(uuidString: importedId) {
+                    let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+                    if let dict = importedDictionaries.first(where: { $0.id == uuid }) {
+                        if !dict.title.lowercased().contains("jmnedict") {
+                            // Non-JMnedict imported dictionary - not JMnedict-only
+                            return false
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If we get here, all sources are JMnedict
+        return true
     }
     
     private func exportToAnki(_ entry: DictionaryEntry) {
