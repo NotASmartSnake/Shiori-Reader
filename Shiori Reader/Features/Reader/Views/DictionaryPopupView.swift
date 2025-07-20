@@ -154,6 +154,15 @@ struct DictionaryPopupView: View {
                                     .layoutPriority(1) // Also give buttons high priority
                                 }
                                 .padding(.vertical, 4)
+                                .contentShape(Rectangle())
+                                .onLongPressGesture {
+                                    let impact = UIImpactFeedbackGenerator(style: .medium)
+                                    impact.impactOccurred()
+                                    
+                                    withAnimation(.easeInOut(duration: 0.3)) {
+                                        toggleAllSourcesForTerm(entry.term, reading: entry.reading)
+                                    }
+                                }
                                 
                                 // Display frequency data if available
                                 if let frequencyRank = entry.frequencyRankString {
@@ -399,6 +408,23 @@ struct DictionaryPopupView: View {
     }
     
     // MARK: - Helper Functions
+    
+    private func toggleAllSourcesForTerm(_ term: String, reading: String) {
+        // Get all available sources for this term-reading combination
+        let entriesBySource = Dictionary(grouping: getAllEntriesForTerm(term, reading: reading, from: matches)) { $0.source }
+        let sourceIds = entriesBySource.keys.map { "\(term)_\(reading)_\($0)" }
+        
+        // Check if any sources are currently expanded (not collapsed)
+        let hasExpandedSources = sourceIds.contains { !collapsedSources.contains($0) }
+        
+        if hasExpandedSources {
+            // If any are expanded, collapse all
+            sourceIds.forEach { collapsedSources.insert($0) }
+        } else {
+            // If all are collapsed, expand all
+            sourceIds.forEach { collapsedSources.remove($0) }
+        }
+    }
     
     private func groupAndMergeEntries(_ entries: [DictionaryEntry]) -> [DictionaryEntry] {
         // Group entries by term-reading combination, keeping one representative per group
