@@ -650,8 +650,7 @@ struct DictionaryPopupView: View {
     
     private func getOrderedDictionarySources(availableSources: [String]) -> [String] {
         // Get the user's preferred dictionary order from settings
-        let viewModel = DictionarySettingsViewModel()
-        let orderedSources = viewModel.getOrderedDictionarySources()
+        let orderedSources = DictionaryColorProvider.shared.getOrderedDictionarySources()
         
         // Filter to only include sources that are available in this lookup
         var result: [String] = []
@@ -676,25 +675,26 @@ struct DictionaryPopupView: View {
     
     @ViewBuilder
     private func getDictionarySourceBadge(for source: String) -> some View {
+        let color = getDictionaryColor(for: source)
+        
         if source == "obunsha" {
             Text("旺文社")
                 .font(.caption2)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
-                .background(Color.orange.opacity(0.2))
-                .foregroundColor(.orange)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
                 .cornerRadius(4)
         } else if source == "jmdict" {
             Text("JMdict")
                 .font(.caption2)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
-                .background(Color.blue.opacity(0.2))
-                .foregroundColor(.blue)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
                 .cornerRadius(4)
         } else if source.hasPrefix("imported_") {
             let displayName = getImportedDictionaryDisplayName(source: source)
-            let color = getImportedDictionaryColor(source: source)
             
             Text(displayName)
                 .font(.caption2)
@@ -704,5 +704,9 @@ struct DictionaryPopupView: View {
                 .foregroundColor(color)
                 .cornerRadius(4)
         }
+    }
+    
+    private func getDictionaryColor(for source: String) -> Color {
+        return DictionaryColorProvider.shared.getColor(for: source)
     }
 }

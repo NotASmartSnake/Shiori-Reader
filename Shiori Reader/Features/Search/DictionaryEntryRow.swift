@@ -86,36 +86,40 @@ struct DictionaryEntryRow: View {
                 }
                 
                 if entry.source == "obunsha" {
+                    let color = getDictionaryColor(for: "obunsha")
                     Text("旺文社")
                         .font(.caption2)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1)
-                        .background(Color.orange.opacity(0.2))
-                        .foregroundColor(.orange)
+                        .background(color.opacity(0.2))
+                        .foregroundColor(color)
                         .cornerRadius(4)
                 } else if entry.source == "jmdict" {
+                    let color = getDictionaryColor(for: "jmdict")
                     Text("JMdict")
                         .font(.caption2)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1)
-                        .background(Color.blue.opacity(0.2))
-                        .foregroundColor(.blue)
+                        .background(color.opacity(0.2))
+                        .foregroundColor(color)
                         .cornerRadius(4)
                 } else if entry.source == "combined" {
+                    let jmdictColor = getDictionaryColor(for: "jmdict")
+                    let obunshaColor = getDictionaryColor(for: "obunsha")
                     HStack(spacing: 4) {
                         Text("JMdict")
                             .font(.caption2)
                             .padding(.horizontal, 3)
                             .padding(.vertical, 1)
-                            .background(Color.blue.opacity(0.2))
-                            .foregroundColor(.blue)
+                            .background(jmdictColor.opacity(0.2))
+                            .foregroundColor(jmdictColor)
                             .cornerRadius(3)
                         Text("旺文社")
                             .font(.caption2)
                             .padding(.horizontal, 3)
                             .padding(.vertical, 1)
-                            .background(Color.orange.opacity(0.2))
-                            .foregroundColor(.orange)
+                            .background(obunshaColor.opacity(0.2))
+                            .foregroundColor(obunshaColor)
                             .cornerRadius(3)
                     }
                 }
@@ -138,5 +142,9 @@ struct DictionaryEntryRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+    
+    private func getDictionaryColor(for source: String) -> Color {
+        return DictionaryColorProvider.shared.getColor(for: source)
     }
 }

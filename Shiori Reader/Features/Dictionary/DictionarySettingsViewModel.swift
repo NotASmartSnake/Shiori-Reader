@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import SwiftUI
 
 class DictionarySettingsViewModel: ObservableObject {
     // Published properties for UI binding
@@ -35,7 +36,8 @@ class DictionarySettingsViewModel: ObservableObject {
                 description: "English-Japanese bilingual dictionary",
                 isBuiltIn: true,
                 isEnabled: true,
-                canDisable: true
+                canDisable: true,
+                tagColor: .blue
             ),
             DictionaryInfo(
                 id: "obunsha",
@@ -43,7 +45,8 @@ class DictionarySettingsViewModel: ObservableObject {
                 description: "Japanese-Japanese monolingual dictionary",
                 isBuiltIn: true,
                 isEnabled: true,
-                canDisable: true
+                canDisable: true,
+                tagColor: .orange
             ),
             DictionaryInfo(
                 id: "bccwj",
@@ -51,7 +54,8 @@ class DictionarySettingsViewModel: ObservableObject {
                 description: "Word frequency rankings from Japanese corpus",
                 isBuiltIn: true,
                 isEnabled: true,
-                canDisable: true
+                canDisable: true,
+                tagColor: .green
             )
         ]
         
@@ -77,6 +81,11 @@ class DictionarySettingsViewModel: ObservableObject {
             let dictionaryId = availableDictionaries[index].id
             let isEnabled = settings.enabledDictionaries.contains(dictionaryId)
             availableDictionaries[index].isEnabled = isEnabled
+            
+            // Update color from settings if available
+            if let savedColor = settings.dictionaryColors[dictionaryId] {
+                availableDictionaries[index].tagColor = savedColor
+            }
             
             // All dictionaries can be disabled - no restrictions
             availableDictionaries[index].canDisable = true
@@ -240,19 +249,35 @@ class DictionarySettingsViewModel: ObservableObject {
         }
     }
     
+    func updateDictionaryColor(id: String, color: DictionaryTagColor) {
+        // Find the dictionary in our list
+        if let index = availableDictionaries.firstIndex(where: { $0.id == id }) {
+            // Update the entry
+            availableDictionaries[index].tagColor = color
+            
+            // Update the settings
+            var updatedSettings = settings
+            updatedSettings.dictionaryColors[id] = color
+            settings = updatedSettings
+            saveSettings()
+        }
+    }
+    
     // MARK: - Imported Dictionary Management
     
     func loadImportedDictionaries() {
         let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
         
         for importedDict in importedDictionaries {
+            let importedId = "imported_\(importedDict.id.uuidString)"
             let dictionaryInfo = DictionaryInfo(
-                id: "imported_\(importedDict.id.uuidString)",
+                id: importedId,
                 name: importedDict.title,
                 description: importedDict.detailText,
                 isBuiltIn: false,
-                isEnabled: settings.enabledDictionaries.contains("imported_\(importedDict.id.uuidString)"),
-                canDisable: true
+                isEnabled: settings.enabledDictionaries.contains(importedId),
+                canDisable: true,
+                tagColor: settings.dictionaryColors[importedId] ?? .gray
             )
             
             if !availableDictionaries.contains(dictionaryInfo) {
@@ -304,9 +329,48 @@ struct DictionaryInfo: Identifiable, Equatable {
     let isBuiltIn: Bool
     var isEnabled: Bool
     var canDisable: Bool
+    var tagColor: DictionaryTagColor
     
     static func == (lhs: DictionaryInfo, rhs: DictionaryInfo) -> Bool {
         return lhs.id == rhs.id
+    }
+}
+
+// Available colors for dictionary tags
+enum DictionaryTagColor: String, CaseIterable, Codable {
+    case blue = "blue"
+    case orange = "orange"
+    case green = "green"
+    case red = "red"
+    case purple = "purple"
+    case yellow = "yellow"
+    case pink = "pink"
+    case gray = "gray"
+    
+    var displayName: String {
+        switch self {
+        case .blue: return "Blue"
+        case .orange: return "Orange"
+        case .green: return "Green"
+        case .red: return "Red"
+        case .purple: return "Purple"
+        case .yellow: return "Yellow"
+        case .pink: return "Pink"
+        case .gray: return "Gray"
+        }
+    }
+    
+    var swiftUIColor: Color {
+        switch self {
+        case .blue: return .blue
+        case .orange: return .orange
+        case .green: return .green
+        case .red: return .red
+        case .purple: return .purple
+        case .yellow: return .yellow
+        case .pink: return .pink
+        case .gray: return .gray
+        }
     }
 }
 
@@ -314,13 +378,28 @@ struct DictionaryInfo: Identifiable, Equatable {
 struct DictionarySettings: Equatable, Codable {
     var enabledDictionaries: [String]
     var dictionaryOrder: [String]
+    var dictionaryColors: [String: DictionaryTagColor]
     
     static func == (lhs: DictionarySettings, rhs: DictionarySettings) -> Bool {
-        return lhs.enabledDictionaries == rhs.enabledDictionaries && lhs.dictionaryOrder == rhs.dictionaryOrder
+        return lhs.enabledDictionaries == rhs.enabledDictionaries && 
+               lhs.dictionaryOrder == rhs.dictionaryOrder &&
+               lhs.dictionaryColors == rhs.dictionaryColors
     }
     
-    init(enabledDictionaries: [String] = ["jmdict", "obunsha", "bccwj"], dictionaryOrder: [String] = ["jmdict", "obunsha"]) {
+    init(enabledDictionaries: [String] = ["jmdict", "obunsha", "bccwj"], 
+         dictionaryOrder: [String] = ["jmdict", "obunsha"],
+         dictionaryColors: [String: DictionaryTagColor] = [:]) {
         self.enabledDictionaries = enabledDictionaries
         self.dictionaryOrder = dictionaryOrder
+        // Set default colors if not provided
+        if dictionaryColors.isEmpty {
+            self.dictionaryColors = [
+                "jmdict": .blue,
+                "obunsha": .orange,
+                "bccwj": .green
+            ]
+        } else {
+            self.dictionaryColors = dictionaryColors
+        }
     }
 }

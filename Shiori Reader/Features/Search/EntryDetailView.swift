@@ -394,8 +394,7 @@ struct EntryDetailView: View {
     
     private func getOrderedDictionarySources(availableSources: [String]) -> [String] {
         // Get the user's preferred dictionary order from settings
-        let viewModel = DictionarySettingsViewModel()
-        let orderedSources = viewModel.getOrderedDictionarySources()
+        let orderedSources = DictionaryColorProvider.shared.getOrderedDictionarySources()
         
         // Filter to only include sources that are available in this lookup
         var result: [String] = []

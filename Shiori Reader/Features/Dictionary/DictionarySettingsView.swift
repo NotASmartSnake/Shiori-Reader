@@ -114,6 +114,47 @@ struct DictionarySettingsView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
+                
+                // Color preview and selection
+                HStack(spacing: 8) {
+                    Text("Tag Color:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    // Current color preview
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(dictionary.tagColor.swiftUIColor.opacity(0.2))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(dictionary.tagColor.swiftUIColor, lineWidth: 1)
+                        )
+                        .frame(width: 20, height: 16)
+                    
+                    // Color selection menu
+                    Menu {
+                        ForEach(DictionaryTagColor.allCases, id: \.self) { color in
+                            Button(action: {
+                                viewModel.updateDictionaryColor(id: dictionary.id, color: color)
+                            }) {
+                                HStack {
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(color.swiftUIColor)
+                                        .frame(width: 16, height: 12)
+                                    Text(color.displayName)
+                                    if color == dictionary.tagColor {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        Text(dictionary.tagColor.displayName)
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+                }
+                .padding(.top, 2)
             }
             
             Spacer()

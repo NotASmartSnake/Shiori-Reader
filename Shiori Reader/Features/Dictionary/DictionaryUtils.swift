@@ -17,7 +17,8 @@ extension DictionaryManager {
                 description: "Japanese-English dictionary",
                 isBuiltIn: true,
                 isEnabled: true,
-                canDisable: false
+                canDisable: false,
+                tagColor: .blue
             )
         ]
     }
