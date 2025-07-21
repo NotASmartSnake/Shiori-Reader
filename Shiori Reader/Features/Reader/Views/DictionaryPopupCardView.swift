@@ -153,15 +153,6 @@ struct DictionaryPopupCardView: View {
                                     }
                                 }
                                 .padding(.vertical, 4)
-                                .contentShape(Rectangle())
-                                .onLongPressGesture {
-                                    let impact = UIImpactFeedbackGenerator(style: .medium)
-                                    impact.impactOccurred()
-                                    
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        toggleAllSourcesForTerm(entry.term, reading: entry.reading)
-                                    }
-                                }
                                 
                                 // Display frequency data if available
                                 if let frequencyRank = entry.frequencyRankString {
@@ -193,6 +184,19 @@ struct DictionaryPopupCardView: View {
                                                 getDictionarySourceBadge(for: source)
                                                 Spacer()
                                             }
+                                            .contentShape(Rectangle())
+                                            .onTapGesture {
+                                                let impact = UIImpactFeedbackGenerator(style: .medium)
+                                                impact.impactOccurred()
+                                                
+                                                withAnimation(.easeInOut(duration: 0.3)) {
+                                                    if isSourceCollapsed {
+                                                        collapsedSources.remove(sourceId)
+                                                    } else {
+                                                        collapsedSources.insert(sourceId)
+                                                    }
+                                                }
+                                            }
                                             
                                             if !isSourceCollapsed {
                                                 // All dictionaries treated identically - no special obunsha logic
@@ -219,24 +223,20 @@ struct DictionaryPopupCardView: View {
                                             }
                                         }
                                         .padding(.bottom, 4)
-                                        .contentShape(Rectangle())
-                                        .onLongPressGesture {
-                                            let impact = UIImpactFeedbackGenerator(style: .medium)
-                                            impact.impactOccurred()
-                                            
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                if isSourceCollapsed {
-                                                    collapsedSources.remove(sourceId)
-                                                } else {
-                                                    collapsedSources.insert(sourceId)
-                                                }
-                                            }
-                                        }
                                     }
                                 }
                                 
                                 Divider()
                                     .padding(.vertical, 4)
+                            }
+                            .contentShape(Rectangle())
+                            .onLongPressGesture {
+                                let impact = UIImpactFeedbackGenerator(style: .medium)
+                                impact.impactOccurred()
+                                
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    toggleAllSourcesForTerm(entry.term, reading: entry.reading)
+                                }
                             }
                         }
                         

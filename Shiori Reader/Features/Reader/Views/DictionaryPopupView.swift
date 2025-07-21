@@ -154,15 +154,6 @@ struct DictionaryPopupView: View {
                                     .layoutPriority(1) // Also give buttons high priority
                                 }
                                 .padding(.vertical, 4)
-                                .contentShape(Rectangle())
-                                .onLongPressGesture {
-                                    let impact = UIImpactFeedbackGenerator(style: .medium)
-                                    impact.impactOccurred()
-                                    
-                                    withAnimation(.easeInOut(duration: 0.3)) {
-                                        toggleAllSourcesForTerm(entry.term, reading: entry.reading)
-                                    }
-                                }
                                 
                                 // Display frequency data if available
                                 if let frequencyRank = entry.frequencyRankString {
@@ -194,6 +185,19 @@ struct DictionaryPopupView: View {
                                                 getDictionarySourceBadge(for: source)
                                                 Spacer()
                                             }
+                                            .contentShape(Rectangle())
+                                            .onTapGesture {
+                                                let impact = UIImpactFeedbackGenerator(style: .medium)
+                                                impact.impactOccurred()
+                                                
+                                                withAnimation(.easeInOut(duration: 0.3)) {
+                                                    if isSourceCollapsed {
+                                                        collapsedSources.remove(sourceId)
+                                                    } else {
+                                                        collapsedSources.insert(sourceId)
+                                                    }
+                                                }
+                                            }
                                             
                                             if !isSourceCollapsed {
                                                 // All dictionaries treated identically - no special obunsha logic
@@ -220,24 +224,20 @@ struct DictionaryPopupView: View {
                                             }
                                         }
                                         .padding(.bottom, 4)
-                                        .contentShape(Rectangle())
-                                        .onLongPressGesture {
-                                            let impact = UIImpactFeedbackGenerator(style: .medium)
-                                            impact.impactOccurred()
-                                            
-                                            withAnimation(.easeInOut(duration: 0.3)) {
-                                                if isSourceCollapsed {
-                                                    collapsedSources.remove(sourceId)
-                                                } else {
-                                                    collapsedSources.insert(sourceId)
-                                                }
-                                            }
-                                        }
                                     }
                                 }
                                 
                                 Divider()
                                     .padding(.vertical, 4)
+                            }
+                            .contentShape(Rectangle())
+                            .onLongPressGesture {
+                                let impact = UIImpactFeedbackGenerator(style: .medium)
+                                impact.impactOccurred()
+                                
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    toggleAllSourcesForTerm(entry.term, reading: entry.reading)
+                                }
                             }
                         }
                         
