@@ -131,10 +131,11 @@ class DictionarySettingsViewModel: ObservableObject {
                     self.settings.enabledDictionaries.append("bccwj")
                     needsMigration = true
                 }
-                // Migrate dictionary order if it doesn't exist
+                // Set initial dictionary order if it doesn't exist (first run only)
                 if savedSettings.dictionaryOrder.isEmpty {
-                    print("📚 [SETTINGS] Migrating settings to include dictionary order")
-                    self.settings.dictionaryOrder = ["jmdict", "obunsha"]
+                    print("📚 [SETTINGS] Setting initial dictionary order")
+                    // Set initial order based on available dictionaries in default sequence
+                    self.settings.dictionaryOrder = availableDictionaries.map { $0.id }
                     needsMigration = true
                 }
                 if needsMigration {
@@ -191,7 +192,7 @@ class DictionarySettingsViewModel: ObservableObject {
         availableDictionaries.move(fromOffsets: source, toOffset: destination)
         
         // Update the dictionary order in settings
-        let newOrder = availableDictionaries.filter { ["jmdict", "obunsha"].contains($0.id) || $0.id.hasPrefix("imported_") }.map { $0.id }
+        let newOrder = availableDictionaries.map { $0.id }
         settings.dictionaryOrder = newOrder
         saveSettings()
     }
@@ -201,16 +202,7 @@ class DictionarySettingsViewModel: ObservableObject {
         availableDictionaries.sort { first, second in
             let firstIndex = order.firstIndex(of: first.id) ?? Int.max
             let secondIndex = order.firstIndex(of: second.id) ?? Int.max
-            
-            if firstIndex != secondIndex {
-                return firstIndex < secondIndex
-            }
-            
-            // If not in order, sort BCCWJ last and imported dictionaries by name
-            if first.id == "bccwj" { return false }
-            if second.id == "bccwj" { return true }
-            
-            return first.name < second.name
+            return firstIndex < secondIndex
         }
     }
     
@@ -263,6 +255,20 @@ class DictionarySettingsViewModel: ObservableObject {
         }
     }
     
+    /// Get an unused color for a new dictionary, or random if all are used
+    private func getUnusedColor() -> DictionaryTagColor {
+        let usedColors = Set(settings.dictionaryColors.values)
+        let availableColors = DictionaryTagColor.allCases.filter { !usedColors.contains($0) }
+        
+        if !availableColors.isEmpty {
+            // Return first unused color
+            return availableColors.first!
+        } else {
+            // All colors are used, return a random color
+            return DictionaryTagColor.allCases.randomElement() ?? .gray
+        }
+    }
+    
     // MARK: - Imported Dictionary Management
     
     func loadImportedDictionaries() {
@@ -270,6 +276,20 @@ class DictionarySettingsViewModel: ObservableObject {
         
         for importedDict in importedDictionaries {
             let importedId = "imported_\(importedDict.id.uuidString)"
+            
+            // Get color for this dictionary, assigning unique color if not set
+            let assignedColor: DictionaryTagColor
+            if let existingColor = settings.dictionaryColors[importedId] {
+                assignedColor = existingColor
+            } else {
+                assignedColor = getUnusedColor()
+                // Update settings with the new color
+                var updatedSettings = settings
+                updatedSettings.dictionaryColors[importedId] = assignedColor
+                settings = updatedSettings
+                saveSettings()
+            }
+            
             let dictionaryInfo = DictionaryInfo(
                 id: importedId,
                 name: importedDict.title,
@@ -277,11 +297,19 @@ class DictionarySettingsViewModel: ObservableObject {
                 isBuiltIn: false,
                 isEnabled: settings.enabledDictionaries.contains(importedId),
                 canDisable: true,
-                tagColor: settings.dictionaryColors[importedId] ?? .gray
+                tagColor: assignedColor
             )
             
             if !availableDictionaries.contains(dictionaryInfo) {
                 availableDictionaries.append(dictionaryInfo)
+                
+                // Add new dictionary to end of order list if not already there
+                if !settings.dictionaryOrder.contains(importedId) {
+                    var updatedSettings = settings
+                    updatedSettings.dictionaryOrder.append(importedId)
+                    settings = updatedSettings
+                    saveSettings()
+                }
             }
         }
         
@@ -387,7 +415,7 @@ struct DictionarySettings: Equatable, Codable {
     }
     
     init(enabledDictionaries: [String] = ["jmdict", "obunsha", "bccwj"], 
-         dictionaryOrder: [String] = ["jmdict", "obunsha"],
+         dictionaryOrder: [String] = [],
          dictionaryColors: [String: DictionaryTagColor] = [:]) {
         self.enabledDictionaries = enabledDictionaries
         self.dictionaryOrder = dictionaryOrder

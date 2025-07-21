@@ -154,8 +154,8 @@ struct DictionaryPopupCardView: View {
                                 }
                                 .padding(.vertical, 4)
                                 
-                                // Display frequency data if available
-                                if let frequencyRank = entry.frequencyRankString {
+                                // Display frequency data if available and BCCWJ is enabled
+                                if isBCCWJEnabled(), let frequencyRank = entry.frequencyRankString {
                                     HStack {
                                         Text(frequencyRank)
                                             .font(.caption2)
@@ -675,6 +675,21 @@ struct DictionaryPopupCardView: View {
     
     private func getDictionaryColor(for source: String) -> Color {
         return DictionaryColorProvider.shared.getColor(for: source)
+    }
+    
+    /// Check if BCCWJ frequency data is enabled in settings
+    private func isBCCWJEnabled() -> Bool {
+        // Simple struct to decode settings
+        struct SimpleDictionarySettings: Codable {
+            var enabledDictionaries: [String]
+        }
+        
+        if let data = UserDefaults.standard.data(forKey: "dictionarySettings"),
+           let settings = try? JSONDecoder().decode(SimpleDictionarySettings.self, from: data) {
+            return settings.enabledDictionaries.contains("bccwj")
+        }
+        // Default to true for backward compatibility
+        return true
     }
     
 }
