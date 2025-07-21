@@ -61,6 +61,9 @@ class DictionarySettingsViewModel: ObservableObject {
         // Load imported dictionaries
         loadImportedDictionaries()
         
+        // Sort dictionaries based on saved order
+        sortDictionariesByOrder()
+        
         // Sync the dictionary enabled state with settings
         syncDictionaryStatesWithSettings()
         
@@ -139,6 +142,12 @@ class DictionarySettingsViewModel: ObservableObject {
                     self.settings.enabledDictionaries.append("bccwj")
                     needsMigration = true
                 }
+                // Migrate dictionary order if it doesn't exist
+                if savedSettings.dictionaryOrder.isEmpty {
+                    print("📚 [SETTINGS] Migrating settings to include dictionary order")
+                    self.settings.dictionaryOrder = ["jmdict", "obunsha"]
+                    needsMigration = true
+                }
                 if needsMigration {
                     saveSettings()
                     print("📚 [SETTINGS] Migration completed")
@@ -169,6 +178,7 @@ class DictionarySettingsViewModel: ObservableObject {
         }
         
         // Re-sync the dictionary states with the refreshed settings
+        sortDictionariesByOrder()
         syncDictionaryStatesWithSettings()
     }
     
@@ -187,6 +197,42 @@ class DictionarySettingsViewModel: ObservableObject {
     }
     
     // MARK: - Dictionary Management
+    
+    func reorderDictionaries(from source: IndexSet, to destination: Int) {
+        availableDictionaries.move(fromOffsets: source, toOffset: destination)
+        
+        // Update the dictionary order in settings
+        let newOrder = availableDictionaries.filter { ["jmdict", "obunsha"].contains($0.id) || $0.id.hasPrefix("imported_") }.map { $0.id }
+        settings.dictionaryOrder = newOrder
+        saveSettings()
+    }
+    
+    func sortDictionariesByOrder() {
+        let order = settings.dictionaryOrder
+        availableDictionaries.sort { first, second in
+            let firstIndex = order.firstIndex(of: first.id) ?? Int.max
+            let secondIndex = order.firstIndex(of: second.id) ?? Int.max
+            
+            if firstIndex != secondIndex {
+                return firstIndex < secondIndex
+            }
+            
+            // If not in order, sort BCCWJ last and imported dictionaries by name
+            if first.id == "bccwj" { return false }
+            if second.id == "bccwj" { return true }
+            
+            return first.name < second.name
+        }
+    }
+    
+    func getOrderedDictionarySources() -> [String] {
+        // Return the current dictionary order from settings
+        // Include any imported dictionaries that aren't in the order yet
+        var orderedSources = settings.dictionaryOrder
+        let importedDictionaries = availableDictionaries.filter { $0.id.hasPrefix("imported_") && !orderedSources.contains($0.id) }
+        orderedSources.append(contentsOf: importedDictionaries.map { $0.id })
+        return orderedSources
+    }
     
     func toggleDictionary(id: String, isEnabled: Bool) {
         // Find the dictionary in our list
@@ -250,6 +296,9 @@ class DictionarySettingsViewModel: ObservableObject {
                 availableDictionaries.append(dictionaryInfo)
             }
         }
+        
+        // Re-sort dictionaries after loading imported ones
+        sortDictionariesByOrder()
     }
     
     func deleteImportedDictionary(_ info: ImportedDictionaryInfo) {
@@ -301,12 +350,14 @@ struct DictionaryInfo: Identifiable, Equatable {
 // Settings structure for dictionaries
 struct DictionarySettings: Equatable, Codable {
     var enabledDictionaries: [String]
+    var dictionaryOrder: [String]
     
     static func == (lhs: DictionarySettings, rhs: DictionarySettings) -> Bool {
-        return lhs.enabledDictionaries == rhs.enabledDictionaries
+        return lhs.enabledDictionaries == rhs.enabledDictionaries && lhs.dictionaryOrder == rhs.dictionaryOrder
     }
     
-    init(enabledDictionaries: [String] = ["jmdict", "obunsha", "bccwj"]) {
+    init(enabledDictionaries: [String] = ["jmdict", "obunsha", "bccwj"], dictionaryOrder: [String] = ["jmdict", "obunsha"]) {
         self.enabledDictionaries = enabledDictionaries
+        self.dictionaryOrder = dictionaryOrder
     }
 }

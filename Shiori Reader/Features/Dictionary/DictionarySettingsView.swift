@@ -13,6 +13,7 @@ struct DictionarySettingsView: View {
     @StateObject private var importManager = DictionaryImportManager.shared
     @Environment(\.presentationMode) var presentationMode
     @State private var showFileImporter = false
+    @Environment(\.editMode) private var editMode
     
     var body: some View {
         VStack {
@@ -22,6 +23,7 @@ struct DictionarySettingsView: View {
                     ForEach(viewModel.availableDictionaries) { dictionary in
                         dictionaryRow(dictionary)
                     }
+                    .onMove(perform: editMode?.wrappedValue == .active ? viewModel.reorderDictionaries : nil)
                     .onDelete(perform: deleteDictionary)
                 }
                 
@@ -47,6 +49,15 @@ struct DictionarySettingsView: View {
             }
             .navigationTitle("Dictionary Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(editMode?.wrappedValue == .active ? "Done" : "Edit") {
+                        withAnimation {
+                            editMode?.wrappedValue = editMode?.wrappedValue == .active ? .inactive : .active
+                        }
+                    }
+                }
+            }
             .onAppear {
                 viewModel.refreshSettings()
             }
@@ -107,12 +118,14 @@ struct DictionarySettingsView: View {
             
             Spacer()
             
-            Toggle("", isOn: Binding(
-                get: { dictionary.isEnabled },
-                set: { viewModel.toggleDictionary(id: dictionary.id, isEnabled: $0) }
-            ))
-            .disabled(!dictionary.canDisable)
-            .fixedSize()
+            if editMode?.wrappedValue != .active {
+                Toggle("", isOn: Binding(
+                    get: { dictionary.isEnabled },
+                    set: { viewModel.toggleDictionary(id: dictionary.id, isEnabled: $0) }
+                ))
+                .disabled(!dictionary.canDisable)
+                .fixedSize()
+            }
         }
         .padding(.vertical, 6)
     }

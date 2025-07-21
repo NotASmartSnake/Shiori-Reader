@@ -171,7 +171,7 @@ struct DictionaryPopupCardView: View {
                                 
                                 // Display meanings grouped by source
                                 let entriesBySource = Dictionary(grouping: getAllEntriesForTerm(entry.term, reading: entry.reading, from: matches)) { $0.source }
-                                let sourceOrder = ["jmdict", "obunsha"] + entriesBySource.keys.filter { !["jmdict", "obunsha"].contains($0) }.sorted()
+                                let sourceOrder = getOrderedDictionarySources(availableSources: Array(entriesBySource.keys))
                                 
                                 ForEach(sourceOrder, id: \.self) { source in
                                     if let sourceEntries = entriesBySource[source], !sourceEntries.isEmpty {
@@ -614,6 +614,28 @@ struct DictionaryPopupCardView: View {
     }
     
     // MARK: - Source Display Helpers
+    
+    private func getOrderedDictionarySources(availableSources: [String]) -> [String] {
+        // Get the user's preferred dictionary order from settings
+        let viewModel = DictionarySettingsViewModel()
+        let orderedSources = viewModel.getOrderedDictionarySources()
+        
+        // Filter to only include sources that are available in this lookup
+        var result: [String] = []
+        
+        // Add sources in the preferred order if they're available
+        for source in orderedSources {
+            if availableSources.contains(source) {
+                result.append(source)
+            }
+        }
+        
+        // Add any remaining sources that weren't in the order (alphabetically)
+        let remainingSources = availableSources.filter { !result.contains($0) }.sorted()
+        result.append(contentsOf: remainingSources)
+        
+        return result
+    }
     
     private func getAllEntriesForTerm(_ term: String, reading: String, from matches: [DictionaryMatch]) -> [DictionaryEntry] {
         return matches.flatMap { $0.entries }.filter { $0.term == term && $0.reading == reading }

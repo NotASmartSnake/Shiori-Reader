@@ -285,8 +285,8 @@ struct EntryDetailView: View {
                 let groupedBySource = Dictionary(grouping: matchingEntries) { $0.source }
                 var sourceSections: [String] = []
                 
-                // Process in preferred order: jmdict first, then obunsha, then others
-                let sourceOrder = ["jmdict", "obunsha"] + groupedBySource.keys.filter { !["jmdict", "obunsha"].contains($0) }.sorted()
+                // Process in user-configured order
+                let sourceOrder = getOrderedDictionarySources(availableSources: Array(groupedBySource.keys))
                 
                 for source in sourceOrder {
                     guard let entries = groupedBySource[source], !entries.isEmpty else { continue }
@@ -389,4 +389,28 @@ struct EntryDetailView: View {
                 )
             }
         }
+    
+    // MARK: - Helper Functions
+    
+    private func getOrderedDictionarySources(availableSources: [String]) -> [String] {
+        // Get the user's preferred dictionary order from settings
+        let viewModel = DictionarySettingsViewModel()
+        let orderedSources = viewModel.getOrderedDictionarySources()
+        
+        // Filter to only include sources that are available in this lookup
+        var result: [String] = []
+        
+        // Add sources in the preferred order if they're available
+        for source in orderedSources {
+            if availableSources.contains(source) {
+                result.append(source)
+            }
+        }
+        
+        // Add any remaining sources that weren't in the order (alphabetically)
+        let remainingSources = availableSources.filter { !result.contains($0) }.sorted()
+        result.append(contentsOf: remainingSources)
+        
+        return result
+    }
 }
