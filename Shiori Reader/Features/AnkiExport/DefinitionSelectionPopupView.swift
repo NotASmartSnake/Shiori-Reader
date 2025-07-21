@@ -34,19 +34,36 @@ struct DefinitionSelectionPopupView: View {
                     .foregroundColor(.blue)
                 }
                 
-                // Word and reading
-                VStack(alignment: .leading, spacing: 4) {
-                    if !reading.isEmpty && reading != word {
-                        Text(reading)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                // Word and reading with "All" button
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if !reading.isEmpty && reading != word {
+                            Text(reading)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Text(word)
+                            .font(.title2)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
                     }
-                    Text(word)
-                        .font(.title2)
-                        .fontWeight(.medium)
-                        .foregroundColor(.blue)
+                    
+                    Spacer()
+                    
+                    // Select/Deselect All button
+                    Button(action: {
+                        toggleAllDictionaries()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: isAllDictionariesSelected() ? "checkmark.square.fill" : "square")
+                                .foregroundColor(.blue)
+                            Text("All")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -80,15 +97,6 @@ struct DefinitionSelectionPopupView: View {
                                     }
                                 }
                                 .buttonStyle(PlainButtonStyle())
-                                
-                                // Dictionary badge
-                                Text(dictionarySourceBadge(dictionaryDef.source))
-                                    .font(.caption2)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(dictionarySourceColor(dictionaryDef.source).opacity(0.2))
-                                    .foregroundColor(dictionarySourceColor(dictionaryDef.source))
-                                    .cornerRadius(4)
                             }
                             
                             // Definition options with checkboxes
@@ -231,6 +239,30 @@ struct DefinitionSelectionPopupView: View {
         }
     }
     
+    private func isAllDictionariesSelected() -> Bool {
+        // Check if all definitions from all dictionaries are selected
+        for dictionaryDef in availableDefinitions {
+            if selectedDefinitions[dictionaryDef.source]?.count != dictionaryDef.definitions.count {
+                return false
+            }
+        }
+        return !availableDefinitions.isEmpty
+    }
+    
+    private func toggleAllDictionaries() {
+        if isAllDictionariesSelected() {
+            // Deselect all definitions from all dictionaries
+            for dictionaryDef in availableDefinitions {
+                selectedDefinitions[dictionaryDef.source] = []
+            }
+        } else {
+            // Select all definitions from all dictionaries
+            for dictionaryDef in availableDefinitions {
+                selectedDefinitions[dictionaryDef.source] = dictionaryDef.definitions
+            }
+        }
+    }
+    
     private func dictionarySourceName(_ source: String) -> String {
         switch source {
         case "jmdict":
@@ -253,44 +285,12 @@ struct DefinitionSelectionPopupView: View {
         }
     }
     
-    private func dictionarySourceBadge(_ source: String) -> String {
-        switch source {
-        case "jmdict":
-            return "JMdict"
-        case "obunsha":
-            return "旺文社"
-        default:
-            if source.hasPrefix("imported_") {
-                // Extract UUID and get display name
-                let importedId = source.replacingOccurrences(of: "imported_", with: "")
-                if let uuid = UUID(uuidString: importedId) {
-                    let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
-                    if let dict = importedDictionaries.first(where: { $0.id == uuid }) {
-                        return dict.title
-                    }
-                }
-                return "Imported"
-            }
-            return source.capitalized
-        }
-    }
-    
-    private func dictionarySourceColor(_ source: String) -> Color {
-        switch source {
-        case "jmdict":
-            return .blue
-        case "obunsha":
-            return .orange
-        default:
-            return .gray
-        }
-    }
 }
 
 // MARK: - Supporting Data Structures
 
 struct DictionarySourceDefinition {
-    let source: String // "jmdict" or "obunsha"
+    let source: String 
     let definitions: [String]
 }
 
