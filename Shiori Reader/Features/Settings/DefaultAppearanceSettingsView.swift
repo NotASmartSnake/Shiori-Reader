@@ -134,7 +134,7 @@ struct DefaultAppearanceSettingsView: View {
                     }
                     
                     // MARK: - Animation Section
-                    Section(header: Text("Dictionary Popup")) {
+                    Section(header: Text("Dictionary Popup"), footer: Text("Choose how the dictionary appears: a sliding card that slides up from the bottom, or a popup that appears as a centered overlay.")) {
                         // Display mode picker
                         Picker("Display Mode", selection: Binding(
                             get: { viewModel.preferences.dictionaryDisplayMode },
@@ -144,10 +144,6 @@ struct DefaultAppearanceSettingsView: View {
                             Text("Popup").tag("popup")
                         }
                         .pickerStyle(SegmentedPickerStyle())
-                        
-                        Text("Choose how the dictionary appears: a sliding card that slides up from the bottom, or a popup that appears as a centered overlay.")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
                         
                         // Animation toggle
                         Toggle("Animate Dictionary Popup", isOn: Binding(

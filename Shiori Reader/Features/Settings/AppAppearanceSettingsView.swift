@@ -15,7 +15,7 @@ struct AppAppearanceSettingsView: View {
     var body: some View {
         List {
             // MARK: - App Appearance Section
-            Section(header: Text("App Interface Mode")) {
+            Section(header: Text("App Interface Mode"), footer: Text("This setting controls the appearance of the app's interface (light or dark mode), not the reader content.")) {
                 Picker("Mode", selection: $appearanceMode) {
                     Text("Light").tag("light")
                     Text("Dark").tag("dark")
@@ -27,10 +27,6 @@ struct AppAppearanceSettingsView: View {
                     // No need to call setAppearanceMode since @AppStorage handles UserDefaults
                     AppearanceManager.shared.applyAppearanceMode()
                 }
-                
-                Text("This setting controls the appearance of the app's interface (light or dark mode), not the reader content.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
             }
             
             // MARK: - Reset Section
