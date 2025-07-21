@@ -78,28 +78,8 @@ class DictionarySettingsViewModel: ObservableObject {
             let isEnabled = settings.enabledDictionaries.contains(dictionaryId)
             availableDictionaries[index].isEnabled = isEnabled
             
-            // Ensure at least one dictionary with definitions is always enabled (JMdict or Obunsha)
-            let definitionDictionaries = ["jmdict", "obunsha"]
-            let enabledDefinitionDictionaries = availableDictionaries.filter { 
-                definitionDictionaries.contains($0.id) && $0.isEnabled 
-            }
-            
-            if enabledDefinitionDictionaries.count <= 1 {
-                // If this is the only enabled definition dictionary, it can't be disabled
-                if definitionDictionaries.contains(availableDictionaries[index].id) && availableDictionaries[index].isEnabled {
-                    availableDictionaries[index].canDisable = false
-                } else {
-                    availableDictionaries[index].canDisable = true
-                }
-            } else {
-                // Multiple definition dictionaries enabled, all can be disabled
-                availableDictionaries[index].canDisable = true
-            }
-            
-            // BCCWJ can always be disabled since it's not a definition dictionary
-            if availableDictionaries[index].id == "bccwj" {
-                availableDictionaries[index].canDisable = true
-            }
+            // All dictionaries can be disabled - no restrictions
+            availableDictionaries[index].canDisable = true
         }
         
         // Force UI update
@@ -237,23 +217,6 @@ class DictionarySettingsViewModel: ObservableObject {
     func toggleDictionary(id: String, isEnabled: Bool) {
         // Find the dictionary in our list
         if let index = availableDictionaries.firstIndex(where: { $0.id == id }) {
-            
-            // Check if this would leave us with no definition dictionaries
-            let definitionDictionaries = ["jmdict", "obunsha"]
-            if !isEnabled && definitionDictionaries.contains(id) {
-                let remainingDefinitionDictionaries = availableDictionaries.filter { 
-                    definitionDictionaries.contains($0.id) && $0.isEnabled && $0.id != id
-                }
-                
-                if remainingDefinitionDictionaries.isEmpty {
-                    // Show alert - can't disable the last definition dictionary
-                    alertTitle = "Cannot Disable Dictionary"
-                    alertMessage = "At least one dictionary with definitions (JMdict or Obunsha) must remain enabled."
-                    showAlert = true
-                    return
-                }
-            }
-            
             // Update the entry
             availableDictionaries[index].isEnabled = isEnabled
             
