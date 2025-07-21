@@ -560,11 +560,33 @@ struct DictionaryPopupCardView: View {
     }
     
     private func saveWordToVocabulary(_ entry: DictionaryEntry) {
+        // Always get ALL available entries for this word-reading combination
+        let wordEntries = matches.flatMap { match in
+            match.entries.filter { $0.term == entry.term && $0.reading == entry.reading }
+        }
+        
+        // Group by source and format
+        let groupedBySource = Dictionary(grouping: wordEntries) { $0.source }
+        var sourceSections: [String] = []
+        
+        // Process in user-configured order
+        let sourceOrder = getOrderedDictionarySources(availableSources: Array(groupedBySource.keys))
+        
+        for source in sourceOrder {
+            guard let entries = groupedBySource[source], !entries.isEmpty else { continue }
+            let sourceTitle = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : (source.hasPrefix("imported_") ? getImportedDictionaryDisplayName(source: source) : source.capitalized))
+            let allMeanings = entries.flatMap { $0.meanings }
+            let definitionsText = allMeanings.joined(separator: "\n")
+            sourceSections.append("\(sourceTitle)\n\(definitionsText)")
+        }
+        
+        let formattedDefinitions = sourceSections
+        
         // Create a new SavedWord
         let newWord = SavedWord(
             word: entry.term,
             reading: entry.reading,
-            definitions: entry.meanings,
+            definitions: formattedDefinitions,
             sentence: sentenceContext,
             sourceBook: bookTitle,
             timeAdded: Date(),

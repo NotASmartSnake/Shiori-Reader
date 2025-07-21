@@ -234,7 +234,14 @@ struct SavedWordRow: View {
     /// Check if a line is a valid dictionary source title
     private func isValidDictionarySource(_ text: String) -> Bool {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return trimmedText == "jmdict" || trimmedText == "旺文社"
+        if trimmedText == "jmdict" || trimmedText == "旺文社" {
+            return true
+        }
+        // Check if it's an imported dictionary title
+        let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+        return importedDictionaries.contains { dict in
+            dict.title.lowercased() == trimmedText
+        }
     }
 }
 

@@ -417,14 +417,36 @@ struct SavedWordDetailView: View {
         case "旺文社":
             return .orange
         default:
+            // For imported dictionaries, try to get their assigned color
+            let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+            if let dict = importedDictionaries.first(where: { $0.title.lowercased() == sourceTitle.lowercased() }) {
+                return getDictionaryColorForImported(dict.id.uuidString)
+            }
             return .gray
         }
+    }
+    
+    /// Get consistent color for imported dictionary
+    private func getDictionaryColorForImported(_ uuidString: String) -> Color {
+        let availableColors: [Color] = [.purple, .pink, .indigo, .teal, .cyan, .mint, .brown]
+        let hash = uuidString.unicodeScalars.reduce(0) { result, scalar in
+            return result &+ Int(scalar.value)
+        }
+        return availableColors[abs(hash) % availableColors.count]
     }
     
     /// Check if a line is a valid dictionary source title
     private func isValidDictionarySource(_ text: String) -> Bool {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return trimmedText == "jmdict" || trimmedText == "旺文社"
+        return trimmedText == "jmdict" || trimmedText == "旺文社" || isImportedDictionaryTitle(trimmedText)
+    }
+    
+    /// Check if text is an imported dictionary title
+    private func isImportedDictionaryTitle(_ text: String) -> Bool {
+        let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+        return importedDictionaries.contains { dict in
+            dict.title.lowercased() == text
+        }
     }
     
     // MARK: - Actions
@@ -452,16 +474,61 @@ struct SavedWordDetailView: View {
             topViewController = presentedViewController
         }
         
-        // Look up the original dictionary entries to get fresh data
-        let originalEntries = DictionaryManager.shared.lookup(word: editedWord.word)
-        let matchingEntries = originalEntries.filter { $0.term == editedWord.word && $0.reading == editedWord.reading }
+        // Reconstruct dictionary entries from saved formatted definitions
+        var reconstructedEntries: [DictionaryEntry] = []
         
-        if !matchingEntries.isEmpty {
-            // Use the new method with fresh dictionary data (no auto-save needed since word is already saved)
+        for (index, definitionSection) in editedWord.definitions.enumerated() {
+            let lines = definitionSection.components(separatedBy: "\n")
+            
+            if lines.count > 1 && isValidDictionarySource(lines[0]) {
+                // This is a formatted definition with valid dictionary source title
+                let sourceTitle = lines[0]
+                let definitions = Array(lines.dropFirst())
+                
+                // Convert source title back to source identifier
+                let sourceId: String
+                switch sourceTitle.lowercased() {
+                case "jmdict":
+                    sourceId = "jmdict"
+                case "旺文社":
+                    sourceId = "obunsha"
+                default:
+                    // For imported dictionaries, try to find the matching UUID
+                    let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+                    if let dict = importedDictionaries.first(where: { $0.title.lowercased() == sourceTitle.lowercased() }) {
+                        sourceId = "imported_\(dict.id.uuidString)"
+                    } else {
+                        sourceId = sourceTitle.lowercased()
+                    }
+                }
+                
+                // Create a reconstructed dictionary entry
+                var entry = DictionaryEntry(
+                    id: "\(editedWord.word)_\(editedWord.reading)_\(sourceId)_\(index)",
+                    term: editedWord.word,
+                    reading: editedWord.reading,
+                    meanings: definitions,
+                    meaningTags: [],
+                    termTags: [],
+                    score: nil,
+                    rules: nil,
+                    popularity: nil,
+                    source: sourceId
+                )
+                
+                // Set pitch accent data if available
+                entry.pitchAccents = editedWord.pitchAccents
+                
+                reconstructedEntries.append(entry)
+            }
+        }
+        
+        if !reconstructedEntries.isEmpty {
+            // Use reconstructed entries with the same flow as popup views
             AnkiExportService.shared.exportWordToAnki(
                 word: editedWord.word,
                 reading: editedWord.reading,
-                entries: matchingEntries,
+                entries: reconstructedEntries,
                 sentence: editedWord.sentence,
                 pitchAccents: editedWord.pitchAccents,
                 sourceView: topViewController,
@@ -482,7 +549,7 @@ struct SavedWordDetailView: View {
                 }
             )
         } else {
-            // Fallback to saved definitions if word is no longer in dictionaries
+            // Fallback - use simple definition format
             let ankiDefinition = editedWord.definitions.joined(separator: "<br>")
             
             AnkiExportService.shared.addVocabularyCard(
