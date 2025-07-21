@@ -72,16 +72,49 @@ extension DictionaryManager {
     
     
     
-    /// Lookup from imported dictionaries only
+    /// Lookup from imported dictionaries only with concurrent processing
     func lookupImportedDictionaries(word: String) -> [DictionaryEntry] {
-        var allEntries: [DictionaryEntry] = []
+        let startTime = CFAbsoluteTimeGetCurrent()
         let enabledDictionaries = getEnabledDictionaries()
         
-        for (dictionaryKey, queue) in Self.importedDictionaryQueues {
-            guard enabledDictionaries.contains(dictionaryKey) else { continue }
+        // Filter enabled dictionaries upfront
+        let enabledQueues = Self.importedDictionaryQueues.filter { dictionaryKey, _ in
+            enabledDictionaries.contains(dictionaryKey)
+        }
+        
+        // If no enabled imported dictionaries, return early
+        guard !enabledQueues.isEmpty else {
+            return []
+        }
+        
+        // Use DispatchGroup for concurrent processing
+        let dispatchGroup = DispatchGroup()
+        let concurrentQueue = DispatchQueue(label: "com.shiori.dictionaryLookup.concurrent", attributes: .concurrent)
+        let resultQueue = DispatchQueue(label: "com.shiori.dictionaryLookup.results")
+        
+        var allEntries: [DictionaryEntry] = []
+        
+        for (dictionaryKey, queue) in enabledQueues {
+            dispatchGroup.enter()
             
-            let entries = lookupImportedDictionary(word: word, queue: queue, dictionaryKey: dictionaryKey)
-            allEntries.append(contentsOf: entries)
+            concurrentQueue.async {
+                let entries = self.lookupImportedDictionary(word: word, queue: queue, dictionaryKey: dictionaryKey)
+                
+                resultQueue.async {
+                    allEntries.append(contentsOf: entries)
+                    dispatchGroup.leave()
+                }
+            }
+        }
+        
+        // Wait for all lookups to complete
+        dispatchGroup.wait()
+        
+        let endTime = CFAbsoluteTimeGetCurrent()
+        let duration = (endTime - startTime) * 1000
+        
+        if !allEntries.isEmpty || duration > 10 { // Log if results found or if took more than 10ms
+            print("🔍 [PERF-CONCURRENT] Imported dict lookup for '\(word)': \(Int(duration))ms, \(enabledQueues.count) dicts, \(allEntries.count) results")
         }
         
         return allEntries

@@ -30,6 +30,9 @@ class ReaderViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var preferences = EPUBPreferences() // Using new Preferences API
     @Published private(set) var tableOfContents: [ReadiumShared.Link] = []
+    
+    // Dictionary lookup state to prevent duplicates
+    private var isProcessingDictionaryLookup = false
 
     // Other state
     @Published var pendingNavigationLink: ReadiumShared.Link? = nil
@@ -563,6 +566,9 @@ class ReaderViewModel: ObservableObject {
             return
         }
         
+        let userClickTime = CFAbsoluteTimeGetCurrent()
+        print("🎯 [PERF-CLICK] User clicked word '\(text)' at \(Int(userClickTime * 1000))")
+        
         // Store the full text for selection and character picker
         if let fullText = options["fullText"] as? String {
             self.fullTextForSelection = fullText
@@ -603,28 +609,57 @@ class ReaderViewModel: ObservableObject {
         
         // Lookup words in the dictionary
         getDictionaryMatches(text: text) { [weak self] matches in
+            let resultsReadyTime = CFAbsoluteTimeGetCurrent()
+            print("📱 [PERF-UI] Results ready for display: \(Int(resultsReadyTime * 1000)), \(matches.count) matches")
+            
             if let settings = self?.animationSettings, settings.isDictionaryAnimationEnabled {
                 withAnimation(.spring(duration: settings.animationDuration, bounce: 0.2)) {
                     self?.dictionaryMatches = matches
                     self?.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
                     // Always show the dictionary even if no matches found
                     self?.showDictionary = true
+                    
+                    // Log when UI animation completes
+                    DispatchQueue.main.asyncAfter(deadline: .now() + (settings.animationDuration + 0.1)) {
+                        let displayCompleteTime = CFAbsoluteTimeGetCurrent()
+                        print("✅ [PERF-DISPLAY] Dictionary displayed to user: \(Int(displayCompleteTime * 1000))")
+                    }
                 }
             } else {
                 self?.dictionaryMatches = matches
                 self?.currentSentenceContext = sentenceContext.trimmingCharacters(in: .whitespacesAndNewlines)
                 // Always show the dictionary even if no matches found
                 self?.showDictionary = true
+                
+                // Log when UI update completes (next run loop)
+                DispatchQueue.main.async {
+                    let displayCompleteTime = CFAbsoluteTimeGetCurrent()
+                    print("✅ [PERF-DISPLAY] Dictionary displayed to user: \(Int(displayCompleteTime * 1000))")
+                }
             }
         }
     }
     
     func getDictionaryMatches(text: String, completion: @escaping ([DictionaryMatch]) -> Void) {
+        // Prevent duplicate processing
+        if isProcessingDictionaryLookup {
+            print("⏭️ [PERF-SKIP] Skipping duplicate lookup request for '\(text)'")
+            return
+        }
+        
+        isProcessingDictionaryLookup = true
+        let readerViewStartTime = CFAbsoluteTimeGetCurrent()
+        print("🔄 [PERF-READER] Starting ReaderView dictionary lookup for '\(text)': \(Int(readerViewStartTime * 1000))")
+        
         let lookupQueue = DispatchQueue(label: "com.shiori.dictionaryLookup", qos: .userInitiated)
         
         lookupQueue.async {
-            // Maximum word length to consider (adjust as needed)
-            let maxLength = min(27, text.count)
+            // Smart text truncation: Limit to first reasonable Japanese word boundary
+            let processedText = self.truncateToReasonableLength(text)
+            print("🎯 [PERF-TRUNCATE] Original: '\(text)' -> Processed: '\(processedText)'")
+            
+            // Maximum word length to consider (test all reasonable lengths)
+            let maxLength = min(16, processedText.count)
             
             // Store all valid matches
             var matches: [DictionaryMatch] = []
@@ -635,15 +670,22 @@ class ReaderViewModel: ObservableObject {
             
             // Try words of decreasing length, starting from the longest
             for length in stride(from: maxLength, through: 1, by: -1) {
-                // Make sure we don't exceed the text length
-                guard length <= text.count else { continue }
+                // Make sure we don't exceed the processed text length
+                guard length <= processedText.count else { continue }
                 
                 // Extract the substring of current length
-                let endIndex = text.index(text.startIndex, offsetBy: length)
-                let candidateWord = String(text[..<endIndex])
+                let endIndex = processedText.index(processedText.startIndex, offsetBy: length)
+                let candidateWord = String(processedText[..<endIndex])
                 
+                let wordLookupStart = CFAbsoluteTimeGetCurrent()
                 // Look up this word in the dictionary with improved deinflection
                 let entries = DictionaryManager.shared.lookupWithDeinflection(word: candidateWord)
+                let wordLookupEnd = CFAbsoluteTimeGetCurrent()
+                let wordDuration = (wordLookupEnd - wordLookupStart) * 1000
+                
+                if !entries.isEmpty {
+                    print("🔤 [PERF-WORD] Length \(length) lookup '\(candidateWord)': \(Int(wordDuration))ms, \(entries.count) entries")
+                }
                 
                 // If we found matches, add this as a valid match
                 if !entries.isEmpty {
@@ -675,7 +717,6 @@ class ReaderViewModel: ObservableObject {
                             addedFromThisLength += 1
                         }
                     }
-                    // No match limit - try all possible lengths
                 }
             }
             
@@ -764,9 +805,22 @@ class ReaderViewModel: ObservableObject {
                 return false // Equal
             }
             
+            // Limit final matches to 32 for UI performance
+            let limitedMatches = Array(sortedMatches.prefix(32))
+            
             // Return all matches found
+            let readerViewEndTime = CFAbsoluteTimeGetCurrent()
+            let readerViewDuration = (readerViewEndTime - readerViewStartTime) * 1000
+            
+            if limitedMatches.count < sortedMatches.count {
+                print("⚡ [PERF-READER] ReaderView lookup completed: \(Int(readerViewDuration))ms, \(limitedMatches.count)/\(sortedMatches.count) matches found (limited to 32)")
+            } else {
+                print("⚡ [PERF-READER] ReaderView lookup completed: \(Int(readerViewDuration))ms, \(limitedMatches.count) matches found")
+            }
+            
             DispatchQueue.main.async {
-                completion(sortedMatches)
+                self.isProcessingDictionaryLookup = false
+                completion(limitedMatches)
             }
         }
     }
@@ -835,6 +889,26 @@ class ReaderViewModel: ObservableObject {
         
         // Check if current location is bookmarked
         isCurrentLocationBookmarked = bookmarkRepository.isBookmarked(bookId: book.id, locator: locator)
+    }
+    
+    // MARK: - Text Processing Helpers
+    
+    /// Truncate text only at sentence boundaries (Japanese period character)
+    private func truncateToReasonableLength(_ text: String) -> String {
+        // Only truncate if we encounter a sentence-ending punctuation
+        let sentenceEnders: Set<Character> = ["。", "！", "？"]
+        
+        var truncated = ""
+        for char in text {
+            truncated.append(char)
+            
+            // Stop at sentence-ending punctuation
+            if sentenceEnders.contains(char) {
+                break
+            }
+        }
+        
+        return truncated
     }
 }
 

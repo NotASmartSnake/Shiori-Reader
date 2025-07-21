@@ -236,42 +236,109 @@ class DictionaryManager {
         return entries
     }
     
-    /// Main lookup function that searches all enabled dictionaries
+    /// Main lookup function that searches all enabled dictionaries concurrently
     func lookup(word: String) -> [DictionaryEntry] {
+        let startTime = CFAbsoluteTimeGetCurrent()
         let enabledDictionaries = getEnabledDictionaries()
+        
+        let dispatchGroup = DispatchGroup()
+        let concurrentQueue = DispatchQueue(label: "com.shiori.builtinDictionary.concurrent", attributes: .concurrent)
+        let resultQueue = DispatchQueue(label: "com.shiori.builtinDictionary.results")
+        
         var allEntries: [DictionaryEntry] = []
         
         // Search JMdict if enabled
         if enabledDictionaries.contains("jmdict") {
-            let jmdictEntries = lookupJMdict(word: word)
-            allEntries.append(contentsOf: jmdictEntries)
+            dispatchGroup.enter()
+            concurrentQueue.async {
+                let jmdictEntries = self.lookupJMdict(word: word)
+                resultQueue.async {
+                    allEntries.append(contentsOf: jmdictEntries)
+                    dispatchGroup.leave()
+                }
+            }
         }
         
         // Search Obunsha if enabled
         if enabledDictionaries.contains("obunsha") {
-            let obunshaEntries = lookupObunsha(word: word)
-            allEntries.append(contentsOf: obunshaEntries)
+            dispatchGroup.enter()
+            concurrentQueue.async {
+                let obunshaEntries = self.lookupObunsha(word: word)
+                resultQueue.async {
+                    allEntries.append(contentsOf: obunshaEntries)
+                    dispatchGroup.leave()
+                }
+            }
         }
         
+        // Wait for all built-in dictionary lookups to complete
+        dispatchGroup.wait()
+        
+        let endTime = CFAbsoluteTimeGetCurrent()
+        let duration = (endTime - startTime) * 1000
+        
         let sortedEntries = sortEntriesByPopularity(allEntries, searchTerm: word)
+        
+        if !sortedEntries.isEmpty || duration > 5 { // Log if results found or if took more than 5ms
+            print("🔍 [PERF-BUILTIN] Built-in dict lookup for '\(word)': \(Int(duration))ms, \(sortedEntries.count) results")
+        }
         
         return sortedEntries
     }
     
     func lookupWithDeinflection(word: String) -> [DictionaryEntry] {
+        let overallStartTime = CFAbsoluteTimeGetCurrent()
         var allEntries: [DictionaryEntry] = []
         
-        // First try direct lookup from built-in dictionaries
-        let directEntries = lookup(word: word)
-        allEntries.append(contentsOf: directEntries)
+        // Use DispatchGroup to run built-in and imported lookups concurrently
+        let dispatchGroup = DispatchGroup()
+        let concurrentQueue = DispatchQueue(label: "com.shiori.dictionaryLookup.main", attributes: .concurrent)
+        let resultQueue = DispatchQueue(label: "com.shiori.dictionaryLookup.mainResults")
         
-        // Add direct lookup from imported dictionaries
-        let importedDirectEntries = lookupImportedDictionaries(word: word)
+        var directEntries: [DictionaryEntry] = []
+        var importedDirectEntries: [DictionaryEntry] = []
+        
+        // Concurrent direct lookup from built-in dictionaries
+        dispatchGroup.enter()
+        concurrentQueue.async {
+            let entries = self.lookup(word: word)
+            resultQueue.async {
+                directEntries = entries
+                dispatchGroup.leave()
+            }
+        }
+        
+        // Concurrent direct lookup from imported dictionaries
+        dispatchGroup.enter()
+        concurrentQueue.async {
+            let entries = self.lookupImportedDictionaries(word: word)
+            resultQueue.async {
+                importedDirectEntries = entries
+                dispatchGroup.leave()
+            }
+        }
+        
+        // Wait for direct lookups to complete
+        dispatchGroup.wait()
+        
+        // Combine direct results
+        allEntries.append(contentsOf: directEntries)
         allEntries.append(contentsOf: importedDirectEntries)
+        
+        let directLookupTime = CFAbsoluteTimeGetCurrent()
+        let directDuration = (directLookupTime - overallStartTime) * 1000
+        
+        print("🔍 [PERF-DIRECT] Direct lookups for '\(word)': \(Int(directDuration))ms, \(allEntries.count) results")
         
         // Always try deinflections if we have them
         if let deinflector = self.deinflector {
+            let deinflectionStartTime = CFAbsoluteTimeGetCurrent()
             let deinflections = deinflector.deinflect(word)
+            
+            // Process deinflections concurrently
+            let deinflectionGroup = DispatchGroup()
+            let deinflectionQueue = DispatchQueue(label: "com.shiori.deinflection.concurrent", attributes: .concurrent)
+            let deinflectionResultQueue = DispatchQueue(label: "com.shiori.deinflection.results")
             
             for result in deinflections {
                 // Skip the original form since we already looked it up
@@ -279,48 +346,92 @@ class DictionaryManager {
                     continue
                 }
                 
-                // Look up deinflected forms in built-in dictionaries
-                let entries = lookup(word: result.term)
-                
-                // Add entries found through deinflection
-                for entry in entries {
-                    let enhancedEntry = createDictionaryEntry(
-                        id: entry.id,
-                        term: entry.term,
-                        reading: entry.reading,
-                        meanings: entry.meanings,
-                        meaningTags: entry.meaningTags,
-                        termTags: entry.termTags,
-                        score: entry.score,
-                        rules: entry.rules,
-                        transformed: word,
-                        transformationNotes: result.reasons.joined(separator: " ← "),
-                        popularity: entry.popularity,
-                        source: entry.source
-                    )
-                    allEntries.append(enhancedEntry)
+                deinflectionGroup.enter()
+                deinflectionQueue.async {
+                    // Run built-in and imported lookups concurrently for each deinflected form
+                    let innerGroup = DispatchGroup()
+                    let innerQueue = DispatchQueue(label: "com.shiori.deinflection.inner", attributes: .concurrent)
+                    let innerResultQueue = DispatchQueue(label: "com.shiori.deinflection.innerResults")
+                    
+                    var builtinEntries: [DictionaryEntry] = []
+                    var importedEntries: [DictionaryEntry] = []
+                    
+                    // Lookup in built-in dictionaries
+                    innerGroup.enter()
+                    innerQueue.async {
+                        let entries = self.lookup(word: result.term)
+                        innerResultQueue.async {
+                            builtinEntries = entries
+                            innerGroup.leave()
+                        }
+                    }
+                    
+                    // Lookup in imported dictionaries
+                    innerGroup.enter()
+                    innerQueue.async {
+                        let entries = self.lookupImportedDictionaries(word: result.term)
+                        innerResultQueue.async {
+                            importedEntries = entries
+                            innerGroup.leave()
+                        }
+                    }
+                    
+                    // Wait for both lookups to complete
+                    innerGroup.wait()
+                    
+                    // Process results and add to main collection
+                    deinflectionResultQueue.async {
+                        // Add built-in entries found through deinflection
+                        for entry in builtinEntries {
+                            let enhancedEntry = self.createDictionaryEntry(
+                                id: entry.id,
+                                term: entry.term,
+                                reading: entry.reading,
+                                meanings: entry.meanings,
+                                meaningTags: entry.meaningTags,
+                                termTags: entry.termTags,
+                                score: entry.score,
+                                rules: entry.rules,
+                                transformed: word,
+                                transformationNotes: result.reasons.joined(separator: " ← "),
+                                popularity: entry.popularity,
+                                source: entry.source
+                            )
+                            allEntries.append(enhancedEntry)
+                        }
+                        
+                        // Add imported entries found through deinflection
+                        for importedEntry in importedEntries {
+                            let enhancedEntry = self.createImportedDictionaryEntry(
+                                id: importedEntry.id,
+                                term: importedEntry.term,
+                                reading: importedEntry.reading,
+                                meanings: importedEntry.meanings,
+                                meaningTags: importedEntry.meaningTags,
+                                termTags: importedEntry.termTags,
+                                score: importedEntry.score,
+                                rules: importedEntry.rules,
+                                transformed: word,
+                                transformationNotes: result.reasons.joined(separator: " ← "),
+                                popularity: importedEntry.popularity,
+                                source: importedEntry.source
+                            )
+                            allEntries.append(enhancedEntry)
+                        }
+                        
+                        deinflectionGroup.leave()
+                    }
                 }
-                
-                // Look up deinflected forms in imported dictionaries
-                let importedEntries = lookupImportedDictionaries(word: result.term)
-                
-                for importedEntry in importedEntries {
-                    let enhancedEntry = createImportedDictionaryEntry(
-                        id: importedEntry.id,
-                        term: importedEntry.term,
-                        reading: importedEntry.reading,
-                        meanings: importedEntry.meanings,
-                        meaningTags: importedEntry.meaningTags,
-                        termTags: importedEntry.termTags,
-                        score: importedEntry.score,
-                        rules: importedEntry.rules,
-                        transformed: word,
-                        transformationNotes: result.reasons.joined(separator: " ← "),
-                        popularity: importedEntry.popularity,
-                        source: importedEntry.source
-                    )
-                    allEntries.append(enhancedEntry)
-                }
+            }
+            
+            // Wait for all deinflection lookups to complete
+            deinflectionGroup.wait()
+            
+            let deinflectionEndTime = CFAbsoluteTimeGetCurrent()
+            let deinflectionDuration = (deinflectionEndTime - deinflectionStartTime) * 1000
+            
+            if deinflections.count > 0 {
+                print("🔍 [PERF-DEINFLECT] Deinflection lookups for '\(word)': \(Int(deinflectionDuration))ms, \(deinflections.count) forms tested")
             }
         }
         
@@ -338,11 +449,12 @@ class DictionaryManager {
         // Sort the final combined results
         let finalSortedEntries = sortEntriesByPopularity(filteredEntries, searchTerm: word)
         
-        // Only log when we actually found results
-        // if !finalSortedEntries.isEmpty {
-        //     let sourcesFound = Set(finalSortedEntries.map { $0.source }).sorted()
-        //     print("📚 [DICT] Found \(finalSortedEntries.count) results for '\(word)' from: \(sourcesFound.joined(separator: ", "))")
-        // }
+        let overallEndTime = CFAbsoluteTimeGetCurrent()
+        let totalDuration = (overallEndTime - overallStartTime) * 1000
+        
+        // Always log the total lookup time for performance monitoring
+        let sourcesFound = Set(finalSortedEntries.map { $0.source }).sorted()
+        print("📚 [PERF-TOTAL] Complete lookup for '\(word)': \(Int(totalDuration))ms, \(finalSortedEntries.count) final results from: \(sourcesFound.joined(separator: ", "))")
         
         return finalSortedEntries
     }
