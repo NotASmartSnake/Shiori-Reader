@@ -109,11 +109,6 @@ struct DictionarySettingsView: View {
                     .font(.body)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                Text(dictionary.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
                 
                 // Color preview and selection
                 HStack(spacing: 8) {
