@@ -14,6 +14,25 @@ class AnkiExportService {
     
     private init() {}
     
+    // MARK: - Dictionary Ordering Helper
+    
+    /// Sort dictionary sources based on user-defined order from Dictionary Settings
+    private func sortSourcesByUserOrder(_ sources: [String]) -> [String] {
+        let userOrder = DictionaryColorProvider.shared.getOrderedDictionarySources()
+        
+        return sources.sorted { first, second in
+            let firstIndex = userOrder.firstIndex(of: first) ?? Int.max
+            let secondIndex = userOrder.firstIndex(of: second) ?? Int.max
+            
+            if firstIndex == secondIndex {
+                // If both are not in user order (or same position), sort alphabetically
+                return first < second
+            }
+            
+            return firstIndex < secondIndex
+        }
+    }
+    
     // Check if AnkiMobile is installed
     func isAnkiInstalled() -> Bool {
         let ankiURL = URL(string: "anki://")!
@@ -326,20 +345,8 @@ class AnkiExportService {
         onSaveToVocab: (() -> Void)?,
         completion: ((Bool) -> Void)?
     ) {
-        // Ensure JMdict comes first, then Obunsha, then others
-        let sortedSources = definitionsBySource.keys.sorted { first, second in
-            if first == "jmdict" && second != "jmdict" {
-                return true
-            } else if first != "jmdict" && second == "jmdict" {
-                return false
-            } else if first == "obunsha" && second != "obunsha" && second != "jmdict" {
-                return true
-            } else if first != "obunsha" && second == "obunsha" && first != "jmdict" {
-                return false
-            } else {
-                return first < second
-            }
-        }
+        // Sort based on user-defined dictionary order
+        let sortedSources = sortSourcesByUserOrder(Array(definitionsBySource.keys))
         
         let formattedDefinitions = sortedSources.compactMap { source -> String? in
             guard let definitions = definitionsBySource[source], !definitions.isEmpty else { return nil }
@@ -378,24 +385,11 @@ class AnkiExportService {
             return
         }
         
-        // Convert to the format expected by the popup
-        let availableDefinitions = definitionsBySource.compactMap { (source, definitions) -> DictionarySourceDefinition? in
-            // Only include sources that have definitions
-            guard !definitions.isEmpty else { return nil }
+        // Convert to the format expected by the popup and sort by user-defined order
+        let sortedSources = sortSourcesByUserOrder(Array(definitionsBySource.keys))
+        let availableDefinitions = sortedSources.compactMap { source -> DictionarySourceDefinition? in
+            guard let definitions = definitionsBySource[source], !definitions.isEmpty else { return nil }
             return DictionarySourceDefinition(source: source, definitions: definitions)
-        }.sorted { first, second in
-            // Sort so JMdict comes first, then Obunsha, then others alphabetically
-            if first.source == "jmdict" && second.source != "jmdict" {
-                return true
-            } else if first.source != "jmdict" && second.source == "jmdict" {
-                return false
-            } else if first.source == "obunsha" && second.source != "obunsha" && second.source != "jmdict" {
-                return true
-            } else if first.source != "obunsha" && second.source == "obunsha" && first.source != "jmdict" {
-                return false
-            } else {
-                return first.source < second.source
-            }
         }
         
         let popupView = DefinitionSelectionPopupView(
@@ -404,20 +398,8 @@ class AnkiExportService {
             availableDefinitions: availableDefinitions,
             onDefinitionsSelected: { selectedDefinitions in
                 // Combine selected definitions with source labels for clarity
-                // Ensure JMdict comes first, then Obunsha, then others
-                let sortedSources = selectedDefinitions.keys.sorted { first, second in
-                    if first == "jmdict" && second != "jmdict" {
-                        return true
-                    } else if first != "jmdict" && second == "jmdict" {
-                        return false
-                    } else if first == "obunsha" && second != "obunsha" && second != "jmdict" {
-                        return true
-                    } else if first != "obunsha" && second == "obunsha" && first != "jmdict" {
-                        return false
-                    } else {
-                        return first < second
-                    }
-                }
+                // Sort based on user-defined dictionary order
+                let sortedSources = self.sortSourcesByUserOrder(Array(selectedDefinitions.keys))
                 
                 let formattedDefinitions = sortedSources.compactMap { source -> String? in
                     guard let definitions = selectedDefinitions[source], !definitions.isEmpty else { return nil }
