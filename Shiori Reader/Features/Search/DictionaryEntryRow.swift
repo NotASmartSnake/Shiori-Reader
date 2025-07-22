@@ -72,8 +72,8 @@ struct DictionaryEntryRow: View {
                 }
             }
             
-            // Dictionary source badges and frequency data on their own line
-            HStack(spacing: 4) {
+            // Dictionary source badges and frequency data with flow layout
+            FlowLayout(spacing: 4) {
                 // Frequency data first (if available and BCCWJ is enabled)
                 if isBCCWJEnabled(), let frequencyRank = entry.frequencyRankString {
                     Text(frequencyRank)
@@ -91,18 +91,13 @@ struct DictionaryEntryRow: View {
                     let allEntries = getAllEntriesForWord()
                     let uniqueSources = Array(Set(allEntries.map { $0.source })).sorted()
                     
-                    print("🏷️ [BADGE-DEBUG] Combined entry '\(entry.term)-\(entry.reading)' - found \(allEntries.count) entries with sources: \(uniqueSources)")
-                    
                     ForEach(uniqueSources, id: \.self) { source in
                         getDictionarySourceBadge(for: source)
                     }
                 } else {
                     // Single source entry
-                    print("🏷️ [BADGE-DEBUG] Single source entry '\(entry.term)-\(entry.reading)' - source: \(entry.source)")
                     getDictionarySourceBadge(for: entry.source)
                 }
-                
-                Spacer()
             }
             .padding(.bottom, 2)
             
@@ -127,8 +122,8 @@ struct DictionaryEntryRow: View {
     }
     
     private func getAllEntriesForWord() -> [DictionaryEntry] {
-        // Look up all entries for this word-reading combination
-        let allEntries = DictionaryManager.shared.lookup(word: entry.term)
+        // Use the same lookup method as SearchViewModel to include imported dictionaries
+        let allEntries = DictionaryManager.shared.lookupWithDeinflection(word: entry.term)
         return allEntries.filter { $0.term == entry.term && $0.reading == entry.reading }
     }
     
@@ -139,6 +134,7 @@ struct DictionaryEntryRow: View {
         if source == "obunsha" {
             Text("旺文社")
                 .font(.caption2)
+                .lineLimit(1)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
                 .background(color.opacity(0.2))
@@ -147,6 +143,7 @@ struct DictionaryEntryRow: View {
         } else if source == "jmdict" {
             Text("JMdict")
                 .font(.caption2)
+                .lineLimit(1)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
                 .background(color.opacity(0.2))
@@ -157,6 +154,7 @@ struct DictionaryEntryRow: View {
             
             Text(displayName)
                 .font(.caption2)
+                .lineLimit(1)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
                 .background(color.opacity(0.2))
@@ -166,6 +164,7 @@ struct DictionaryEntryRow: View {
             // Fallback for any other source types
             Text(source.capitalized)
                 .font(.caption2)
+                .lineLimit(1)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
                 .background(color.opacity(0.2))

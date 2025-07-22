@@ -420,8 +420,8 @@ struct EntryDetailView: View {
     }
     
     private func getAllEntriesForWord() -> [DictionaryEntry] {
-        // Look up all entries for this word-reading combination
-        let allEntries = DictionaryManager.shared.lookup(word: entry.term)
+        // Use the same lookup method as SearchViewModel to include imported dictionaries
+        let allEntries = DictionaryManager.shared.lookupWithDeinflection(word: entry.term)
         return allEntries.filter { $0.term == entry.term && $0.reading == entry.reading }
     }
     

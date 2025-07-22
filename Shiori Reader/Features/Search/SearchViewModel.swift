@@ -61,12 +61,6 @@ class SearchViewModel: ObservableObject {
             if hasJapaneseCharacters {
                 // Use the same lookup method as ReaderView for consistency
                 let exactResults = DictionaryManager.shared.lookupWithDeinflection(word: query)
-                print("🔍 [SEARCH-DEBUG] Query '\(query)' - lookupWithDeinflection returned \(exactResults.count) results")
-                
-                // Log sources found
-                let sources = Set(exactResults.map { $0.source })
-                print("🔍 [SEARCH-DEBUG] Sources found: \(sources.sorted())")
-                
                 if !exactResults.isEmpty {
                     results = exactResults
                 } else {
@@ -74,22 +68,15 @@ class SearchViewModel: ObservableObject {
                     let builtInResults = DictionaryManager.shared.searchByPrefix(prefix: query, limit: 50)
                     let importedResults = DictionaryManager.shared.searchImportedDictionariesByPrefix(prefix: query, limit: 50)
                     results = builtInResults + importedResults
-                    print("🔍 [SEARCH-DEBUG] Prefix search - builtin: \(builtInResults.count), imported: \(importedResults.count)")
                 }
                 
                 results = Array(results.prefix(100)) // Limit total results
-                print("🔍 [SEARCH-DEBUG] Total results before grouping: \(results.count)")
             } else {
                 // Use meaning search for English - only built-in dictionaries support meaning search
                 results = DictionaryManager.shared.searchByMeaning(text: query, limit: 100)
             }
             
             let groupedResults = self.groupAndMergeEntries(results)
-            print("🔍 [SEARCH-DEBUG] Results after grouping: \(groupedResults.count)")
-            
-            // Log the final grouped results by source
-            let finalSources = Set(groupedResults.map { $0.source })
-            print("🔍 [SEARCH-DEBUG] Final sources after grouping: \(finalSources.sorted())")
             
             DispatchQueue.main.async {
                 self.allSearchResults = groupedResults
@@ -142,13 +129,9 @@ class SearchViewModel: ObservableObject {
     // MARK: - Helper Functions
     
     private func groupAndMergeEntries(_ entries: [DictionaryEntry]) -> [DictionaryEntry] {
-        print("🔍 [GROUPING-DEBUG] Starting groupAndMergeEntries with \(entries.count) entries")
-        
         let groupedEntries = Dictionary(grouping: entries) { entry in
             "\(entry.term)-\(entry.reading)"
         }
-        
-        print("🔍 [GROUPING-DEBUG] Created \(groupedEntries.count) groups")
         
         var processedKeys = Set<String>()
         var mergedEntries: [DictionaryEntry] = []
@@ -164,13 +147,9 @@ class SearchViewModel: ObservableObject {
                     let allMeanings = groupEntries.flatMap { $0.meanings }
                     let allSources = groupEntries.map { $0.source }
                     
-                    print("🔍 [GROUPING-DEBUG] Group '\(groupKey)' has \(groupEntries.count) entries from sources: \(allSources)")
-                    
                     // Mark as combined if we have multiple different sources
                     let uniqueSources = Array(Set(allSources))
                     let combinedSource = uniqueSources.count > 1 ? "combined" : entry.source
-                    
-                    print("🔍 [GROUPING-DEBUG] Creating merged entry with source: \(combinedSource)")
                     
                     let mergedEntry = DictionaryEntry(
                         id: "merged_\(groupKey)",
@@ -189,13 +168,11 @@ class SearchViewModel: ObservableObject {
                     mergedEntries.append(mergedEntry)
                 } else {
                     // Single entry - use as is
-                    print("🔍 [GROUPING-DEBUG] Single entry for '\(groupKey)' from source: \(entry.source)")
                     mergedEntries.append(entry)
                 }
             }
         }
         
-        print("🔍 [GROUPING-DEBUG] Final merged entries: \(mergedEntries.count)")
         return mergedEntries
     }
     
