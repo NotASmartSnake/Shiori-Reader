@@ -201,8 +201,8 @@ struct SavedWordDetailView: View {
                                                     .font(.caption2)
                                                     .padding(.horizontal, 6)
                                                     .padding(.vertical, 2)
-                                                    .background(getDictionaryColor(for: sourceTitle).opacity(0.2))
-                                                    .foregroundColor(getDictionaryColor(for: sourceTitle))
+                                                    .background(DictionaryColorProvider.shared.getColor(for: convertSourceTitleToId(sourceTitle)).opacity(0.2))
+                                                    .foregroundColor(DictionaryColorProvider.shared.getColor(for: convertSourceTitleToId(sourceTitle)))
                                                     .cornerRadius(4)
                                                 
                                                 Spacer()
@@ -409,31 +409,6 @@ struct SavedWordDetailView: View {
         }
     }
     
-    /// Get dictionary color for badges
-    private func getDictionaryColor(for sourceTitle: String) -> Color {
-        switch sourceTitle.lowercased() {
-        case "jmdict":
-            return .blue
-        case "旺文社":
-            return .orange
-        default:
-            // For imported dictionaries, try to get their assigned color
-            let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
-            if let dict = importedDictionaries.first(where: { $0.title.lowercased() == sourceTitle.lowercased() }) {
-                return getDictionaryColorForImported(dict.id.uuidString)
-            }
-            return .gray
-        }
-    }
-    
-    /// Get consistent color for imported dictionary
-    private func getDictionaryColorForImported(_ uuidString: String) -> Color {
-        let availableColors: [Color] = [.purple, .pink, .indigo, .teal, .cyan, .mint, .brown]
-        let hash = uuidString.unicodeScalars.reduce(0) { result, scalar in
-            return result &+ Int(scalar.value)
-        }
-        return availableColors[abs(hash) % availableColors.count]
-    }
     
     /// Check if a line is a valid dictionary source title
     private func isValidDictionarySource(_ text: String) -> Bool {
@@ -446,6 +421,23 @@ struct SavedWordDetailView: View {
         let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
         return importedDictionaries.contains { dict in
             dict.title.lowercased() == text
+        }
+    }
+    
+    /// Convert source title back to dictionary ID for color lookup
+    private func convertSourceTitleToId(_ sourceTitle: String) -> String {
+        switch sourceTitle.lowercased() {
+        case "jmdict":
+            return "jmdict"
+        case "旺文社":
+            return "obunsha"
+        default:
+            // For imported dictionaries, try to find the matching UUID
+            let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+            if let dict = importedDictionaries.first(where: { $0.title.lowercased() == sourceTitle.lowercased() }) {
+                return "imported_\(dict.id.uuidString)"
+            }
+            return sourceTitle.lowercased()
         }
     }
     
