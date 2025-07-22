@@ -85,43 +85,21 @@ struct DictionaryEntryRow: View {
                         .cornerRadius(4)
                 }
                 
-                if entry.source == "obunsha" {
-                    let color = getDictionaryColor(for: "obunsha")
-                    Text("旺文社")
-                        .font(.caption2)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(color.opacity(0.2))
-                        .foregroundColor(color)
-                        .cornerRadius(4)
-                } else if entry.source == "jmdict" {
-                    let color = getDictionaryColor(for: "jmdict")
-                    Text("JMdict")
-                        .font(.caption2)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(color.opacity(0.2))
-                        .foregroundColor(color)
-                        .cornerRadius(4)
-                } else if entry.source == "combined" {
-                    let jmdictColor = getDictionaryColor(for: "jmdict")
-                    let obunshaColor = getDictionaryColor(for: "obunsha")
-                    HStack(spacing: 4) {
-                        Text("JMdict")
-                            .font(.caption2)
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 1)
-                            .background(jmdictColor.opacity(0.2))
-                            .foregroundColor(jmdictColor)
-                            .cornerRadius(3)
-                        Text("旺文社")
-                            .font(.caption2)
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 1)
-                            .background(obunshaColor.opacity(0.2))
-                            .foregroundColor(obunshaColor)
-                            .cornerRadius(3)
+                // Show dictionary badges based on source
+                if entry.source == "combined" {
+                    // For combined entries, show all available dictionary badges
+                    let allEntries = getAllEntriesForWord()
+                    let uniqueSources = Array(Set(allEntries.map { $0.source })).sorted()
+                    
+                    print("🏷️ [BADGE-DEBUG] Combined entry '\(entry.term)-\(entry.reading)' - found \(allEntries.count) entries with sources: \(uniqueSources)")
+                    
+                    ForEach(uniqueSources, id: \.self) { source in
+                        getDictionarySourceBadge(for: source)
                     }
+                } else {
+                    // Single source entry
+                    print("🏷️ [BADGE-DEBUG] Single source entry '\(entry.term)-\(entry.reading)' - source: \(entry.source)")
+                    getDictionarySourceBadge(for: entry.source)
                 }
                 
                 Spacer()
@@ -146,6 +124,66 @@ struct DictionaryEntryRow: View {
     
     private func getDictionaryColor(for source: String) -> Color {
         return DictionaryColorProvider.shared.getColor(for: source)
+    }
+    
+    private func getAllEntriesForWord() -> [DictionaryEntry] {
+        // Look up all entries for this word-reading combination
+        let allEntries = DictionaryManager.shared.lookup(word: entry.term)
+        return allEntries.filter { $0.term == entry.term && $0.reading == entry.reading }
+    }
+    
+    @ViewBuilder
+    private func getDictionarySourceBadge(for source: String) -> some View {
+        let color = getDictionaryColor(for: source)
+        
+        if source == "obunsha" {
+            Text("旺文社")
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        } else if source == "jmdict" {
+            Text("JMdict")
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        } else if source.hasPrefix("imported_") {
+            let displayName = getImportedDictionaryDisplayName(source: source)
+            
+            Text(displayName)
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        } else {
+            // Fallback for any other source types
+            Text(source.capitalized)
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        }
+    }
+    
+    private func getImportedDictionaryDisplayName(source: String) -> String {
+        // Extract UUID from source string (format: "imported_UUID")
+        let importedId = source.replacingOccurrences(of: "imported_", with: "")
+        if let uuid = UUID(uuidString: importedId) {
+            let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+            if let dict = importedDictionaries.first(where: { $0.id == uuid }) {
+                return dict.title
+            }
+        }
+        return "Imported"
     }
     
     /// Check if BCCWJ frequency data is enabled in settings

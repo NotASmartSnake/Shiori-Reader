@@ -154,16 +154,55 @@ struct EntryDetailView: View {
                     .font(.headline)
                     .foregroundColor(.gray)
                 
-                ForEach(entry.meanings.indices, id: \.self) { index in
-                    HStack(alignment: .top) {
-                        Text("\(index + 1).")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                        
-                        Text(entry.meanings[index])
-                            .font(.body)
+                // Get all entries for this word-reading combination to show dictionary-separated definitions
+                let allEntries = getAllEntriesForWord()
+                
+                if !allEntries.isEmpty {
+                    // Show dictionary-separated definitions
+                    let entriesBySource = Dictionary(grouping: allEntries) { $0.source }
+                    let sourceOrder = getOrderedDictionarySources(availableSources: Array(entriesBySource.keys))
+                    
+                    ForEach(sourceOrder, id: \.self) { source in
+                        if let sourceEntries = entriesBySource[source], !sourceEntries.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                // Dictionary source badge
+                                HStack {
+                                    getDictionarySourceBadge(for: source)
+                                    Spacer()
+                                }
+                                
+                                // Definitions for this source
+                                VStack(alignment: .leading, spacing: 4) {
+                                    let allMeanings = sourceEntries.flatMap { $0.meanings }
+                                    ForEach(allMeanings.indices, id: \.self) { meaningIndex in
+                                        Text(allMeanings[meaningIndex])
+                                            .font(.body)
+                                            .padding(.leading, 8)
+                                    }
+                                }
+                            }
+                            .padding(.bottom, 4)
+                        }
                     }
-                    .padding(.leading, 4)
+                } else {
+                    // Fallback: show the current entry's definitions if no lookup results found
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Dictionary source badge
+                        HStack {
+                            getDictionarySourceBadge(for: entry.source)
+                            Spacer()
+                        }
+                        
+                        // Definitions for this entry
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(entry.meanings.indices, id: \.self) { meaningIndex in
+                                Text(entry.meanings[meaningIndex])
+                                    .font(.body)
+                                    .padding(.leading, 8)
+                            }
+                        }
+                    }
+                    .padding(.bottom, 4)
                 }
             }
             .padding(.horizontal)
@@ -273,36 +312,25 @@ struct EntryDetailView: View {
         // MARK: - Actions
         
         private func saveWordAction() {
-            // Format definitions with source title and proper newlines
-            let formattedDefinitions: [String]
+            // Always get all entries for this word-reading combination
+            let allEntries = getAllEntriesForWord()
             
-            if entry.source == "combined" {
-                // For combined entries, get original entries and group by source
-                let originalEntries = DictionaryManager.shared.lookup(word: entry.term)
-                let matchingEntries = originalEntries.filter { $0.term == entry.term && $0.reading == entry.reading }
-                
-                // Group by source and format
-                let groupedBySource = Dictionary(grouping: matchingEntries) { $0.source }
-                var sourceSections: [String] = []
-                
-                // Process in user-configured order
-                let sourceOrder = getOrderedDictionarySources(availableSources: Array(groupedBySource.keys))
-                
-                for source in sourceOrder {
-                    guard let entries = groupedBySource[source], !entries.isEmpty else { continue }
-                    let sourceTitle = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : source.capitalized)
-                    let allMeanings = entries.flatMap { $0.meanings }
-                    let definitionsText = allMeanings.joined(separator: "\n")
-                    sourceSections.append("\(sourceTitle)\n\(definitionsText)")
-                }
-                
-                formattedDefinitions = sourceSections
-            } else {
-                // Single source entry
-                let sourceTitle = entry.source == "jmdict" ? "JMdict" : (entry.source == "obunsha" ? "旺文社" : entry.source.capitalized)
-                let definitionsText = entry.meanings.joined(separator: "\n")
-                formattedDefinitions = ["\(sourceTitle)\n\(definitionsText)"]
+            // Group by source and format
+            let groupedBySource = Dictionary(grouping: allEntries) { $0.source }
+            var sourceSections: [String] = []
+            
+            // Process in user-configured order
+            let sourceOrder = getOrderedDictionarySources(availableSources: Array(groupedBySource.keys))
+            
+            for source in sourceOrder {
+                guard let entries = groupedBySource[source], !entries.isEmpty else { continue }
+                let sourceTitle = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : (source.hasPrefix("imported_") ? getImportedDictionaryDisplayName(source: source) : source.capitalized))
+                let allMeanings = entries.flatMap { $0.meanings }
+                let definitionsText = allMeanings.joined(separator: "\n")
+                sourceSections.append("\(sourceTitle)\n\(definitionsText)")
             }
+            
+            let formattedDefinitions = sourceSections
             
             // Create a new SavedWord
             let newSavedWord = SavedWord(
@@ -346,48 +374,26 @@ struct EntryDetailView: View {
                 self.saveWordAction()
             }
             
-            // Check if this is a combined entry from multiple dictionaries
-            if entry.source == "combined" {
-                // Look up the original entries from both dictionaries
-                let originalEntries = DictionaryManager.shared.lookup(word: entry.term)
-                let matchingEntries = originalEntries.filter { $0.term == entry.term && $0.reading == entry.reading }
-                
-                // Use the new export method with all matching entries
-                AnkiExportService.shared.exportWordToAnki(
-                    word: entry.term,
-                    reading: entry.reading,
-                    entries: matchingEntries,
-                    sentence: "", // No sentence from search results
-                    pitchAccents: entry.pitchAccents,
-                    sourceView: topViewController,
-                    onSaveToVocab: saveCallback,
-                    completion: { success in
-                        if success {
-                            withAnimation {
-                                showAnkiSuccess = true
-                            }
+            // Always get all entries for this word-reading combination to use the same flow as popup views
+            let allEntries = getAllEntriesForWord()
+            
+            // Use the export method with all matching entries
+            AnkiExportService.shared.exportWordToAnki(
+                word: entry.term,
+                reading: entry.reading,
+                entries: allEntries,
+                sentence: "", // No sentence from search results
+                pitchAccents: entry.pitchAccents,
+                sourceView: topViewController,
+                onSaveToVocab: saveCallback,
+                completion: { success in
+                    if success {
+                        withAnimation {
+                            showAnkiSuccess = true
                         }
                     }
-                )
-            } else {
-                // Single entry - create array with just this entry for consistent handling
-                AnkiExportService.shared.exportWordToAnki(
-                    word: entry.term,
-                    reading: entry.reading,
-                    entries: [entry],
-                    sentence: "", // No sentence from search results
-                    pitchAccents: entry.pitchAccents,
-                    sourceView: topViewController,
-                    onSaveToVocab: saveCallback,
-                    completion: { success in
-                        if success {
-                            withAnimation {
-                                showAnkiSuccess = true
-                            }
-                        }
-                    }
-                )
-            }
+                }
+            )
         }
     
     // MARK: - Helper Functions
@@ -411,5 +417,69 @@ struct EntryDetailView: View {
         result.append(contentsOf: remainingSources)
         
         return result
+    }
+    
+    private func getAllEntriesForWord() -> [DictionaryEntry] {
+        // Look up all entries for this word-reading combination
+        let allEntries = DictionaryManager.shared.lookup(word: entry.term)
+        return allEntries.filter { $0.term == entry.term && $0.reading == entry.reading }
+    }
+    
+    @ViewBuilder
+    private func getDictionarySourceBadge(for source: String) -> some View {
+        let color = getDictionaryColor(for: source)
+        
+        if source == "obunsha" {
+            Text("旺文社")
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        } else if source == "jmdict" {
+            Text("JMdict")
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        } else if source.hasPrefix("imported_") {
+            let displayName = getImportedDictionaryDisplayName(source: source)
+            
+            Text(displayName)
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        } else {
+            // Fallback for any other source types
+            Text(source.capitalized)
+                .font(.caption2)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        }
+    }
+    
+    private func getDictionaryColor(for source: String) -> Color {
+        return DictionaryColorProvider.shared.getColor(for: source)
+    }
+    
+    private func getImportedDictionaryDisplayName(source: String) -> String {
+        // Extract UUID from source string (format: "imported_UUID")
+        let importedId = source.replacingOccurrences(of: "imported_", with: "")
+        if let uuid = UUID(uuidString: importedId) {
+            let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+            if let dict = importedDictionaries.first(where: { $0.id == uuid }) {
+                return dict.title
+            }
+        }
+        return "Imported"
     }
 }
