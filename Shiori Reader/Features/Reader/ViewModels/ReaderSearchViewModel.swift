@@ -1,10 +1,3 @@
-//
-//  EnhancedSearchViewModel.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/4/25.
-//
-
 import Foundation
 import ReadiumShared
 

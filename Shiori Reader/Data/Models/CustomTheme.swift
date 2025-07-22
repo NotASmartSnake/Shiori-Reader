@@ -1,10 +1,3 @@
-//
-//  CustomTheme.swift
-//  Shiori Reader
-//
-//  Created by Claude on 5/16/25.
-//
-
 import Foundation
 import SwiftUI
 

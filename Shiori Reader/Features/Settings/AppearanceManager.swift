@@ -1,10 +1,3 @@
-//
-//  AppearanceManager.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/18/25.
-//
-
 import SwiftUI
 
 /// Key for storing appearance mode in UserDefaults

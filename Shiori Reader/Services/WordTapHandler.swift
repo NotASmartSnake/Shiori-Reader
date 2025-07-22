@@ -1,10 +1,3 @@
-//
-//  WordTapHandler.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/6/25.
-//
-
 import WebKit
 
 class WordTapHandler: NSObject, WKScriptMessageHandler {

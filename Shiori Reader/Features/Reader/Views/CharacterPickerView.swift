@@ -1,10 +1,3 @@
-//
-//  CharacterPickerView.swift
-//  Shiori Reader
-//
-//  Created by Claude on 5/16/25.
-//
-
 import SwiftUI
 
 struct CharacterPickerView: View {

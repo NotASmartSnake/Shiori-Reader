@@ -1,10 +1,3 @@
-//
-//  JapanesePitchAccentUtils.swift
-//  Shiori Reader
-//
-//  Created by Claude on 6/13/25.
-//
-
 import Foundation
 
 /// Utilities for handling Japanese text in the context of pitch accent visualization

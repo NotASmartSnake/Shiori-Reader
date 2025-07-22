@@ -1,10 +1,3 @@
-//
-//  DictionarySettingsViewModel.swift
-//  Shiori Reader
-//
-//  Created by Claude on 4/16/25.
-//
-
 import Foundation
 import Combine
 import SwiftUI

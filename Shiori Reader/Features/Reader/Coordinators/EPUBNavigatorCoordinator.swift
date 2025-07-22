@@ -1,10 +1,3 @@
-//
-//  EPUBNavigatorCoordinator.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/8/25.
-//
-
 import SwiftUI
 import ReadiumShared
 import ReadiumNavigator

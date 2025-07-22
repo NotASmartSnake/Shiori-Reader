@@ -1,10 +1,3 @@
-//
-//  PitchAccent.swift
-//  Shiori Reader
-//
-//  Created by Claude on 6/13/25.
-//
-
 import Foundation
 
 /// Represents a pitch accent entry for a Japanese word

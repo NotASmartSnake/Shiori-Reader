@@ -1,10 +1,3 @@
-//
-//  BookGrid.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/29/25.
-//
-
 import SwiftUI
 
 // Extension to detect device type

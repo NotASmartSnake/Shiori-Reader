@@ -1,10 +1,3 @@
-//
-//  DictionaryColorProvider.swift
-//  Shiori Reader
-//
-//  Created by Claude on 7/21/25.
-//
-
 import SwiftUI
 import Foundation
 

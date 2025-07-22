@@ -1,10 +1,3 @@
-//
-//  CustomTabBar.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 2/20/25.
-//
-
 import SwiftUI
 
 struct CustomTabBar: View {

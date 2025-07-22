@@ -1,10 +1,3 @@
-//
-//  Book.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 2/13/25.
-//
-
 import Foundation
 
 struct Book: Identifiable, Equatable, Hashable {

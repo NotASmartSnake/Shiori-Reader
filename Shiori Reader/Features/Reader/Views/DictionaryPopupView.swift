@@ -1,10 +1,3 @@
-//
-//  DictionaryPopupView.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/13/25.
-//
-
 
 import SwiftUI
 

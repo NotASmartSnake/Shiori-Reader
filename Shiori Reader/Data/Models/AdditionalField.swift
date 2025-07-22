@@ -1,10 +1,3 @@
-//
-//  AdditionalField.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/26/25.
-//
-
 import Foundation
 
 // Model for additional fields

@@ -1,10 +1,3 @@
-//
-//  EmptySavedWordsView.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/18/25.
-//
-
 import SwiftUI
 
 struct EmptySavedWordsView: View {

@@ -1,10 +1,3 @@
-//
-//  UIColor+Hex.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/16/25.
-//
-
 import UIKit
 
 extension UIColor {

@@ -1,10 +1,3 @@
-//
-//  DictionaryManager+YomitanImport.swift
-//  Shiori Reader
-//
-//  Created by Claude on 1/10/25.
-//
-
 import Foundation
 import GRDB
 

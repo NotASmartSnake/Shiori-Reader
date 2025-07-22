@@ -1,10 +1,3 @@
-//
-//  BookRepository.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 2/20/25.
-//
-
 import Foundation
 import CoreData
 

@@ -1,10 +1,3 @@
-//
-//  SimplePitchAccentGraphView.swift
-//  Shiori Reader
-//
-//  Created by Claude on 6/13/25.
-//
-
 import SwiftUI
 
 /// A simple pitch accent graph that shows just the visual pattern without badges or numbers

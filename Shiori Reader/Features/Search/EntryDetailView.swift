@@ -1,10 +1,3 @@
-//
-//  EntryDetailView.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/21/25.
-//
-
 import SwiftUI
 
 // Detail view for dictionary entry

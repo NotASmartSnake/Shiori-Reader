@@ -1,11 +1,4 @@
 
-//
-//  NavigationCoordinator.swift
-//  Shiori Reader
-//
-//  Created by Claude on 4/18/25.
-//
-
 import SwiftUI
 import Combine
 

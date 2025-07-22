@@ -1,10 +1,3 @@
-//
-//  SavedWordsManager.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/21/25.
-//
-
 import Foundation
 import Combine
 import UIKit

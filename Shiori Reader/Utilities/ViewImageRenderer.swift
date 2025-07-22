@@ -1,10 +1,3 @@
-//
-//  ViewImageRenderer.swift
-//  Shiori Reader
-//
-//  Created by Claude on 6/14/25.
-//
-
 import SwiftUI
 import UIKit
 

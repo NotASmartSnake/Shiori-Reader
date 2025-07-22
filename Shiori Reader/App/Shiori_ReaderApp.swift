@@ -1,10 +1,3 @@
-//
-//  Shiori_ReaderApp.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 2/13/25.
-//
-
 import SwiftUI
 import UIKit
 

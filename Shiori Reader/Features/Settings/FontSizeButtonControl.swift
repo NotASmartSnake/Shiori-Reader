@@ -1,10 +1,3 @@
-//
-//  FontSizeButtonControl.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 6/21/25.
-//
-
 import SwiftUI
 
 struct FontSizeButtonControl: View {

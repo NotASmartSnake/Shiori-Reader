@@ -1,10 +1,3 @@
-//
-//  PitchAccentGraphView.swift
-//  Shiori Reader
-//
-//  Created by Claude on 6/13/25.
-//
-
 import SwiftUI
 
 /// A visual representation of Japanese pitch accent patterns using dots and lines

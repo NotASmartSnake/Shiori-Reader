@@ -1,10 +1,3 @@
-//
-//  DictionaryPopupCardView.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 6/22/25.
-//
-
 import SwiftUI
 
 struct DictionaryPopupCardView: View {

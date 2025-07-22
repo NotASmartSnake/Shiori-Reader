@@ -1,10 +1,3 @@
-//
-//  AppDelegate.swift
-//  Shiori Reader
-//
-//  Created by Claude on 4/16/25.
-//
-
 import UIKit
 import SwiftUI
 import Foundation

@@ -1,10 +1,3 @@
-//
-//  MinimalPitchAccentGraphView.swift
-//  Shiori Reader
-//
-//  Created by Claude on 6/13/25.
-//
-
 import SwiftUI
 
 /// Minimal test view to verify compilation

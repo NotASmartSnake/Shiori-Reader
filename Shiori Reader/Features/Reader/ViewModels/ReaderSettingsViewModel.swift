@@ -1,10 +1,3 @@
-//
-//  ReaderSettingsViewModel.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/10/25.
-//
-
 
 // ReaderSettingsViewModel.swift
 import SwiftUI

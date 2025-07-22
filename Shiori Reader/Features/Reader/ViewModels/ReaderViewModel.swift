@@ -1,10 +1,3 @@
-//
-//  BookViewModel.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/3/25.
-//
-
 import Foundation
 import Combine
 import SwiftUI

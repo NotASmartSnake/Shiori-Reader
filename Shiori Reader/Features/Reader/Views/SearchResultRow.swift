@@ -1,10 +1,3 @@
-//
-//  SearchResultRow.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/4/25.
-//
-
 import SwiftUI
 import ReadiumShared
 import ReadiumNavigator

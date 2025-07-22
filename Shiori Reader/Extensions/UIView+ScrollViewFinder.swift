@@ -1,11 +1,4 @@
 
-//
-//  UIView+ScrollViewFinder.swift
-//  Shiori Reader
-//
-//  Created by Claude on 4/18/25.
-//
-
 import UIKit
 import SwiftUI
 import WebKit

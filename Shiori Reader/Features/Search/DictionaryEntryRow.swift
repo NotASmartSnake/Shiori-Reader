@@ -1,10 +1,3 @@
-//
-//  DictionaryEntryRow.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/21/25.
-//
-
 import SwiftUI
 
 // Component for dictionary entry row

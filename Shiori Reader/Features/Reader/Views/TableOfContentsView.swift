@@ -1,10 +1,3 @@
-//
-//  TableOfContentsView.swift
-//  Shiori Reader
-//
-//  Created by Claude on 4/10/25.
-//
-
 import SwiftUI
 import ReadiumShared
 

@@ -1,10 +1,3 @@
-//
-//  PitchAccentManager.swift
-//  Shiori Reader
-//
-//  Created by Claude on 6/13/25.
-//
-
 import Foundation
 import GRDB
 

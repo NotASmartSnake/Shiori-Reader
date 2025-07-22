@@ -1,17 +1,3 @@
-//
-//  SavedWordDetailView.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/21/25.
-//
-
-
-//
-//  SavedWordDetailView.swift
-//  Shiori Reader
-//
-//  Created by Claude on 3/20/25.
-//
 
 import SwiftUI
 

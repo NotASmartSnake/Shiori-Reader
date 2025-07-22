@@ -1,10 +1,3 @@
-//
-//  ReaderSettingsView.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/10/25.
-//
-
 import SwiftUI
 
 struct ReaderSettingsView: View {

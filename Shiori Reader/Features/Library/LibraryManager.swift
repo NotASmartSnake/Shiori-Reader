@@ -1,10 +1,3 @@
-//
-//  LibraryManager.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/29/25.
-//
-
 import Foundation
 import SwiftUI
 import Combine

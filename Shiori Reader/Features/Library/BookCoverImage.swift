@@ -1,10 +1,3 @@
-//
-//  BookCoverImage.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 3/31/25.
-//
-
 import SwiftUI
 import Combine
 

@@ -1,10 +1,3 @@
-//
-//  FrequencyManager.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 6/23/25.
-//
-
 import Foundation
 import GRDB
 

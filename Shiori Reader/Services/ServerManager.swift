@@ -1,10 +1,3 @@
-//
-//  ServerManager.swift
-//  Shiori Reader
-//
-//  Created by Russell Graviet on 4/3/25.
-//
-
 // ServerManager.swift
 import Foundation
 import ReadiumAdapterGCDWebServer
