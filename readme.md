@@ -6,6 +6,20 @@ Shiori Reader is an iOS application designed for Japanese language learners to r
 
 **Get the app from the App Store for the best experience!** The App Store version includes all features and regular updates.
 
+## Screenshots
+
+<p align="center">
+  <img src="Images/library_view.PNG" width="250" alt="Library View" />
+  <img src="Images/dictionary_lookup.PNG" width="250" alt="Dictionary Lookup" />
+  <img src="Images/saved_words.PNG" width="250" alt="Saved Words" />
+</p>
+
+<p align="center">
+  <img src="Images/definition_popup.PNG" width="250" alt="Dictionary Popup" />
+  <img src="Images/definition_popup_card.PNG" width="250" alt="Dictionary Card" />
+  <img src="Images/definition_selection.PNG" width="250" alt="Word Selection" />
+</p>
+
 ## Features
 
 ### Advanced Reading Experience
