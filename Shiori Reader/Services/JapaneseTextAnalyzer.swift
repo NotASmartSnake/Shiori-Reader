@@ -18,53 +18,103 @@ class JapaneseTextAnalyzer {
         }
     }
     
-    // Format word with reading using MeCab's furigana annotations
+    // Format word with reading using individual kanji mapping
     func formatWordWithReading(word: String, reading: String) -> String {
-        // Get furigana annotations
-        let annotations = tokenizer.furiganaAnnotations(for: word, 
-                                                      transliteration: .hiragana, 
-                                                      options: [.kanjiOnly])
-        
-        if annotations.isEmpty {
-            // If no annotations (all hiragana or no kanji), return the word
+        if !containsKanji(word) {
             return word
         }
         
-        // Create a mutable copy of the word
-        var result = word
+        // Get all individual kanji characters from the word
+        let kanjiChars = Array(word).filter { containsKanji(String($0)) }
         
-        // Process annotations in reverse order to avoid index shifting
-        for annotation in annotations.reversed() {
-            let range = annotation.range
-            // Insert the reading in brackets after the kanji
-            result.insert(contentsOf: "[\(annotation.reading)]", at: range.upperBound)
+        if kanjiChars.isEmpty {
+            return word
         }
         
-        return result
-    }
-    
-    // Alternative implementation if the range approach doesn't work well
-    func formatWordWithReadingAlternative(word: String, reading: String) -> String {
-        // Tokenize the word
+        // Get the full reading for the word
         let tokens = tokenizer.tokenize(text: word, transliteration: .hiragana)
+        let fullReading = tokens.first?.reading ?? reading
         
-        // Build the result with readings
         var result = ""
+        var readingIndex = fullReading.startIndex
+        var kanjiGroupCount = 0
         
-        for token in tokens {
-            let base = token.base
-            let tokenReading = token.reading
-            
-            // Check if the token contains kanji
-            if containsKanji(base) && base != tokenReading {
-                result += "\(base)[\(tokenReading)]"
+        // Count total kanji groups (contiguous kanji sequences)
+        var i = word.startIndex
+        while i < word.endIndex {
+            if containsKanji(String(word[i])) {
+                kanjiGroupCount += 1
+                // Skip through the contiguous kanji
+                while i < word.endIndex && containsKanji(String(word[i])) {
+                    i = word.index(after: i)
+                }
             } else {
-                result += base
+                i = word.index(after: i)
+            }
+        }
+        
+        // Process each character
+        i = word.startIndex
+        var processedKanjiGroups = 0
+        
+        while i < word.endIndex {
+            let char = word[i]
+            
+            if containsKanji(String(char)) {
+                // Add space before subsequent kanji groups
+                if kanjiGroupCount > 1 && processedKanjiGroups > 0 {
+                    result += " "
+                }
+                
+                // Process each kanji in this group individually
+                while i < word.endIndex && containsKanji(String(word[i])) {
+                    let kanjiChar = String(word[i])
+                    
+                    // Get the reading for this specific kanji
+                    let kanjiReading = getReadingForKanji(kanjiChar, from: fullReading, at: &readingIndex)
+                    
+                    result += "\(kanjiChar)[\(kanjiReading)]"
+                    i = word.index(after: i)
+                }
+                
+                processedKanjiGroups += 1
+            } else {
+                // Hiragana/katakana - add as-is and advance reading index
+                result += String(char)
+                if readingIndex < fullReading.endIndex && String(char) == String(fullReading[readingIndex]) {
+                    readingIndex = fullReading.index(after: readingIndex)
+                }
+                i = word.index(after: i)
             }
         }
         
         return result
     }
+    
+    // Extract reading for a specific kanji from the full reading
+    private func getReadingForKanji(_ kanji: String, from fullReading: String, at readingIndex: inout String.Index) -> String {
+        // This is a simplified approach - in reality, mapping individual kanji to readings is complex
+        // For now, we'll try to extract a reasonable portion of the reading
+        
+        if readingIndex >= fullReading.endIndex {
+            return kanji
+        }
+        
+        // Try to get 1-3 characters from the reading for this kanji
+        var kanjiReading = ""
+        var charsToTake = min(2, fullReading.distance(from: readingIndex, to: fullReading.endIndex))
+        
+        for _ in 0..<charsToTake {
+            if readingIndex < fullReading.endIndex {
+                kanjiReading += String(fullReading[readingIndex])
+                readingIndex = fullReading.index(after: readingIndex)
+            }
+        }
+        
+        return kanjiReading.isEmpty ? kanji : kanjiReading
+    }
+    
+    
     
     // Helper to check if a string contains kanji
     private func containsKanji(_ text: String) -> Bool {
