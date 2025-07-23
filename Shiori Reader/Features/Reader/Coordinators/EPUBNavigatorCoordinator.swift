@@ -53,6 +53,8 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
         // First check for direct WebViews
         if let webView = view as? WKWebView {
             _ = wordTapHandler.registerHandlers(for: webView)
+            // Disable scroll-to-top behavior
+            webView.disableScrollToTop()
         }
         
         // Then check children
@@ -76,6 +78,8 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
             
             // Apply the insets to the scroll views within the WebView
             webView.adjustScrollViewContentInsets(top: topInset, bottom: bottomInset)
+            // Disable scroll-to-top behavior
+            webView.disableScrollToTop()
         }
     }
     
@@ -100,6 +104,8 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
             webViewCount += 1
             // Reinject the word tap handlers
             _ = wordTapHandler.registerHandlers(for: webView)
+            // Disable scroll-to-top behavior
+            webView.disableScrollToTop()
             
             // Check if it's already loading content, as that can interfere with script injection
             if webView.isLoading {
@@ -148,6 +154,8 @@ class EPUBNavigatorCoordinator: NSObject, EPUBNavigatorDelegate, WKScriptMessage
                 // Now register the handlers fresh
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     _ = self.wordTapHandler.registerHandlers(for: webView)
+                    // Disable scroll-to-top behavior
+                    webView.disableScrollToTop()
                 }
             }
         }

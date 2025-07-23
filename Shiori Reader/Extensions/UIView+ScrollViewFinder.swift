@@ -44,4 +44,12 @@ extension WKWebView {
             print("DEBUG [ScrollViewFinder]: Adjusted scroll view content insets to top: \(topInset), bottom: \(bottomInset)")
         }
     }
+    
+    /// Disable scroll-to-top behavior for all scroll views within the WebView
+    func disableScrollToTop() {
+        let scrollViews = self.findScrollViews()
+        for scrollView in scrollViews {
+            scrollView.scrollsToTop = false
+        }
+    }
 }
