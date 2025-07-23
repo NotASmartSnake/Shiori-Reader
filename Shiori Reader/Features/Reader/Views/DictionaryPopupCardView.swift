@@ -407,7 +407,6 @@ struct DictionaryPopupCardView: View {
     
     // MARK: - Helper Functions
     
-    
     private func toggleAllSourcesForTerm(_ term: String, reading: String) {
         // Get all available sources for this term-reading combination
         let entriesBySource = Dictionary(grouping: getAllEntriesForTerm(term, reading: reading, from: matches)) { $0.source }

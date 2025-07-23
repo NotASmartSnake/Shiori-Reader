@@ -111,6 +111,23 @@ struct ReaderView: View {
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarHidden(true)
         .statusBarHidden(!showOverlay)
+        .gesture(
+            viewModel.showDictionary ? 
+            DragGesture()
+                .onEnded { value in
+                    let threshold: CGFloat = 50
+                    
+                    if !viewModel.fullTextForSelection.isEmpty {
+                        if value.translation.width > threshold {
+                            // Swipe right - move to previous character (left)
+                            navigateToCharacter(direction: -1)
+                        } else if value.translation.width < -threshold {
+                            // Swipe left - move to next character (right)
+                            navigateToCharacter(direction: 1)
+                        }
+                    }
+                } : nil
+        )
         .onAppear {
             // Allow all orientations when reading
             orientationManager.unlockOrientation()
@@ -412,6 +429,17 @@ struct ReaderView: View {
     }
     
     // MARK: - Helper Methods
+    
+    private func navigateToCharacter(direction: Int) {
+        let safeSelectedOffset = max(0, min(viewModel.currentTextOffset, viewModel.fullTextForSelection.count - 1))
+        let newOffset = safeSelectedOffset + direction
+        
+        // Ensure the new offset is within bounds
+        guard newOffset >= 0 && newOffset < viewModel.fullTextForSelection.count else { return }
+        
+        print("👉 READER SWIPE: Moving to offset: \(newOffset)")
+        viewModel.handleCharacterSelection(offset: newOffset)
+    }
     
     // Helper method to update reader preferences
     private func updateReaderPreferences() {
