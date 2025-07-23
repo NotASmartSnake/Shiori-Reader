@@ -10,12 +10,16 @@
 *.otf
 *.ttf
 
-# Ignore image files
+# Ignore image files (except Images folder for README)
 *.jpg
 *.jpeg
 *.png
 *.webp
 *.gif
+
+# Allow Images folder for README screenshots
+!Images/
+!Images/*
 
 # Ignore EPUBs and other books/media
 Books/
