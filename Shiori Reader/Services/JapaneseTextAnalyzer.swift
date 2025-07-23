@@ -70,8 +70,12 @@ class JapaneseTextAnalyzer {
                 while i < word.endIndex && containsKanji(String(word[i])) {
                     let kanjiChar = String(word[i])
                     
+                    // Look ahead to see what character comes next
+                    let nextIndex = word.index(after: i)
+                    let nextChar = nextIndex < word.endIndex ? String(word[nextIndex]) : nil
+                    
                     // Get the reading for this specific kanji
-                    let kanjiReading = getReadingForKanji(kanjiChar, from: fullReading, at: &readingIndex)
+                    let kanjiReading = getReadingForKanji(kanjiChar, from: fullReading, at: &readingIndex, nextCharInWord: nextChar)
                     
                     result += "\(kanjiChar)[\(kanjiReading)]"
                     i = word.index(after: i)
@@ -91,23 +95,46 @@ class JapaneseTextAnalyzer {
         return result
     }
     
-    // Extract reading for a specific kanji from the full reading
-    private func getReadingForKanji(_ kanji: String, from fullReading: String, at readingIndex: inout String.Index) -> String {
-        // This is a simplified approach - in reality, mapping individual kanji to readings is complex
-        // For now, we'll try to extract a reasonable portion of the reading
-        
+    // Extract reading for a specific kanji from the full reading, considering following hiragana
+    private func getReadingForKanji(_ kanji: String, from fullReading: String, at readingIndex: inout String.Index, nextCharInWord: String? = nil) -> String {
         if readingIndex >= fullReading.endIndex {
             return kanji
         }
         
-        // Try to get 1-3 characters from the reading for this kanji
         var kanjiReading = ""
-        var charsToTake = min(2, fullReading.distance(from: readingIndex, to: fullReading.endIndex))
+        let startReadingIndex = readingIndex
         
-        for _ in 0..<charsToTake {
-            if readingIndex < fullReading.endIndex {
-                kanjiReading += String(fullReading[readingIndex])
-                readingIndex = fullReading.index(after: readingIndex)
+        // If there's a hiragana character following the kanji, we need to stop the reading before that hiragana appears in the reading
+        if let nextChar = nextCharInWord, !containsKanji(nextChar) {
+            // Look ahead in the reading to find where this hiragana character appears
+            var tempIndex = readingIndex
+            while tempIndex < fullReading.endIndex {
+                let readingChar = String(fullReading[tempIndex])
+                
+                // If we find the next hiragana character in the reading, stop before it
+                if readingChar == nextChar {
+                    break
+                }
+                
+                kanjiReading += readingChar
+                tempIndex = fullReading.index(after: tempIndex)
+                
+                // Safety: don't take more than 4 characters for a single kanji
+                if kanjiReading.count >= 4 {
+                    break
+                }
+            }
+            
+            readingIndex = tempIndex
+        } else {
+            // No following hiragana to consider, take 1-2 characters as before
+            let charsToTake = min(2, fullReading.distance(from: readingIndex, to: fullReading.endIndex))
+            
+            for _ in 0..<charsToTake {
+                if readingIndex < fullReading.endIndex {
+                    kanjiReading += String(fullReading[readingIndex])
+                    readingIndex = fullReading.index(after: readingIndex)
+                }
             }
         }
         
