@@ -63,6 +63,7 @@ struct CharacterPickerView: View {
                         .background(charInfo.offset == max(0, min(selectedOffset, currentText.count - 1)) ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
                         .cornerRadius(8)
                         .foregroundColor(charInfo.offset == max(0, min(selectedOffset, currentText.count - 1)) ? .blue : .primary)
+                        .animation(.none, value: selectedOffset) // Disable automatic animation
                 }
             }
         }
