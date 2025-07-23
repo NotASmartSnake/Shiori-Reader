@@ -156,6 +156,12 @@ struct DefaultAppearanceSettingsView: View {
                             }
                             .pickerStyle(SegmentedPickerStyle())
                         }
+                        
+                        // Character picker swipe gestures toggle
+                        Toggle("Enable Swipe Motions for Character Picker", isOn: Binding(
+                            get: { viewModel.preferences.isCharacterPickerSwipeEnabled },
+                            set: { _ in viewModel.toggleCharacterPickerSwipe() }
+                        ))
                     }
                     
                     // MARK: - Reset Section

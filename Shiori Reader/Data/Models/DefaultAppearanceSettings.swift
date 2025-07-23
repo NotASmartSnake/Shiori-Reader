@@ -16,6 +16,7 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
     var isDictionaryAnimationEnabled: Bool
     var dictionaryAnimationSpeed: String // "slow", "normal", "fast"
     var dictionaryDisplayMode: String // "card", "popup"
+    var isCharacterPickerSwipeEnabled: Bool
     
     // MARK: - Initialization
     
@@ -31,7 +32,8 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
          theme: String = "light",
          isDictionaryAnimationEnabled: Bool = true,
          dictionaryAnimationSpeed: String = "normal",
-         dictionaryDisplayMode: String = "card") {
+         dictionaryDisplayMode: String = "card",
+         isCharacterPickerSwipeEnabled: Bool = true) {
         self.id = id
         self.fontSize = fontSize
         self.fontFamily = fontFamily
@@ -45,6 +47,7 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
         self.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
         self.dictionaryAnimationSpeed = dictionaryAnimationSpeed
         self.dictionaryDisplayMode = dictionaryDisplayMode
+        self.isCharacterPickerSwipeEnabled = isCharacterPickerSwipeEnabled
     }
     
     // Initialize from Core Data entity
@@ -62,6 +65,7 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
         self.isDictionaryAnimationEnabled = entity.isDictionaryAnimationEnabled
         self.dictionaryAnimationSpeed = entity.dictionaryAnimationSpeed ?? "normal"
         self.dictionaryDisplayMode = entity.dictionaryDisplayMode ?? "card"
+        self.isCharacterPickerSwipeEnabled = entity.isCharacterPickerSwipeEnabled
     }
     
     // MARK: - Helper Methods
@@ -135,7 +139,8 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
             lhs.theme == rhs.theme &&
             lhs.isDictionaryAnimationEnabled == rhs.isDictionaryAnimationEnabled &&
             lhs.dictionaryAnimationSpeed == rhs.dictionaryAnimationSpeed &&
-            lhs.dictionaryDisplayMode == rhs.dictionaryDisplayMode
+            lhs.dictionaryDisplayMode == rhs.dictionaryDisplayMode &&
+            lhs.isCharacterPickerSwipeEnabled == rhs.isCharacterPickerSwipeEnabled
     }
     
     // MARK: - Core Data Helpers
@@ -155,5 +160,6 @@ struct DefaultAppearanceSettings: Identifiable, Equatable, Hashable {
         entity.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
         entity.dictionaryAnimationSpeed = dictionaryAnimationSpeed
         entity.dictionaryDisplayMode = dictionaryDisplayMode
+        entity.isCharacterPickerSwipeEnabled = isCharacterPickerSwipeEnabled
     }
 }

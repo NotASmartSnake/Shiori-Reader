@@ -229,7 +229,8 @@ class CoreDataManager {
                                               theme: String,
                                               isDictionaryAnimationEnabled: Bool = true,
                                               dictionaryAnimationSpeed: String = "normal",
-                                              dictionaryDisplayMode: String = "card") -> DefaultAppearanceSettingsEntity {
+                                              dictionaryDisplayMode: String = "card",
+                                              isCharacterPickerSwipeEnabled: Bool = true) -> DefaultAppearanceSettingsEntity {
         
         // Check if settings already exist
         if let existingSettings = getDefaultAppearanceSettings() {
@@ -246,6 +247,7 @@ class CoreDataManager {
             existingSettings.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
             existingSettings.dictionaryAnimationSpeed = dictionaryAnimationSpeed
             existingSettings.dictionaryDisplayMode = dictionaryDisplayMode
+            existingSettings.isCharacterPickerSwipeEnabled = isCharacterPickerSwipeEnabled
             saveContext()
             return existingSettings
         } else {
@@ -264,6 +266,7 @@ class CoreDataManager {
             settings.isDictionaryAnimationEnabled = isDictionaryAnimationEnabled
             settings.dictionaryAnimationSpeed = dictionaryAnimationSpeed
             settings.dictionaryDisplayMode = dictionaryDisplayMode
+            settings.isCharacterPickerSwipeEnabled = isCharacterPickerSwipeEnabled
             saveContext()
             return settings
         }

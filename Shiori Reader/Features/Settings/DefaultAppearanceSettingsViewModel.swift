@@ -74,6 +74,10 @@ class DefaultAppearanceSettingsViewModel: ObservableObject {
         savePreferences()
     }
     
+    func toggleCharacterPickerSwipe() {
+        preferences.isCharacterPickerSwipeEnabled.toggle()
+    }
+    
     func setTheme(_ theme: String) {
         preferences.theme = theme
         
@@ -115,7 +119,8 @@ class DefaultAppearanceSettingsViewModel: ObservableObject {
             theme: "light",
             isDictionaryAnimationEnabled: true,
             dictionaryAnimationSpeed: "normal",
-            dictionaryDisplayMode: "card"
+            dictionaryDisplayMode: "card",
+            isCharacterPickerSwipeEnabled: true
         )
         
         // Reset selected custom theme

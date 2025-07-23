@@ -112,7 +112,7 @@ struct ReaderView: View {
         .navigationBarHidden(true)
         .statusBarHidden(!showOverlay)
         .gesture(
-            viewModel.showDictionary ? 
+            viewModel.showDictionary && defaultAppearanceSettings.isCharacterPickerSwipeEnabled ? 
             DragGesture()
                 .onEnded { value in
                     let threshold: CGFloat = 50

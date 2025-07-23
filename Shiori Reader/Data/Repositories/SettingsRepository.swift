@@ -49,7 +49,8 @@ class SettingsRepository {
                 theme: "light",
                 isDictionaryAnimationEnabled: true,
                 dictionaryAnimationSpeed: "normal",
-                dictionaryDisplayMode: "card"
+                dictionaryDisplayMode: "card",
+                isCharacterPickerSwipeEnabled: true
             )
             return DefaultAppearanceSettings(entity: entity)
         }
@@ -69,7 +70,8 @@ class SettingsRepository {
             theme: settings.theme,
             isDictionaryAnimationEnabled: settings.isDictionaryAnimationEnabled,
             dictionaryAnimationSpeed: settings.dictionaryAnimationSpeed,
-            dictionaryDisplayMode: settings.dictionaryDisplayMode
+            dictionaryDisplayMode: settings.dictionaryDisplayMode,
+            isCharacterPickerSwipeEnabled: settings.isCharacterPickerSwipeEnabled
         )
     }
     
