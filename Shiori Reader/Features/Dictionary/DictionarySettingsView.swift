@@ -99,67 +99,45 @@ struct DictionarySettingsView: View {
     // MARK: - UI Components
     
     private func dictionaryRow(_ dictionary: DictionaryInfo) -> some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(dictionary.name)
-                    .font(.body)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+        NavigationLink(destination: DictionaryDetailView(dictionaryId: dictionary.id, viewModel: viewModel)) {
+            HStack(alignment: .center) {
+                // Color indicator
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(dictionary.tagColor.swiftUIColor.opacity(0.2))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(dictionary.tagColor.swiftUIColor, lineWidth: 1)
+                    )
+                    .frame(width: 20, height: 16)
                 
-                // Color preview and selection
-                HStack(spacing: 8) {
-                    Text("Tag Color:")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(dictionary.name)
+                        .font(.body)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .foregroundColor(.primary)
+                    
+                    Text(dictionary.description)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
-                    // Current color preview
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(dictionary.tagColor.swiftUIColor.opacity(0.2))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(dictionary.tagColor.swiftUIColor, lineWidth: 1)
-                        )
-                        .frame(width: 20, height: 16)
-                    
-                    // Color selection menu
-                    Menu {
-                        ForEach(DictionaryTagColor.allCases, id: \.self) { color in
-                            Button(action: {
-                                viewModel.updateDictionaryColor(id: dictionary.id, color: color)
-                            }) {
-                                HStack {
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .fill(color.swiftUIColor)
-                                        .frame(width: 16, height: 12)
-                                    Text(color.displayName)
-                                    if color == dictionary.tagColor {
-                                        Spacer()
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        Text(dictionary.tagColor.displayName)
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
-                .padding(.top, 2)
+                
+                Spacer()
+                
+                if editMode?.wrappedValue != .active {
+                    Toggle("", isOn: Binding(
+                        get: { dictionary.isEnabled },
+                        set: { viewModel.toggleDictionary(id: dictionary.id, isEnabled: $0) }
+                    ))
+                    .disabled(!dictionary.canDisable)
+                    .fixedSize()
+                }
             }
-            
-            Spacer()
-            
-            if editMode?.wrappedValue != .active {
-                Toggle("", isOn: Binding(
-                    get: { dictionary.isEnabled },
-                    set: { viewModel.toggleDictionary(id: dictionary.id, isEnabled: $0) }
-                ))
-                .disabled(!dictionary.canDisable)
-                .fixedSize()
-            }
+            .padding(.vertical, 6)
         }
-        .padding(.vertical, 6)
+        .disabled(editMode?.wrappedValue == .active)
     }
     
     private var importProgressView: some View {

@@ -62,7 +62,7 @@ class DictionaryColorProvider: ObservableObject {
             if source.hasPrefix("imported_") {
                 return getImportedDictionaryFallbackColor(for: source)
             }
-            return .gray
+            return .cyan
         }
     }
     
@@ -74,7 +74,7 @@ class DictionaryColorProvider: ObservableObject {
     
     // Fast lookup without SwiftUI Color conversion for performance-critical paths
     func getTagColor(for source: String) -> DictionaryTagColor {
-        return colorMap[source] ?? .gray
+        return colorMap[source] ?? .cyan
     }
     
     func getOrderedDictionarySources() -> [String] {

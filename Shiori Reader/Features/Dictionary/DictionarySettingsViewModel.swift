@@ -21,7 +21,10 @@ class DictionarySettingsViewModel: ObservableObject {
         // Initialize with default settings first
         self.settings = DictionarySettings()
         
-        // Initialize with the available dictionaries
+        // Now load the saved settings first
+        loadSettings()
+        
+        // Initialize with the available dictionaries using saved colors if available
         self.availableDictionaries = [
             DictionaryInfo(
                 id: "jmdict",
@@ -30,7 +33,7 @@ class DictionarySettingsViewModel: ObservableObject {
                 isBuiltIn: true,
                 isEnabled: true,
                 canDisable: true,
-                tagColor: .blue
+                tagColor: settings.dictionaryColors["jmdict"] ?? .blue
             ),
             DictionaryInfo(
                 id: "obunsha",
@@ -39,7 +42,7 @@ class DictionarySettingsViewModel: ObservableObject {
                 isBuiltIn: true,
                 isEnabled: true,
                 canDisable: true,
-                tagColor: .orange
+                tagColor: settings.dictionaryColors["obunsha"] ?? .orange
             ),
             DictionaryInfo(
                 id: "bccwj",
@@ -48,12 +51,9 @@ class DictionarySettingsViewModel: ObservableObject {
                 isBuiltIn: true,
                 isEnabled: true,
                 canDisable: true,
-                tagColor: .green
+                tagColor: settings.dictionaryColors["bccwj"] ?? .green
             )
         ]
-        
-        // Now load the saved settings after initializing properties
-        loadSettings()
         
         // Load imported dictionaries
         loadImportedDictionaries()
@@ -160,8 +160,7 @@ class DictionarySettingsViewModel: ObservableObject {
             print("📚 [SETTINGS] No saved settings during refresh, using defaults")
         }
         
-        // Re-sync the dictionary states with the refreshed settings
-        sortDictionariesByOrder()
+        // Only sync dictionary states, don't reload imported dictionaries or re-sort
         syncDictionaryStatesWithSettings()
     }
     
@@ -258,7 +257,7 @@ class DictionarySettingsViewModel: ObservableObject {
             return availableColors.first!
         } else {
             // All colors are used, return a random color
-            return DictionaryTagColor.allCases.randomElement() ?? .gray
+            return DictionaryTagColor.allCases.randomElement() ?? .cyan
         }
     }
     
@@ -269,6 +268,11 @@ class DictionarySettingsViewModel: ObservableObject {
         
         for importedDict in importedDictionaries {
             let importedId = "imported_\(importedDict.id.uuidString)"
+            
+            // Skip if we already have this dictionary
+            if availableDictionaries.contains(where: { $0.id == importedId }) {
+                continue
+            }
             
             // Get color for this dictionary, assigning unique color if not set
             let assignedColor: DictionaryTagColor
@@ -293,16 +297,14 @@ class DictionarySettingsViewModel: ObservableObject {
                 tagColor: assignedColor
             )
             
-            if !availableDictionaries.contains(dictionaryInfo) {
-                availableDictionaries.append(dictionaryInfo)
-                
-                // Add new dictionary to end of order list if not already there
-                if !settings.dictionaryOrder.contains(importedId) {
-                    var updatedSettings = settings
-                    updatedSettings.dictionaryOrder.append(importedId)
-                    settings = updatedSettings
-                    saveSettings()
-                }
+            availableDictionaries.append(dictionaryInfo)
+            
+            // Add new dictionary to end of order list if not already there
+            if !settings.dictionaryOrder.contains(importedId) {
+                var updatedSettings = settings
+                updatedSettings.dictionaryOrder.append(importedId)
+                settings = updatedSettings
+                saveSettings()
             }
         }
         
@@ -366,7 +368,7 @@ enum DictionaryTagColor: String, CaseIterable, Codable {
     case purple = "purple"
     case yellow = "yellow"
     case pink = "pink"
-    case gray = "gray"
+    case cyan = "cyan"
     
     var displayName: String {
         switch self {
@@ -377,7 +379,7 @@ enum DictionaryTagColor: String, CaseIterable, Codable {
         case .purple: return "Purple"
         case .yellow: return "Yellow"
         case .pink: return "Pink"
-        case .gray: return "Gray"
+        case .cyan: return "Cyan"
         }
     }
     
@@ -390,7 +392,7 @@ enum DictionaryTagColor: String, CaseIterable, Codable {
         case .purple: return .purple
         case .yellow: return .yellow
         case .pink: return .pink
-        case .gray: return .gray
+        case .cyan: return .cyan
         }
     }
 }
