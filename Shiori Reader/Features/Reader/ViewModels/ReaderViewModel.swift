@@ -559,8 +559,6 @@ class ReaderViewModel: ObservableObject {
             return
         }
         
-        let userClickTime = CFAbsoluteTimeGetCurrent()
-        print("🎯 [PERF-CLICK] User clicked word '\(text)' at \(Int(userClickTime * 1000))")
         
         // Store the full text for selection and character picker
         if let fullText = options["fullText"] as? String {
@@ -602,8 +600,6 @@ class ReaderViewModel: ObservableObject {
         
         // Lookup words in the dictionary
         getDictionaryMatches(text: text) { [weak self] matches in
-            let resultsReadyTime = CFAbsoluteTimeGetCurrent()
-            print("📱 [PERF-UI] Results ready for display: \(Int(resultsReadyTime * 1000)), \(matches.count) matches")
             
             if let settings = self?.animationSettings, settings.isDictionaryAnimationEnabled {
                 withAnimation(.spring(duration: settings.animationDuration, bounce: 0.2)) {
@@ -612,11 +608,6 @@ class ReaderViewModel: ObservableObject {
                     // Always show the dictionary even if no matches found
                     self?.showDictionary = true
                     
-                    // Log when UI animation completes
-                    DispatchQueue.main.asyncAfter(deadline: .now() + (settings.animationDuration + 0.1)) {
-                        let displayCompleteTime = CFAbsoluteTimeGetCurrent()
-                        print("✅ [PERF-DISPLAY] Dictionary displayed to user: \(Int(displayCompleteTime * 1000))")
-                    }
                 }
             } else {
                 self?.dictionaryMatches = matches
@@ -624,11 +615,6 @@ class ReaderViewModel: ObservableObject {
                 // Always show the dictionary even if no matches found
                 self?.showDictionary = true
                 
-                // Log when UI update completes (next run loop)
-                DispatchQueue.main.async {
-                    let displayCompleteTime = CFAbsoluteTimeGetCurrent()
-                    print("✅ [PERF-DISPLAY] Dictionary displayed to user: \(Int(displayCompleteTime * 1000))")
-                }
             }
         }
     }
@@ -636,20 +622,16 @@ class ReaderViewModel: ObservableObject {
     func getDictionaryMatches(text: String, completion: @escaping ([DictionaryMatch]) -> Void) {
         // Prevent duplicate processing
         if isProcessingDictionaryLookup {
-            print("⏭️ [PERF-SKIP] Skipping duplicate lookup request for '\(text)'")
             return
         }
         
         isProcessingDictionaryLookup = true
-        let readerViewStartTime = CFAbsoluteTimeGetCurrent()
-        print("🔄 [PERF-READER] Starting ReaderView dictionary lookup for '\(text)': \(Int(readerViewStartTime * 1000))")
         
         let lookupQueue = DispatchQueue(label: "com.shiori.dictionaryLookup", qos: .userInitiated)
         
         lookupQueue.async {
             // Smart text truncation: Limit to first reasonable Japanese word boundary
             let processedText = self.truncateToReasonableLength(text)
-            print("🎯 [PERF-TRUNCATE] Original: '\(text)' -> Processed: '\(processedText)'")
             
             // Maximum word length to consider (test all reasonable lengths)
             let maxLength = min(16, processedText.count)
@@ -670,15 +652,8 @@ class ReaderViewModel: ObservableObject {
                 let endIndex = processedText.index(processedText.startIndex, offsetBy: length)
                 let candidateWord = String(processedText[..<endIndex])
                 
-                let wordLookupStart = CFAbsoluteTimeGetCurrent()
                 // Look up this word in the dictionary with improved deinflection
                 let entries = DictionaryManager.shared.lookupWithDeinflection(word: candidateWord)
-                let wordLookupEnd = CFAbsoluteTimeGetCurrent()
-                let wordDuration = (wordLookupEnd - wordLookupStart) * 1000
-                
-                if !entries.isEmpty {
-                    print("🔤 [PERF-WORD] Length \(length) lookup '\(candidateWord)': \(Int(wordDuration))ms, \(entries.count) entries")
-                }
                 
                 // If we found matches, add this as a valid match
                 if !entries.isEmpty {
@@ -802,14 +777,6 @@ class ReaderViewModel: ObservableObject {
             let limitedMatches = Array(sortedMatches.prefix(32))
             
             // Return all matches found
-            let readerViewEndTime = CFAbsoluteTimeGetCurrent()
-            let readerViewDuration = (readerViewEndTime - readerViewStartTime) * 1000
-            
-            if limitedMatches.count < sortedMatches.count {
-                print("⚡ [PERF-READER] ReaderView lookup completed: \(Int(readerViewDuration))ms, \(limitedMatches.count)/\(sortedMatches.count) matches found (limited to 32)")
-            } else {
-                print("⚡ [PERF-READER] ReaderView lookup completed: \(Int(readerViewDuration))ms, \(limitedMatches.count) matches found")
-            }
             
             DispatchQueue.main.async {
                 self.isProcessingDictionaryLookup = false

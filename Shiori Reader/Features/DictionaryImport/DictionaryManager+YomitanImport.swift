@@ -106,9 +106,6 @@ extension DictionaryManager {
         let endTime = CFAbsoluteTimeGetCurrent()
         let duration = (endTime - startTime) * 1000
         
-        if !allEntries.isEmpty || duration > 10 { // Log if results found or if took more than 10ms
-            print("🔍 [PERF-CONCURRENT] Imported dict lookup for '\(word)': \(Int(duration))ms, \(enabledQueues.count) dicts, \(allEntries.count) results")
-        }
         
         return allEntries
     }

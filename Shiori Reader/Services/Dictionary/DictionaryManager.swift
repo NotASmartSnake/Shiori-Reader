@@ -279,9 +279,6 @@ class DictionaryManager {
         
         let sortedEntries = sortEntriesByPopularity(allEntries, searchTerm: word)
         
-        if !sortedEntries.isEmpty || duration > 5 { // Log if results found or if took more than 5ms
-            print("🔍 [PERF-BUILTIN] Built-in dict lookup for '\(word)': \(Int(duration))ms, \(sortedEntries.count) results")
-        }
         
         return sortedEntries
     }
@@ -328,7 +325,6 @@ class DictionaryManager {
         let directLookupTime = CFAbsoluteTimeGetCurrent()
         let directDuration = (directLookupTime - overallStartTime) * 1000
         
-        print("🔍 [PERF-DIRECT] Direct lookups for '\(word)': \(Int(directDuration))ms, \(allEntries.count) results")
         
         // Always try deinflections if we have them
         if let deinflector = self.deinflector {
@@ -430,9 +426,6 @@ class DictionaryManager {
             let deinflectionEndTime = CFAbsoluteTimeGetCurrent()
             let deinflectionDuration = (deinflectionEndTime - deinflectionStartTime) * 1000
             
-            if deinflections.count > 0 {
-                print("🔍 [PERF-DEINFLECT] Deinflection lookups for '\(word)': \(Int(deinflectionDuration))ms, \(deinflections.count) forms tested")
-            }
         }
         
         // Debug: Log entries before filtering
@@ -452,9 +445,6 @@ class DictionaryManager {
         let overallEndTime = CFAbsoluteTimeGetCurrent()
         let totalDuration = (overallEndTime - overallStartTime) * 1000
         
-        // Always log the total lookup time for performance monitoring
-        let sourcesFound = Set(finalSortedEntries.map { $0.source }).sorted()
-        print("📚 [PERF-TOTAL] Complete lookup for '\(word)': \(Int(totalDuration))ms, \(finalSortedEntries.count) final results from: \(sourcesFound.joined(separator: ", "))")
         
         return finalSortedEntries
     }
