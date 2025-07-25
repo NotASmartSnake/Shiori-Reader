@@ -21,7 +21,10 @@ struct DictionarySettingsView: View {
                 }
                 
                 // MARK: - Import Dictionary Section
-                Section("Import Dictionary") {
+                Section(
+                    header: Text("Import Dictionary"),
+                    footer: Text("Dictionaries with structured content are not supported.")
+                ) {
                     Button(action: {
                         showFileImporter = true
                     }) {
