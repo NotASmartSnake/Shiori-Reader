@@ -5,7 +5,6 @@ class DictionaryManager {
     static let shared = DictionaryManager()
     
     private var jmdictQueue: DatabaseQueue?
-    private var obunshaQueue: DatabaseQueue?
     private var deinflector: Deinflector?
     private let pitchAccentManager = PitchAccentManager.shared
     private let frequencyManager = FrequencyManager.shared
@@ -27,15 +26,6 @@ class DictionaryManager {
                 print("JMdict database not found in bundle")
             }
             
-            // Setup Obunsha database
-            if let obunshaPath = Bundle.main.path(forResource: "obunsha", ofType: "db") {
-                var configuration = Configuration()
-                configuration.readonly = true
-                obunshaQueue = try DatabaseQueue(path: obunshaPath, configuration: configuration)
-                print("Obunsha database loaded successfully")
-            } else {
-                print("Obunsha database not found in bundle")
-            }
         } catch {
             print("Error setting up databases: \(error)")
         }
@@ -68,7 +58,7 @@ class DictionaryManager {
             return settings.enabledDictionaries
         }
         // Default to all dictionaries enabled
-        return ["jmdict", "obunsha", "bccwj"]
+        return ["jmdict", "bccwj"]
     }
     
     /// Check if BCCWJ frequency data is enabled
@@ -177,64 +167,6 @@ class DictionaryManager {
         return entries
     }
     
-    /// Lookup from Obunsha dictionary database
-    private func lookupObunsha(word: String) -> [DictionaryEntry] {
-        guard let db = obunshaQueue else { return [] }
-        
-        var entries: [DictionaryEntry] = []
-        
-        do {
-            try db.read { db in
-                let rows = try Row.fetchAll(db, sql: """
-                    SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
-                    FROM terms
-                    WHERE expression = ? OR reading = ?
-                    ORDER BY id
-                    """, arguments: [word, word])
-                
-                for row in rows {
-                    let termId = row["id"] as? Int64 ?? 0
-                    let expression = row["expression"] as? String ?? ""
-                    let reading = row["reading"] as? String ?? ""
-                    let tags = row["term_tags"] as? String ?? ""
-                    let score = row["score"] as? String
-                    let rules = row["rules"] as? String
-                    let definitionsText = row["definitions"] as? String ?? ""
-                    
-                    // Handle popularity stored as string in database
-                    let popularity: Double
-                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
-                        popularity = popDouble
-                    } else {
-                        popularity = 0.0
-                    }
-                    
-                    // Split definitions by newline separator (same as imported dictionaries)
-                    let meanings = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
-                    
-                    // Create a new entry
-                    let entry = createDictionaryEntry(
-                        id: "obunsha_\(termId)",
-                        term: expression,
-                        reading: reading,
-                        meanings: meanings,
-                        meaningTags: [],
-                        termTags: tags.split(separator: ",").map(String.init),
-                        score: score,
-                        rules: rules,
-                        popularity: popularity,
-                        source: "obunsha"
-                    )
-                    
-                    entries.append(entry)
-                }
-            }
-        } catch {
-            print("Error looking up word in Obunsha: \(error)")
-        }
-        
-        return entries
-    }
     
     /// Main lookup function that searches all enabled dictionaries concurrently
     func lookup(word: String) -> [DictionaryEntry] {
@@ -259,17 +191,6 @@ class DictionaryManager {
             }
         }
         
-        // Search Obunsha if enabled
-        if enabledDictionaries.contains("obunsha") {
-            dispatchGroup.enter()
-            concurrentQueue.async {
-                let obunshaEntries = self.lookupObunsha(word: word)
-                resultQueue.async {
-                    allEntries.append(contentsOf: obunshaEntries)
-                    dispatchGroup.leave()
-                }
-            }
-        }
         
         // Wait for all built-in dictionary lookups to complete
         dispatchGroup.wait()
@@ -530,8 +451,8 @@ class DictionaryManager {
             return true
         }
         
-        // Trust results from built-in dictionaries (jmdict, obunsha) and be less strict
-        if entry.source == "jmdict" || entry.source == "obunsha" {
+        // Trust results from built-in dictionaries (jmdict) and be less strict
+        if entry.source == "jmdict" {
             // For built-in dictionaries, only filter out obvious non-conjugatable entries
             let tagString = entry.termTags.joined(separator: " ")
             let cleanedTagString = tagString.replacingOccurrences(of: "\"", with: "")
@@ -609,10 +530,6 @@ class DictionaryManager {
             allEntries.append(contentsOf: searchByPrefixJMdict(prefix: prefix, limit: limit))
         }
         
-        // Search Obunsha if enabled
-        if enabledDictionaries.contains("obunsha") {
-            allEntries.append(contentsOf: searchByPrefixObunsha(prefix: prefix, limit: limit))
-        }
         
         return Array(allEntries.prefix(limit))
     }
@@ -673,61 +590,6 @@ class DictionaryManager {
         return entries
     }
     
-    private func searchByPrefixObunsha(prefix: String, limit: Int = 10) -> [DictionaryEntry] {
-        guard let db = obunshaQueue else { return [] }
-        
-        var entries: [DictionaryEntry] = []
-        
-        do {
-            try db.read { db in
-                let rows = try Row.fetchAll(db, sql: """
-                    SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
-                    FROM terms
-                    WHERE expression LIKE ? || '%' OR reading LIKE ? || '%'
-                    ORDER BY sequence, id
-                    LIMIT ?
-                    """, arguments: [prefix, prefix, limit])
-                
-                for row in rows {
-                    let termId = row["id"] as? Int64 ?? 0
-                    let expression = row["expression"] as? String ?? ""
-                    let reading = row["reading"] as? String ?? ""
-                    let tags = row["term_tags"] as? String ?? ""
-                    let score = row["score"] as? String
-                    let rules = row["rules"] as? String
-                    let definitionsText = row["definitions"] as? String ?? ""
-                    let popularity: Double
-                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
-                        popularity = popDouble
-                    } else {
-                        popularity = 0.0
-                    }
-                    
-                    // Split definitions by newline separator (same as imported dictionaries)
-                    let definitions = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
-                    
-                    let entry = createDictionaryEntry(
-                        id: "obunsha_\(termId)",
-                        term: expression,
-                        reading: reading,
-                        meanings: definitions,
-                        meaningTags: [],
-                        termTags: tags.split(separator: ",").map(String.init),
-                        score: score,
-                        rules: rules,
-                        popularity: popularity,
-                        source: "obunsha"
-                    )
-                    
-                    entries.append(entry)
-                }
-            }
-        } catch {
-            print("Error searching Obunsha by prefix: \(error)")
-        }
-        
-        return entries
-    }
     
     // Search by English meaning
     func searchByMeaning(text: String, limit: Int = 20) -> [DictionaryEntry] {
@@ -739,10 +601,6 @@ class DictionaryManager {
             allEntries.append(contentsOf: searchByMeaningJMdict(text: text, limit: limit))
         }
         
-        // Search Obunsha if enabled (though English meaning search may not be as useful for monolingual dictionary)
-        if enabledDictionaries.contains("obunsha") {
-            allEntries.append(contentsOf: searchByMeaningObunsha(text: text, limit: limit))
-        }
         
         return sortEntriesByPopularity(Array(allEntries.prefix(limit)))
     }
@@ -832,70 +690,6 @@ class DictionaryManager {
         return entries
     }
     
-    private func searchByMeaningObunsha(text: String, limit: Int = 20) -> [DictionaryEntry] {
-        guard let db = obunshaQueue else { return [] }
-        
-        var entries: [DictionaryEntry] = []
-        let searchTerm = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        do {
-            try db.read { db in
-                // For Obunsha (Japanese monolingual), we'll search in definitions but this may not be as useful
-                let sql = """
-                    SELECT id, expression, reading, term_tags, score, rules, definitions, popularity,
-                        (CASE
-                            WHEN definitions LIKE '% \(searchTerm) %' OR definitions LIKE '\(searchTerm) %' OR definitions LIKE '% \(searchTerm)' OR definitions = '\(searchTerm)' THEN 1
-                            WHEN definitions LIKE '%\(searchTerm)%' THEN 2
-                            ELSE 3
-                        END) AS match_quality
-                    FROM terms
-                    WHERE definitions LIKE '%\(searchTerm)%'
-                    ORDER BY match_quality, popularity DESC, sequence
-                    LIMIT ?
-                    """
-                
-                let rows = try Row.fetchAll(db, sql: sql, arguments: [limit])
-                
-                for row in rows {
-                    let termId = row["id"] as? Int64 ?? 0
-                    let expression = row["expression"] as? String ?? ""
-                    let reading = row["reading"] as? String ?? ""
-                    let tags = row["term_tags"] as? String ?? ""
-                    let score = row["score"] as? String
-                    let rules = row["rules"] as? String
-                    let definitionsText = row["definitions"] as? String ?? ""
-                    let popularity: Double
-                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
-                        popularity = popDouble
-                    } else {
-                        popularity = 0.0
-                    }
-                    
-                    // Split definitions by newline separator (same as imported dictionaries)
-                    let definitions = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
-                    
-                    let entry = createDictionaryEntry(
-                        id: "obunsha_\(termId)",
-                        term: expression,
-                        reading: reading,
-                        meanings: definitions,
-                        meaningTags: [],
-                        termTags: tags.split(separator: ",").map(String.init),
-                        score: score,
-                        rules: rules,
-                        popularity: popularity,
-                        source: "obunsha"
-                    )
-                    
-                    entries.append(entry)
-                }
-            }
-        } catch {
-            print("Error searching Obunsha by meaning: \(error)")
-        }
-        
-        return entries
-    }
     
     func sortEntriesByPopularity(_ entries: [DictionaryEntry]) -> [DictionaryEntry] {
         return sortEntriesByPopularity(entries, searchTerm: nil)
@@ -1098,75 +892,6 @@ class DictionaryManager {
         }
     }
     
-    /// Test the Obunsha database integration
-    func testObunshaDatabaseIntegration() {
-        print("🧪 [OBUNSHA TEST] Testing Obunsha database integration...")
-        
-        guard let db = obunshaQueue else {
-            print("🧪 [OBUNSHA TEST] ERROR: Obunsha database queue is nil!")
-            return
-        }
-        
-        do {
-            try db.read { db in
-                // Check database structure
-                let tableRows = try Row.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type='table'")
-                let tableNames = tableRows.map { $0["name"] as? String ?? "unknown" }
-                print("🧪 [OBUNSHA TEST] Available tables: \(tableNames)")
-                
-                // If terms table exists, get some stats
-                if tableNames.contains("terms") {
-                    let countRow = try Row.fetchOne(db, sql: "SELECT COUNT(*) as count FROM terms")
-                    let totalCount = countRow?["count"] as? Int64 ?? 0
-                    print("🧪 [OBUNSHA TEST] Total entries in database: \(totalCount)")
-                    
-                    // Check schema
-                    let schemaRows = try Row.fetchAll(db, sql: "PRAGMA table_info(terms)")
-                    print("🧪 [OBUNSHA TEST] Terms table schema:")
-                    for row in schemaRows {
-                        let name = row["name"] as? String ?? "unknown"
-                        let type = row["type"] as? String ?? "unknown"
-                        print("  - \(name): \(type)")
-                    }
-                    
-                    // Try a direct query for some common words
-                    let testWords = ["猫", "日本", "最初"]
-                    
-                    for word in testWords {
-                        let rows = try Row.fetchAll(db, sql: """
-                            SELECT expression, reading, definitions
-                            FROM terms
-                            WHERE expression = ? OR reading = ?
-                            LIMIT 3
-                            """, arguments: [word, word])
-                        
-                        print("🧪 [OBUNSHA TEST] Direct query for '\(word)': \(rows.count) results")
-                        
-                        for (index, row) in rows.enumerated() {
-                            let expression = row["expression"] as? String ?? ""
-                            let reading = row["reading"] as? String ?? ""
-                            let definitions = row["definitions"] as? String ?? ""
-                            print("  [\(index + 1)] \(expression) (\(reading)): \(definitions.prefix(50))...")
-                        }
-                        
-                        if !rows.isEmpty {
-                            print("🧪 [OBUNSHA TEST] SUCCESS: Found entries in database!")
-                            break
-                        }
-                    }
-                } else {
-                    print("🧪 [OBUNSHA TEST] ERROR: No 'terms' table found in database")
-                }
-            }
-        } catch {
-            print("🧪 [OBUNSHA TEST] ERROR: \(error)")
-        }
-        
-        // Now test the lookup method separately (outside the transaction)
-        print("🧪 [OBUNSHA TEST] Testing lookup method...")
-        let testResults = lookupObunsha(word: "猫")
-        print("🧪 [OBUNSHA TEST] Lookup method returned \(testResults.count) entries")
-    }
 
 }
 

@@ -317,8 +317,6 @@ class AnkiExportService {
     private func getDictionaryDisplayName(for source: String) -> String {
         if source == "jmdict" {
             return "JMdict"
-        } else if source == "obunsha" {
-            return "旺文社"
         } else if source.hasPrefix("imported_") {
             // Extract UUID from source string (format: "imported_UUID")
             let importedId = source.replacingOccurrences(of: "imported_", with: "")

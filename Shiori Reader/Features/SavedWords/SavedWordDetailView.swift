@@ -388,8 +388,6 @@ struct SavedWordDetailView: View {
         switch sourceTitle.lowercased() {
         case "jmdict":
             return "JMdict"
-        case "旺文社":
-            return "旺文社"
         default:
             return sourceTitle.capitalized
         }
@@ -399,7 +397,7 @@ struct SavedWordDetailView: View {
     /// Check if a line is a valid dictionary source title
     private func isValidDictionarySource(_ text: String) -> Bool {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return trimmedText == "jmdict" || trimmedText == "旺文社" || isImportedDictionaryTitle(trimmedText)
+        return trimmedText == "jmdict" || isImportedDictionaryTitle(trimmedText)
     }
     
     /// Check if text is an imported dictionary title
@@ -415,8 +413,6 @@ struct SavedWordDetailView: View {
         switch sourceTitle.lowercased() {
         case "jmdict":
             return "jmdict"
-        case "旺文社":
-            return "obunsha"
         default:
             // For imported dictionaries, try to find the matching UUID
             let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
@@ -468,8 +464,6 @@ struct SavedWordDetailView: View {
                 switch sourceTitle.lowercased() {
                 case "jmdict":
                     sourceId = "jmdict"
-                case "旺文社":
-                    sourceId = "obunsha"
                 default:
                     // For imported dictionaries, try to find the matching UUID
                     let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()

@@ -317,7 +317,7 @@ struct EntryDetailView: View {
             
             for source in sourceOrder {
                 guard let entries = groupedBySource[source], !entries.isEmpty else { continue }
-                let sourceTitle = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : (source.hasPrefix("imported_") ? getImportedDictionaryDisplayName(source: source) : source.capitalized))
+                let sourceTitle = source == "jmdict" ? "JMdict" : (source.hasPrefix("imported_") ? getImportedDictionaryDisplayName(source: source) : source.capitalized)
                 let allMeanings = entries.flatMap { $0.meanings }
                 let definitionsText = allMeanings.joined(separator: "\n")
                 sourceSections.append("\(sourceTitle)\n\(definitionsText)")
@@ -422,15 +422,7 @@ struct EntryDetailView: View {
     private func getDictionarySourceBadge(for source: String) -> some View {
         let color = getDictionaryColor(for: source)
         
-        if source == "obunsha" {
-            Text("旺文社")
-                .font(.caption2)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1)
-                .background(color.opacity(0.2))
-                .foregroundColor(color)
-                .cornerRadius(4)
-        } else if source == "jmdict" {
+        if source == "jmdict" {
             Text("JMdict")
                 .font(.caption2)
                 .padding(.horizontal, 4)

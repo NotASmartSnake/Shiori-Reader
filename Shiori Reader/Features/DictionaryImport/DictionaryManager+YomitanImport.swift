@@ -52,7 +52,7 @@ extension DictionaryManager {
     
     /// Get all enabled dictionaries including imported ones
     func getAllEnabledDictionaries() -> [String] {
-        var enabled = ["jmdict", "obunsha", "bccwj"] // Default built-in dictionaries
+        var enabled = ["jmdict", "bccwj"] // Default built-in dictionaries
         
         // Add imported dictionaries using the UUID format
         let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()

@@ -203,7 +203,7 @@ struct DictionaryPopupView: View {
                                             }
                                             
                                             if !isSourceCollapsed {
-                                                // All dictionaries treated identically - no special obunsha logic
+                                                // All dictionaries treated identically
                                                 ForEach(sourceEntries.flatMap { $0.meanings }.indices, id: \.self) { meaningIndex in
                                                     let meaning = sourceEntries.flatMap { $0.meanings }[meaningIndex]
                                                     let definitionId = "\(entry.id)_\(source)_\(meaningIndex)"
@@ -528,7 +528,7 @@ struct DictionaryPopupView: View {
         
         // Check if we have any non-JMnedict sources
         for (source, _) in entriesBySource {
-            if source == "jmdict" || source == "obunsha" {
+            if source == "jmdict" {
                 // Built-in dictionary sources - not JMnedict-only
                 return false
             } else if source.hasPrefix("imported_") {
@@ -626,7 +626,7 @@ struct DictionaryPopupView: View {
         
         for source in sourceOrder {
             guard let entries = groupedBySource[source], !entries.isEmpty else { continue }
-            let sourceTitle = source == "jmdict" ? "JMdict" : (source == "obunsha" ? "旺文社" : (source.hasPrefix("imported_") ? getImportedDictionaryDisplayName(source: source) : source.capitalized))
+            let sourceTitle = source == "jmdict" ? "JMdict" : (source.hasPrefix("imported_") ? getImportedDictionaryDisplayName(source: source) : source.capitalized)
             let allMeanings = entries.flatMap { $0.meanings }
             let definitionsText = allMeanings.joined(separator: "\n")
             sourceSections.append("\(sourceTitle)\n\(definitionsText)")
@@ -718,15 +718,7 @@ struct DictionaryPopupView: View {
     private func getDictionarySourceBadge(for source: String) -> some View {
         let color = getDictionaryColor(for: source)
         
-        if source == "obunsha" {
-            Text("旺文社")
-                .font(.caption2)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1)
-                .background(color.opacity(0.2))
-                .foregroundColor(color)
-                .cornerRadius(4)
-        } else if source == "jmdict" {
+        if source == "jmdict" {
             Text("JMdict")
                 .font(.caption2)
                 .padding(.horizontal, 4)

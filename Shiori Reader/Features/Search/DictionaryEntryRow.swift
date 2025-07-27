@@ -124,16 +124,7 @@ struct DictionaryEntryRow: View {
     private func getDictionarySourceBadge(for source: String) -> some View {
         let color = getDictionaryColor(for: source)
         
-        if source == "obunsha" {
-            Text("旺文社")
-                .font(.caption2)
-                .lineLimit(1)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1)
-                .background(color.opacity(0.2))
-                .foregroundColor(color)
-                .cornerRadius(4)
-        } else if source == "jmdict" {
+        if source == "jmdict" {
             Text("JMdict")
                 .font(.caption2)
                 .lineLimit(1)

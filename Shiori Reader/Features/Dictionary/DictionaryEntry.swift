@@ -43,7 +43,7 @@ struct DictionaryEntry: Identifiable, Equatable {
     var transformed: String? = nil
     var transformationNotes: String? = nil
     let popularity: Double?
-    let source: String // Dictionary source identifier (e.g., "jmdict", "obunsha")
+    let source: String // Dictionary source identifier (e.g., "jmdict")
     var frequencyData: FrequencyData? = nil // BCCWJ frequency data
     
     // Lazy loading helper

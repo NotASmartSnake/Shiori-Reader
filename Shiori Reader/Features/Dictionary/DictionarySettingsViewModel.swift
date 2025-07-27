@@ -36,15 +36,6 @@ class DictionarySettingsViewModel: ObservableObject {
                 tagColor: settings.dictionaryColors["jmdict"] ?? .blue
             ),
             DictionaryInfo(
-                id: "obunsha",
-                name: "旺文社国語辞典 第十一版",
-                description: "Japanese-Japanese monolingual dictionary",
-                isBuiltIn: true,
-                isEnabled: true,
-                canDisable: true,
-                tagColor: settings.dictionaryColors["obunsha"] ?? .orange
-            ),
-            DictionaryInfo(
                 id: "bccwj",
                 name: "BCCWJ Frequency Data",
                 description: "Word frequency rankings from Japanese corpus",
@@ -114,11 +105,6 @@ class DictionarySettingsViewModel: ObservableObject {
             // Migration: Only run once per device/app install
             if !hasMigrated {
                 var needsMigration = false
-                if !savedSettings.enabledDictionaries.contains("obunsha") {
-                    print("📚 [SETTINGS] Migrating settings to include Obunsha dictionary")
-                    self.settings.enabledDictionaries.append("obunsha")
-                    needsMigration = true
-                }
                 if !savedSettings.enabledDictionaries.contains("bccwj") {
                     print("📚 [SETTINGS] Migrating settings to include BCCWJ frequency data")
                     self.settings.enabledDictionaries.append("bccwj")
@@ -409,7 +395,7 @@ struct DictionarySettings: Equatable, Codable {
                lhs.dictionaryColors == rhs.dictionaryColors
     }
     
-    init(enabledDictionaries: [String] = ["jmdict", "obunsha", "bccwj"], 
+    init(enabledDictionaries: [String] = ["jmdict", "bccwj"], 
          dictionaryOrder: [String] = [],
          dictionaryColors: [String: DictionaryTagColor] = [:]) {
         self.enabledDictionaries = enabledDictionaries
@@ -418,7 +404,6 @@ struct DictionarySettings: Equatable, Codable {
         if dictionaryColors.isEmpty {
             self.dictionaryColors = [
                 "jmdict": .blue,
-                "obunsha": .orange,
                 "bccwj": .green
             ]
         } else {

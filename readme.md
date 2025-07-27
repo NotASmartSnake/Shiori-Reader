@@ -34,7 +34,7 @@ Shiori Reader is an iOS application designed for Japanese language learners to r
 ### Japanese Language Learning Tools
 
 - One-tap, instant word lookups
-- Comprehensive dictionary integration with built-in dictionaries (JMdict (Japanese-English bilingual dictionary), 旺文社国語辞典 (Japanese-Japanese monolingual dictionary), BCCWJ Frequency Data, Kanjium Pitch Accents)
+- Comprehensive dictionary integration with built-in dictionaries (JMdict (Japanese-English bilingual dictionary), BCCWJ Frequency Data, Kanjium Pitch Accents)
 - Import functionality for Yomitan-formatted dictionaries
 - Support for kanji, furigana, pitch accent, and complex Japanese text
 - Context-aware word selection

@@ -34,10 +34,9 @@ class DictionaryColorProvider: ObservableObject {
             // Use default colors and order
             colorMap = [
                 "jmdict": .blue,
-                "obunsha": .orange,
                 "bccwj": .green
             ]
-            dictionaryOrder = ["jmdict", "obunsha"]
+            dictionaryOrder = ["jmdict"]
         }
     }
     
@@ -54,8 +53,6 @@ class DictionaryColorProvider: ObservableObject {
         switch source {
         case "jmdict":
             return .blue
-        case "obunsha":
-            return .orange
         case "bccwj":
             return .green
         default:

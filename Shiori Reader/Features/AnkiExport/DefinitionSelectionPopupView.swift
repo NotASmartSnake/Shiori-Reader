@@ -260,8 +260,6 @@ struct DefinitionSelectionPopupView: View {
         switch source {
         case "jmdict":
             return "JMdict"
-        case "obunsha":
-            return "旺文社"
         default:
             if source.hasPrefix("imported_") {
                 // Extract UUID and get display name
@@ -305,12 +303,6 @@ struct DictionarySourceDefinition {
                         "learning; studying; knowledge",
                         "work; effort; practice",
                         "discount; reduction; bargain"
-                    ]
-                ),
-                DictionarySourceDefinition(
-                    source: "obunsha",
-                    definitions: [
-                        "学問や技芸を学ぶこと。精神を鍛錬すること。学習すること。また、その内容。勉学。学業。修学。習学。学修。学習。ガクシュウ。"
                     ]
                 )
             ],

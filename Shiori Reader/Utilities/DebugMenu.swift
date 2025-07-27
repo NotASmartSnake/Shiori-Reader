@@ -41,10 +41,6 @@ struct DebugMenu: View {
                 DictionaryManager.shared.testFrequencyIntegration()
             }
             
-            Button("Test Obunsha Database") {
-                DictionaryManager.shared.testObunshaDatabaseIntegration()
-            }
-            
             Spacer()
         }
         .padding()
