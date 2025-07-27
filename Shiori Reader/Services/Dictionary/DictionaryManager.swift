@@ -917,6 +917,24 @@ class DictionaryManager {
                 if firstExactReadingMatch != secondExactReadingMatch {
                     return firstExactReadingMatch
                 }
+                
+                // 0.7. Term length preference - longer terms first for exact matches
+                if firstExactTermMatch || secondExactTermMatch || firstExactReadingMatch || secondExactReadingMatch {
+                    if first.term.count != second.term.count {
+                        return first.term.count > second.term.count
+                    }
+                }
+                
+                // 0.8. Script type preference (hiragana to hiragana, kanji to kanji)
+                let searchIsHiragana = searchTerm.isAllHiragana()
+                let firstIsHiragana = first.term.isAllHiragana()
+                let secondIsHiragana = second.term.isAllHiragana()
+                
+                if searchIsHiragana && firstIsHiragana != secondIsHiragana {
+                    return firstIsHiragana
+                } else if !searchIsHiragana && firstIsHiragana != secondIsHiragana {
+                    return !firstIsHiragana
+                }
             }
             
             // 1. Direct matches (no transformation) first
@@ -963,9 +981,9 @@ class DictionaryManager {
                 return !firstHasArchaism
             }
             
-            // 7. Shorter terms preferred
+            // 7. Longer terms preferred for remaining entries
             if first.term.count != second.term.count {
-                return first.term.count < second.term.count
+                return first.term.count > second.term.count
             }
             
             // 8. Stable sort by term name as final tiebreaker
@@ -1150,4 +1168,17 @@ class DictionaryManager {
         print("🧪 [OBUNSHA TEST] Lookup method returned \(testResults.count) entries")
     }
 
+}
+
+// MARK: - String Extensions for Japanese Script Detection
+extension String {
+    func isAllHiragana() -> Bool {
+        guard !isEmpty else { return false }
+        let pattern = "^[\\p{Hiragana}]+$"
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+            return false
+        }
+        let range = NSRange(location: 0, length: self.utf16.count)
+        return regex.firstMatch(in: self, options: [], range: range) != nil
+    }
 }

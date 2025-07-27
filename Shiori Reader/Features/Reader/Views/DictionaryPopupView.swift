@@ -63,6 +63,16 @@ struct DictionaryPopupView: View {
                         // Group entries by term-reading combination and merge definitions from different sources
                         let mergedEntries = groupAndMergeEntries(matches.flatMap { $0.entries })
                         let displayedEntries = showingAllEntries ? mergedEntries : Array(mergedEntries.prefix(initialEntriesLimit))
+                        // let _ = {
+                        //     // Debug: Print displayed dictionary results
+                        //     print("📖 Dictionary Results:")
+                        //     for (index, entry) in displayedEntries.enumerated() {
+                        //         let isJMnedict = isJMnedictEntry(entry) ? " [JMnedict]" : ""
+                        //         let hasReading = hasProperReading(entry) ? " [HasReading]" : " [NoReading]"
+                        //         let effectiveLength = getEffectiveReadingLength(entry)
+                        //         print("📖 [\(index + 1)]: \(entry.term)/\(entry.reading) (term:\(entry.term.count), reading:\(entry.reading.count), effective:\(effectiveLength))\(isJMnedict)\(hasReading)")
+                        //     }
+                        // }()
                         
                         // Display merged entries
                         ForEach(displayedEntries, id: \.id) { entry in
@@ -439,27 +449,76 @@ struct DictionaryPopupView: View {
             }
         }
         
-        // Now apply post-grouping sorting to fix just the JMnedict and no-reading issues
+        // Sort to preserve DictionaryManager ordering while moving JMnedict and no-reading entries to bottom of their length groups
         return mergedEntries.sorted { first, second in
-            // 1. Prioritize entries with readings over no reading
-            let firstHasReading = !first.reading.isEmpty && first.reading != first.term
-            let secondHasReading = !second.reading.isEmpty && second.reading != second.term
+            // First, group by effective reading length (treat no-reading entries as length 0)
+            let firstReadingLength = getEffectiveReadingLength(first)
+            let secondReadingLength = getEffectiveReadingLength(second)
+            
+            if firstReadingLength != secondReadingLength {
+                // Different effective reading lengths - sort by effective length (higher lengths first, except 0 goes last)
+                if firstReadingLength == 0 && secondReadingLength > 0 {
+                    return false // first goes after second (0 at bottom)
+                } else if firstReadingLength > 0 && secondReadingLength == 0 {
+                    return true // first goes before second (0 at bottom)
+                } else {
+                    // Both non-zero, preserve DictionaryManager ordering
+                    guard let firstIndex = entries.firstIndex(where: { $0.term == first.term && $0.reading == first.reading }),
+                          let secondIndex = entries.firstIndex(where: { $0.term == second.term && $0.reading == second.reading }) else {
+                        return false
+                    }
+                    return firstIndex < secondIndex
+                }
+            }
+            
+            // Within the same length group, apply special rules
+            let firstHasReading = hasProperReading(first)
+            let secondHasReading = hasProperReading(second)
+            let firstIsJMnedict = isJMnedictEntry(first)
+            let secondIsJMnedict = isJMnedictEntry(second)
+            
+            // 1. Within length group: entries with readings before no-reading entries (kanji only)
             if firstHasReading != secondHasReading {
                 return firstHasReading
             }
             
-            // 2. Among entries with readings, prioritize non-JMnedict entries
-            if firstHasReading && secondHasReading {
-                let firstIsJMnedict = isJMnedictEntry(first)
-                let secondIsJMnedict = isJMnedictEntry(second)
-                if firstIsJMnedict != secondIsJMnedict {
-                    return !firstIsJMnedict
-                }
+            // 2. Within length group: non-JMnedict before JMnedict entries
+            if firstIsJMnedict != secondIsJMnedict {
+                return !firstIsJMnedict
             }
             
-            // 3. Preserve original order for everything else
-            return false
+            // 3. Otherwise preserve original DictionaryManager order
+            guard let firstIndex = entries.firstIndex(where: { $0.term == first.term && $0.reading == first.reading }),
+                  let secondIndex = entries.firstIndex(where: { $0.term == second.term && $0.reading == second.reading }) else {
+                return false
+            }
+            return firstIndex < secondIndex
         }
+    }
+    
+    private func getEffectiveReadingLength(_ entry: DictionaryEntry) -> Int {
+        // Treat entries with no proper reading as having length 0 (so they go to the bottom)
+        if !hasProperReading(entry) {
+            return 0
+        }
+        return entry.reading.count
+    }
+    
+    private func hasProperReading(_ entry: DictionaryEntry) -> Bool {
+        // Only consider kanji words as potentially having "no reading"
+        // Hiragana/katakana words inherently have their reading in the term itself
+        let containsKanji = entry.term.contains { char in
+            let scalar = char.unicodeScalars.first!
+            return CharacterSet(charactersIn: "\u{4E00}"..."\u{9FFF}").contains(scalar)
+        }
+        
+        if !containsKanji {
+            // Hiragana/katakana words always "have a reading"
+            return true
+        }
+        
+        // For kanji words, check if there's a separate reading provided
+        return !entry.reading.isEmpty && entry.reading != entry.term
     }
     
     private func isJMnedictEntry(_ entry: DictionaryEntry) -> Bool {
