@@ -68,14 +68,14 @@ struct DictionaryEntryRow: View {
             // Dictionary source badges and frequency data with flow layout
             FlowLayout(spacing: 4) {
                 // Frequency data first (if available and BCCWJ is enabled)
-                if isBCCWJEnabled(), let frequencyRank = entry.frequencyRankString {
-                    Text(frequencyRank)
-                        .font(.caption2)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(Color.green.opacity(0.2))
-                        .foregroundColor(.green)
-                        .cornerRadius(4)
+                if isBCCWJEnabled() {
+//                    Text(frequencyRank)
+//                        .font(.caption2)
+//                        .padding(.horizontal, 4)
+//                        .padding(.vertical, 1)
+//                        .background(Color.green.opacity(0.2))
+//                        .foregroundColor(.green)
+//                        .cornerRadius(4)
                 }
                 
                 // Show dictionary badges based on source

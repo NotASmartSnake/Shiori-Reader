@@ -86,12 +86,18 @@ extension DictionaryManager {
         let resultQueue = DispatchQueue(label: "com.shiori.dictionaryLookup.results")
         
         var allEntries: [DictionaryEntry] = []
+        var allFrequencies: [FrequencyData] = []
         
         for (dictionaryKey, queue) in enabledQueues {
             dispatchGroup.enter()
             
             concurrentQueue.async {
                 let entries = self.lookupImportedDictionary(word: word, queue: queue, dictionaryKey: dictionaryKey)
+    
+                if let frequency = FrequencyManager.shared.getImportedFrequencyData(for: word, db: queue, dictionaryKey: dictionaryKey) {
+                    print("Appending frequency")
+                    allFrequencies.append(frequency)
+                }
                 
                 resultQueue.async {
                     allEntries.append(contentsOf: entries)
@@ -106,8 +112,31 @@ extension DictionaryManager {
         let endTime = CFAbsoluteTimeGetCurrent()
         let duration = (endTime - startTime) * 1000
         
-        
         return allEntries
+    }
+    
+    func lookupImportedFrequencies(word: String) -> [FrequencyData] {
+        let enabledDictionaries = getEnabledDictionaries()
+        
+        // Filter enabled dictionaries upfront
+        let enabledQueues = Self.importedDictionaryQueues.filter { dictionaryKey, _ in
+            enabledDictionaries.contains(dictionaryKey)
+        }
+        
+        // If no enabled imported dictionaries, return early
+        guard !enabledQueues.isEmpty else {
+            return []
+        }
+        
+        var allFrequencies: [FrequencyData] = []
+        
+        for (dictionaryKey, queue) in enabledQueues {
+            if let frequency = FrequencyManager.shared.getImportedFrequencyData(for: word, db: queue, dictionaryKey: dictionaryKey) {
+                allFrequencies.append(frequency)
+            }
+        }
+        
+        return allFrequencies
     }
     
     /// Create dictionary entry for imported dictionaries (public version)
@@ -142,9 +171,7 @@ extension DictionaryManager {
         )
         
         // Try to add frequency data if available
-        if let frequencyData = FrequencyManager.shared.getFrequencyData(for: term) {
-            entry.frequencyData = frequencyData
-        }
+        entry.frequencyData = FrequencyManager.shared.getFrequencyData(for: term) + lookupImportedFrequencies(word: term)
         
         return entry
     }
