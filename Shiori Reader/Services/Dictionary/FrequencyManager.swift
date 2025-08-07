@@ -229,11 +229,11 @@ class FrequencyManager {
                     }
 
                     // Test using our frequency manager
-                    //                    if let frequencyData = getFrequencyData(for: word) {
-                    //                        print("🧪 [BCCWJ TEST] FrequencyManager '\(word)': rank=\(frequencyData.rank), freq=\(frequencyData.frequency)")
-                    //                    } else {
-                    //                        print("🧪 [BCCWJ TEST] FrequencyManager '\(word)': No frequency data found")
-                    //                    }
+                    if let frequencyData = getBCCWJFrequencyData(for: word) {
+                        print("🧪 [BCCWJ TEST] FrequencyManager '\(word)': rank=\(frequencyData.rank), freq=\(frequencyData.frequency)")
+                    } else {
+                        print("🧪 [BCCWJ TEST] FrequencyManager '\(word)': No frequency data found")
+                    }
                 }
             }
         } catch {
