@@ -11,13 +11,13 @@ struct FrequencyData {
 
 class FrequencyManager {
     static let shared = FrequencyManager()
-
+    
     private var bccwjQueue: DatabaseQueue?
-
+    
     private init() {
         setupDatabase()
     }
-
+    
     private func setupDatabase() {
         do {
             // Setup BCCWJ frequency database
@@ -33,26 +33,24 @@ class FrequencyManager {
             print("Error setting up BCCWJ frequency database: \(error)")
         }
     }
-
+    
     /// Get frequency data for a specific word (optimized version)
     func getBCCWJFrequencyData(for word: String) -> FrequencyData? {
         guard let db = bccwjQueue else { return nil }
-
+        
         do {
             return try db.read { db in
                 // Fast exact match query
-                let rows = try Row.fetchAll(
-                    db,
-                    sql: """
-                        SELECT term, frequency_value
-                        FROM frequency
-                        WHERE term = ?
-                        LIMIT 1
-                        """, arguments: [word])
-
+                let rows = try Row.fetchAll(db, sql: """
+                    SELECT term, frequency_value
+                    FROM frequency
+                    WHERE term = ?
+                    LIMIT 1
+                    """, arguments: [word])
+                
                 if let row = rows.first {
                     let term = row["term"] as? String ?? word
-
+                    
                     // Optimized parsing - try Int64 first (most common)
                     let frequencyValue: Int
                     if let int64Value = row["frequency_value"] as? Int64 {
@@ -62,7 +60,7 @@ class FrequencyManager {
                     } else {
                         frequencyValue = (try? Int.fromDatabaseValue(row["frequency_value"])) ?? 0
                     }
-
+                    
                     if frequencyValue > 0 {
                         return FrequencyData(
                             word: term,
@@ -161,33 +159,32 @@ class FrequencyManager {
     /// Get frequency rank for display (returns a formatted string)
     func getFrequencyRank(for word: String) -> String? {
         guard let frequencyData = getBCCWJFrequencyData(for: word) else { return nil }
-
+        
         if frequencyData.rank > 0 {
             return "#\(frequencyData.rank)"
         } else if frequencyData.frequency > 0 {
             return "f:\(frequencyData.frequency)"
         }
-
+        
         return nil
     }
-
+    
     /// Test the BCCWJ database integration
     func testBCCWJDatabaseIntegration() {
         print("🧪 [BCCWJ TEST] Testing BCCWJ database integration...")
-
+        
         guard let db = bccwjQueue else {
             print("🧪 [BCCWJ TEST] ERROR: BCCWJ database queue is nil!")
             return
         }
-
+        
         do {
             try db.read { db in
                 // Check database structure
-                let tableRows = try Row.fetchAll(
-                    db, sql: "SELECT name FROM sqlite_master WHERE type='table'")
+                let tableRows = try Row.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type='table'")
                 let tableNames = tableRows.map { $0["name"] as? String ?? "unknown" }
                 print("🧪 [BCCWJ TEST] Available tables: \(tableNames)")
-
+                
                 // For each table, show its structure
                 for tableName in tableNames {
                     let schemaRows = try Row.fetchAll(db, sql: "PRAGMA table_info(\(tableName))")
@@ -197,7 +194,7 @@ class FrequencyManager {
                         let type = row["type"] as? String ?? "unknown"
                         print("  - \(name): \(type)")
                     }
-
+                    
                     // Show sample data
                     let sampleRows = try Row.fetchAll(db, sql: "SELECT * FROM \(tableName) LIMIT 3")
                     print("🧪 [BCCWJ TEST] Sample data from '\(tableName)':")
@@ -210,16 +207,13 @@ class FrequencyManager {
                     }
                     print()
                 }
-
+                
                 // Test frequency lookup for common words
                 let testWords = ["猫", "日本", "最初", "食べる", "の", "は", "を", "に"]
                 print("🧪 [BCCWJ TEST] Testing frequency lookup for common words:")
                 for word in testWords {
                     // Test direct database query
-                    let directRows = try Row.fetchAll(
-                        db,
-                        sql: "SELECT term, frequency_value FROM frequency WHERE term = ? LIMIT 1",
-                        arguments: [word])
+                    let directRows = try Row.fetchAll(db, sql: "SELECT term, frequency_value FROM frequency WHERE term = ? LIMIT 1", arguments: [word])
                     if let row = directRows.first {
                         let term = row["term"] as? String ?? "unknown"
                         let freq = row["frequency_value"] as? Int ?? 0
@@ -227,7 +221,7 @@ class FrequencyManager {
                     } else {
                         print("🧪 [BCCWJ TEST] Direct query '\(word)': No match found")
                     }
-
+                    
                     // Test using our frequency manager
                     if let frequencyData = getBCCWJFrequencyData(for: word) {
                         print("🧪 [BCCWJ TEST] FrequencyManager '\(word)': rank=\(frequencyData.rank), freq=\(frequencyData.frequency)")

@@ -884,19 +884,19 @@ class DictionaryManager {
         
         let testWords = ["猫", "日本", "最初", "食べる", "本", "私", "今日"]
         
-//        for word in testWords {
-//            if let frequencyData = frequencyManager.getFrequencyData(for: word) {
-//                print("🧪 [FREQUENCY TEST] '\(word)': rank=\(frequencyData.rank), freq=\(frequencyData.frequency), source=\(frequencyData.source)")
-//            } else {
-//                print("🧪 [FREQUENCY TEST] '\(word)': No frequency data found")
-//            }
-//        }
+        for word in testWords {
+            if let frequencyData = frequencyManager.getBCCWJFrequencyData(for: word) {
+                print("🧪 [FREQUENCY TEST] '\(word)': rank=\(frequencyData.rank), freq=\(frequencyData.frequency), source=\(frequencyData.source)")
+            } else {
+                print("🧪 [FREQUENCY TEST] '\(word)': No frequency data found")
+            }
+        }
         
         // Test with actual dictionary lookup
         print("🧪 [FREQUENCY TEST] Testing with dictionary lookup...")
         let testEntries = lookupWithDeinflection(word: "猫")
         for entry in testEntries {
-//            print("🧪 [FREQUENCY TEST] Entry '\(entry.term)' has frequency: \(entry.hasFrequencyData ? entry.frequencyRankString ?? "unknown" : "none")")
+            print("🧪 [FREQUENCY TEST] Entry '\(entry.term)' has frequency: \(entry.hasFrequencyData ? entry.frequencyRankStrings.getOrNil(0) ?? "unknown" : "none")")
         }
     }
     
