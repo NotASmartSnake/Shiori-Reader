@@ -35,7 +35,7 @@ class FrequencyManager {
     }
 
     /// Get frequency data for a specific word (optimized version)
-    private func getBCCWJFrequencyData(for word: String) -> FrequencyData? {
+    func getBCCWJFrequencyData(for word: String) -> FrequencyData? {
         guard let db = bccwjQueue else { return nil }
 
         do {
@@ -81,14 +81,15 @@ class FrequencyManager {
         }
     }
 
-    func decodeFrequencyJson(json rawJson: String) throws -> Int? {
+    /// Get the frequency number from the "data" field json string in a term bank.
+    func decodeFrequencyJson(json rawJson: String) -> Int? {
         let jsonData = rawJson.data(using: .utf8)!
 
         if let jsonFrequency = Int(rawJson) {
             return jsonFrequency
         }
 
-        let jsonObj = try JSONSerialization.jsonObject(with: jsonData, options: [])
+        let jsonObj = try? JSONSerialization.jsonObject(with: jsonData, options: [])
 
         if let jsonObj = jsonObj as? [String: Any] {
             if let value = jsonObj["value"],
@@ -115,6 +116,7 @@ class FrequencyManager {
         return nil
     }
 
+    /// Get frequency data from an imported dictionary
     func getImportedFrequencyData(for word: String, db: DatabaseQueue, dictionaryKey: String)
         -> FrequencyData?
     {
@@ -130,12 +132,12 @@ class FrequencyManager {
                         """, arguments: [word])
 
                 if let row = rows.first {
-                    let term = row["expression"] as String
-                    let mode = row["mode"] as String
-                    let data = row["data"] as String
+                    let term = row["expression"] as! String
+                    let mode = row["mode"] as! String
+                    let data = row["data"] as! String
 
                     if mode == "freq" {
-                        let frequency = try decodeFrequencyJson(json: data)
+                        let frequency = decodeFrequencyJson(json: data)
 
                         if let frequency = frequency {
                             return FrequencyData(
@@ -155,17 +157,7 @@ class FrequencyManager {
             return nil
         }
     }
-
-    func getFrequencyData(for word: String) -> [FrequencyData] {
-        var frequencyData: [FrequencyData] = []
-
-        if let data = getBCCWJFrequencyData(for: word) {
-            frequencyData.append(data)
-        }
-
-        return frequencyData
-    }
-
+    
     /// Get frequency rank for display (returns a formatted string)
     func getFrequencyRank(for word: String) -> String? {
         guard let frequencyData = getBCCWJFrequencyData(for: word) else { return nil }

@@ -3,7 +3,7 @@ import SwiftUI
 // Component for dictionary entry row
 struct DictionaryEntryRow: View {
     let entry: DictionaryEntry
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center) {
@@ -16,22 +16,22 @@ struct DictionaryEntryRow: View {
                             .foregroundColor(.secondary)
                             .padding(.bottom, 1)
                     }
-                    
+
                     // Main term
                     Text(entry.term)
                         .font(.headline)
                         .foregroundColor(.primary)
                 }
-                .layoutPriority(1) // Give term highest priority
+                .layoutPriority(1)  // Give term highest priority
                 .fixedSize(horizontal: false, vertical: true)
-                
+
                 // Pitch accent graphs in horizontal scroll view
                 if entry.hasPitchAccent, let pitchAccents = entry.pitchAccents {
                     // Filter to only show graphs that match both term AND reading
                     let matchingAccents = pitchAccents.accents.filter { accent in
                         accent.term == entry.term && accent.reading == entry.reading
                     }
-                    
+
                     if !matchingAccents.isEmpty {
                         // Scrollable container for pitch accent graphs
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -46,13 +46,13 @@ struct DictionaryEntryRow: View {
                             }
                             .padding(.horizontal, 4)
                         }
-                        .padding(.leading, 8) // Small gap from the word
-                        .layoutPriority(0) // Lower priority than term
+                        .padding(.leading, 8)  // Small gap from the word
+                        .layoutPriority(0)  // Lower priority than term
                     }
                 }
-                
+
                 Spacer(minLength: 8)
-                
+
                 // Optional: Show tags or indicators for word types
                 if !entry.termTags.isEmpty {
                     Text(entry.termTags.first ?? "")
@@ -64,26 +64,23 @@ struct DictionaryEntryRow: View {
                         .cornerRadius(4)
                 }
             }
-            
+
             // Dictionary source badges and frequency data with flow layout
             FlowLayout(spacing: 4) {
                 // Frequency data first (if available and BCCWJ is enabled)
                 if isBCCWJEnabled() {
-//                    Text(frequencyRank)
-//                        .font(.caption2)
-//                        .padding(.horizontal, 4)
-//                        .padding(.vertical, 1)
-//                        .background(Color.green.opacity(0.2))
-//                        .foregroundColor(.green)
-//                        .cornerRadius(4)
+                    ForEach(entry.frequencyData, id: \.source) { frequencyData in
+                        getFrequencyBadge(
+                            for: frequencyData.source, frequencyRank: "\(frequencyData.frequency)")
+                    }
                 }
-                
+
                 // Show dictionary badges based on source
                 if entry.source == "combined" {
                     // For combined entries, show all available dictionary badges
                     let allEntries = getAllEntriesForWord()
                     let uniqueSources = Array(Set(allEntries.map { $0.source })).sorted()
-                    
+
                     ForEach(uniqueSources, id: \.self) { source in
                         getDictionarySourceBadge(for: source)
                     }
@@ -93,13 +90,13 @@ struct DictionaryEntryRow: View {
                 }
             }
             .padding(.bottom, 2)
-            
+
             // Show first meaning
             Text(entry.meanings.first ?? "")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
-            
+
             // Indicate if there are more meanings
             if entry.meanings.count > 1 {
                 Text("+\(entry.meanings.count - 1) more meanings")
@@ -109,21 +106,21 @@ struct DictionaryEntryRow: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     private func getDictionaryColor(for source: String) -> Color {
         return DictionaryColorProvider.shared.getColor(for: source)
     }
-    
+
     private func getAllEntriesForWord() -> [DictionaryEntry] {
         // Use the same lookup method as SearchViewModel to include imported dictionaries
         let allEntries = DictionaryManager.shared.lookupWithDeinflection(word: entry.term)
         return allEntries.filter { $0.term == entry.term && $0.reading == entry.reading }
     }
-    
+
     @ViewBuilder
     private func getDictionarySourceBadge(for source: String) -> some View {
         let color = getDictionaryColor(for: source)
-        
+
         if source == "jmdict" {
             Text("JMdict")
                 .font(.caption2)
@@ -135,7 +132,7 @@ struct DictionaryEntryRow: View {
                 .cornerRadius(4)
         } else if source.hasPrefix("imported_") {
             let displayName = getImportedDictionaryDisplayName(source: source)
-            
+
             Text(displayName)
                 .font(.caption2)
                 .lineLimit(1)
@@ -156,7 +153,32 @@ struct DictionaryEntryRow: View {
                 .cornerRadius(4)
         }
     }
-    
+
+    @ViewBuilder
+    private func getFrequencyBadge(for source: String, frequencyRank: String) -> some View {
+        let color = getDictionaryColor(for: source)
+
+        if source == "BCCWJ" {
+            Text("BCCWJ: \(frequencyRank)")
+                .font(.caption2)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(Color.green.opacity(0.2))
+                .foregroundColor(.green)
+                .cornerRadius(4)
+        } else if source.hasPrefix("imported_") {
+            let displayName = getImportedDictionaryDisplayName(source: source)
+
+            Text("\(displayName): \(frequencyRank)")
+                .font(.caption2)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        }
+    }
+
     private func getImportedDictionaryDisplayName(source: String) -> String {
         // Extract UUID from source string (format: "imported_UUID")
         let importedId = source.replacingOccurrences(of: "imported_", with: "")
@@ -168,16 +190,17 @@ struct DictionaryEntryRow: View {
         }
         return "Imported"
     }
-    
+
     /// Check if BCCWJ frequency data is enabled in settings
     private func isBCCWJEnabled() -> Bool {
         // Simple struct to decode settings
         struct SimpleDictionarySettings: Codable {
             var enabledDictionaries: [String]
         }
-        
+
         if let data = UserDefaults.standard.data(forKey: "dictionarySettings"),
-           let settings = try? JSONDecoder().decode(SimpleDictionarySettings.self, from: data) {
+            let settings = try? JSONDecoder().decode(SimpleDictionarySettings.self, from: data)
+        {
             return settings.enabledDictionaries.contains("bccwj")
         }
         // Default to true for backward compatibility

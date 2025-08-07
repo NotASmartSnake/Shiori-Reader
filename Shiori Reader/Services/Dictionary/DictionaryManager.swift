@@ -98,9 +98,17 @@ class DictionaryManager {
         )
         
         // Add frequency data if available and BCCWJ is enabled
-        if isBCCWJEnabled() {
-            entry.frequencyData = frequencyManager.getFrequencyData(for: term) + lookupImportedFrequencies(word: term)
+        // Lookup and add all frequencies to the entry
+        let importedFrequencies = lookupImportedFrequencies(word: term)
+        
+        if let BCCWJFrequency = FrequencyManager.shared.getBCCWJFrequencyData(for: term),
+        isBCCWJEnabled() {
+            entry.frequencyData = importedFrequencies + [BCCWJFrequency]
+        } else {
+            entry.frequencyData = importedFrequencies
         }
+        
+        return entry
         
         // Pitch accents will be loaded lazily via the computed property
         return entry

@@ -86,18 +86,12 @@ extension DictionaryManager {
         let resultQueue = DispatchQueue(label: "com.shiori.dictionaryLookup.results")
         
         var allEntries: [DictionaryEntry] = []
-        var allFrequencies: [FrequencyData] = []
         
         for (dictionaryKey, queue) in enabledQueues {
             dispatchGroup.enter()
             
             concurrentQueue.async {
                 let entries = self.lookupImportedDictionary(word: word, queue: queue, dictionaryKey: dictionaryKey)
-    
-                if let frequency = FrequencyManager.shared.getImportedFrequencyData(for: word, db: queue, dictionaryKey: dictionaryKey) {
-                    print("Appending frequency")
-                    allFrequencies.append(frequency)
-                }
                 
                 resultQueue.async {
                     allEntries.append(contentsOf: entries)
@@ -170,8 +164,15 @@ extension DictionaryManager {
             source: source
         )
         
-        // Try to add frequency data if available
-        entry.frequencyData = FrequencyManager.shared.getFrequencyData(for: term) + lookupImportedFrequencies(word: term)
+        
+        // Lookup and add all frequencies to the entry
+        let importedFrequencies = lookupImportedFrequencies(word: term)
+        
+        if let BCCWJFrequency = FrequencyManager.shared.getBCCWJFrequencyData(for: term) {
+            entry.frequencyData = importedFrequencies + [BCCWJFrequency]
+        } else {
+            entry.frequencyData = importedFrequencies
+        }
         
         return entry
     }
