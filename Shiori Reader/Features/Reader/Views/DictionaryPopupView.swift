@@ -160,7 +160,7 @@ struct DictionaryPopupView: View {
                                 
                                 // Display frequency data if available and BCCWJ is enabled
                                 if isBCCWJEnabled() {
-                                    HStack() {
+                                    FlowLayout(spacing: 4) {
                                         ForEach(entry.frequencyData, id: \.source) {frequencyData in
                                             getFrequencyBadge(for: frequencyData.source, frequencyRank: "\(frequencyData.frequency)")
                                         }

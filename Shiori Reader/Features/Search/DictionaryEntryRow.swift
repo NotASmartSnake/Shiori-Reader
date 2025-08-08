@@ -67,7 +67,7 @@ struct DictionaryEntryRow: View {
             
             // Dictionary source badges and frequency data with flow layout
             FlowLayout(spacing: 4) {
-                // Frequency data first (if available and BCCWJ is enabled)
+                // Frequency data first
                 if isBCCWJEnabled() {
                     ForEach(entry.frequencyData, id: \.source) { frequencyData in
                         getFrequencyBadge(
