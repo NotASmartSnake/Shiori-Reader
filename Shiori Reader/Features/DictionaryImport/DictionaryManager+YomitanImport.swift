@@ -110,6 +110,7 @@ extension DictionaryManager {
     }
     
     func lookupImportedFrequencies(word: String) -> [FrequencyData] {
+        let startTime = CFAbsoluteTimeGetCurrent()
         let enabledDictionaries = getEnabledDictionaries()
         
         // Filter enabled dictionaries upfront
@@ -122,13 +123,33 @@ extension DictionaryManager {
             return []
         }
         
+        // Use DispatchGroup for concurrent processing
+        let dispatchGroup = DispatchGroup()
+        let concurrentQueue = DispatchQueue(label: "com.shiori.frequencyLookup.concurrent", attributes: .concurrent)
+        let resultQueue = DispatchQueue(label: "com.shiori.frequencyLookup.results")
+        
         var allFrequencies: [FrequencyData] = []
         
         for (dictionaryKey, queue) in enabledQueues {
-            if let frequency = FrequencyManager.shared.getImportedFrequencyData(for: word, db: queue, dictionaryKey: dictionaryKey) {
-                allFrequencies.append(frequency)
+            dispatchGroup.enter()
+            
+            concurrentQueue.async {
+                let frequency = FrequencyManager.shared.getImportedFrequencyData(for: word, db: queue, dictionaryKey: dictionaryKey)
+                    
+                resultQueue.async {
+                    if let frequency = frequency {
+                        allFrequencies.append(frequency)
+                    }
+                    dispatchGroup.leave()
+                }
             }
         }
+        
+        // Wait for all lookups to complete
+        dispatchGroup.wait()
+        
+        let endTime = CFAbsoluteTimeGetCurrent()
+        let duration = (endTime - startTime) * 1000
         
         return allFrequencies
     }
