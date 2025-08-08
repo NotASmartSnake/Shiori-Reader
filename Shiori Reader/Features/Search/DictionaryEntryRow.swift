@@ -158,7 +158,7 @@ struct DictionaryEntryRow: View {
     private func getFrequencyBadge(for source: String, frequencyRank: String) -> some View {
         let color = getDictionaryColor(for: source)
 
-        if source == "BCCWJ" {
+        if source == "bccwj" {
             Text("BCCWJ: \(frequencyRank)")
                 .font(.caption2)
                 .padding(.horizontal, 5)

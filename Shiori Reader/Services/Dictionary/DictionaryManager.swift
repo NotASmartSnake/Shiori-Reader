@@ -66,7 +66,7 @@ class DictionaryManager {
         return getEnabledDictionaries().contains("bccwj")
     }
     
-    /// Create dictionary entry with lazy-loaded pitch accents and frequency data
+    /// Create dictionary entry with lazy-loaded pitch accents
     private func createDictionaryEntry(
         id: String,
         term: String,
@@ -97,18 +97,27 @@ class DictionaryManager {
             source: source
         )
         
-        // Add frequency data if available and BCCWJ is enabled
         // Lookup and add all frequencies to the entry
-        let importedFrequencies = lookupImportedFrequencies(word: term)
+        var frequencyData: [FrequencyData] = lookupImportedFrequencies(word: term)
         
-        if let BCCWJFrequency = FrequencyManager.shared.getBCCWJFrequencyData(for: term),
-        isBCCWJEnabled() {
-            entry.frequencyData = importedFrequencies + [BCCWJFrequency]
-        } else {
-            entry.frequencyData = importedFrequencies
+        if let BCCWJFrequency = FrequencyManager.shared.getBCCWJFrequencyData(for: term), isBCCWJEnabled() {
+            frequencyData += [BCCWJFrequency]
         }
         
-        return entry
+        // Order frequencies by user's chosen source order
+        let orderedSources = DictionaryColorProvider.shared.getOrderedDictionarySources()
+        frequencyData.sort { (lhs, rhs) -> Bool in
+            guard let lhsIndex = orderedSources.firstIndex(of: lhs.source) else {
+                return false
+            }
+            
+            guard let rhsIndex = orderedSources.firstIndex(of: rhs.source) else {
+                return false
+            }
+            return lhsIndex < rhsIndex
+        }
+        
+        entry.frequencyData = frequencyData
         
         // Pitch accents will be loaded lazily via the computed property
         return entry

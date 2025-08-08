@@ -147,8 +147,7 @@ struct DictionaryPopupCardView: View {
                                 }
                                 .padding(.vertical, 4)
                                 
-                                // Display frequency data
-                                FlowLayout {
+                                FlowLayout(spacing: 4) {
                                     ForEach(entry.frequencyData, id: \.source) {frequencyData in
                                         getFrequencyBadge(for: frequencyData.source, frequencyRank: "\(frequencyData.frequency)")
                                     }
@@ -677,7 +676,7 @@ struct DictionaryPopupCardView: View {
     private func getFrequencyBadge(for source: String, frequencyRank: String) -> some View {
         let color = getDictionaryColor(for: source)
         
-        if source == "BCCWJ" {
+        if source == "bccwj" {
             Text("BCCWJ: \(frequencyRank)")
                 .font(.caption2)
                 .padding(.horizontal, 5)

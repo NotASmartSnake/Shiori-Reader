@@ -67,7 +67,7 @@ class FrequencyManager {
                             reading: nil,
                             frequency: frequencyValue,
                             rank: frequencyValue,
-                            source: "BCCWJ"
+                            source: "bccwj"
                         )
                     }
                 }
