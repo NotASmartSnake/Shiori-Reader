@@ -139,9 +139,11 @@ class FrequencyManager {
     func getImportedFrequencyData(for word: String, with reading: String, db: DatabaseQueue, dictionaryKey: String)
         -> FrequencyData?
     {
+        var rows: [Row] = []
+        
         do {
-            return try db.read { db in
-                let rows = try Row.fetchAll(
+            try db.read { db in
+                rows = try Row.fetchAll(
                     db,
                     sql: """
                         SELECT id, expression, mode, data, dictionary
@@ -149,35 +151,35 @@ class FrequencyManager {
                         WHERE expression = ?
                         ORDER BY id
                         """, arguments: [word])
+            }
 
-                for row in rows {
-                    let term = row["expression"] as! String
-                    let mode = row["mode"] as! String
-                    let data = row["data"] as! String
+            for row in rows {
+                let term = row["expression"] as! String
+                let mode = row["mode"] as! String
+                let data = row["data"] as! String
 
-                    if mode == "freq" {
-                        let jsonData = data.data(using: .utf8)!
-                        let yomitanFrequencyData = decodeFrequencyJson(json: jsonData)
+                if mode == "freq" {
+                    let jsonData = data.data(using: .utf8)!
+                    let yomitanFrequencyData = decodeFrequencyJson(json: jsonData)
 
-                        if let frequency = yomitanFrequencyData {
-                            if let frequencyReading = frequency.reading,
-                               frequencyReading != reading {
-                                continue
-                            }
-                            
-                            return FrequencyData(
-                                word: term,
-                                reading: reading,
-                                frequency: frequency.frequency,
-                                rank: frequency.frequency,
-                                source: dictionaryKey
-                            )
+                    if let frequency = yomitanFrequencyData {
+                        if let frequencyReading = frequency.reading,
+                           frequencyReading != reading {
+                            continue
                         }
+                        
+                        return FrequencyData(
+                            word: term,
+                            reading: reading,
+                            frequency: frequency.frequency,
+                            rank: frequency.frequency,
+                            source: dictionaryKey
+                        )
                     }
                 }
-
-                return nil
             }
+
+            return nil
         } catch {
             return nil
         }

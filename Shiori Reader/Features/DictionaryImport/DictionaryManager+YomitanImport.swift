@@ -110,50 +110,50 @@ extension DictionaryManager {
     }
     
     /// Lookup frequency data concurrently from all dictionaries
-    func lookupImportedFrequencies(word: String, reading: String) -> [FrequencyData] {
-        let startTime = CFAbsoluteTimeGetCurrent()
-        let enabledDictionaries = getEnabledDictionaries()
-        
-        // Filter enabled dictionaries upfront
-        let enabledQueues = Self.importedDictionaryQueues.filter { dictionaryKey, _ in
-            enabledDictionaries.contains(dictionaryKey)
-        }
-        
-        // If no enabled imported dictionaries, return early
-        guard !enabledQueues.isEmpty else {
-            return []
-        }
-        
-        // Use DispatchGroup for concurrent processing
-        let dispatchGroup = DispatchGroup()
-        let concurrentQueue = DispatchQueue(label: "com.shiori.frequencyLookup.concurrent", attributes: .concurrent)
-        let resultQueue = DispatchQueue(label: "com.shiori.frequencyLookup.results")
-        
-        var allFrequencies: [FrequencyData] = []
-        
-        for (dictionaryKey, queue) in enabledQueues {
-            dispatchGroup.enter()
+        func lookupImportedFrequencies(word: String, reading: String) -> [FrequencyData] {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            let enabledDictionaries = getEnabledDictionaries()
             
-            concurrentQueue.async {
-                let frequency = FrequencyManager.shared.getImportedFrequencyData(for: word, with: reading, db: queue, dictionaryKey: dictionaryKey)
-                    
-                resultQueue.async {
-                    if let frequency = frequency {
-                        allFrequencies.append(frequency)
+            // Filter enabled dictionaries upfront
+            let enabledQueues = Self.importedDictionaryQueues.filter { dictionaryKey, _ in
+                enabledDictionaries.contains(dictionaryKey)
+            }
+            
+            // If no enabled imported dictionaries, return early
+            guard !enabledQueues.isEmpty else {
+                return []
+            }
+            
+            // Use DispatchGroup for concurrent processing
+            let dispatchGroup = DispatchGroup()
+            let concurrentQueue = DispatchQueue(label: "com.shiori.frequencyLookup.concurrent", attributes: .concurrent)
+            let resultQueue = DispatchQueue(label: "com.shiori.frequencyLookup.results")
+            
+            var allFrequencies: [FrequencyData] = []
+            
+            for (dictionaryKey, queue) in enabledQueues {
+                dispatchGroup.enter()
+                
+                concurrentQueue.async {
+                    let frequency = FrequencyManager.shared.getImportedFrequencyData(for: word, with: reading, db: queue, dictionaryKey: dictionaryKey)
+                        
+                    resultQueue.async {
+                        if let frequency = frequency {
+                            allFrequencies.append(frequency)
+                        }
+                        dispatchGroup.leave()
                     }
-                    dispatchGroup.leave()
                 }
             }
+            
+            // Wait for all lookups to complete
+            dispatchGroup.wait()
+            
+            let endTime = CFAbsoluteTimeGetCurrent()
+            let duration = (endTime - startTime) * 1000
+            
+            return allFrequencies
         }
-        
-        // Wait for all lookups to complete
-        dispatchGroup.wait()
-        
-        let endTime = CFAbsoluteTimeGetCurrent()
-        let duration = (endTime - startTime) * 1000
-        
-        return allFrequencies
-    }
     
     /// Create dictionary entry for imported dictionaries (public version)
     func createImportedDictionaryEntry(
@@ -185,7 +185,6 @@ extension DictionaryManager {
             popularity: popularity,
             source: source
         )
-        
         
         // Lookup and add all frequencies to the entry
         var frequencyData: [FrequencyData] = lookupImportedFrequencies(word: term, reading: reading)
@@ -220,53 +219,54 @@ extension DictionaryManager {
     ) -> [DictionaryEntry] {
         
         var entries: [DictionaryEntry] = []
+        var rows: [Row] = []
         
         do {
             try queue.read { db in
                 // Simple query - same as built-in dictionaries
-                let rows = try Row.fetchAll(db, sql: """
+                rows = try Row.fetchAll(db, sql: """
                     SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
                     FROM terms
                     WHERE expression = ? OR reading = ?
                     ORDER BY id
                     """, arguments: [word, word])
+            }
+            
+            for row in rows {
+                let termId = row["id"] as? Int64 ?? 0
+                let expression = row["expression"] as? String ?? ""
+                let reading = row["reading"] as? String ?? ""
+                let tags = row["term_tags"] as? String ?? ""
+                let score = row["score"] as? String
+                let rules = row["rules"] as? String
+                let definitionsText = row["definitions"] as? String ?? ""
                 
-                for row in rows {
-                    let termId = row["id"] as? Int64 ?? 0
-                    let expression = row["expression"] as? String ?? ""
-                    let reading = row["reading"] as? String ?? ""
-                    let tags = row["term_tags"] as? String ?? ""
-                    let score = row["score"] as? String
-                    let rules = row["rules"] as? String
-                    let definitionsText = row["definitions"] as? String ?? ""
-                    
-                    // Handle popularity stored as string in database
-                    let popularity: Double
-                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
-                        popularity = popDouble
-                    } else {
-                        popularity = 0.0
-                    }
-                    
-                    // Split definitions by newline separator
-                    let meanings = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
-                    
-                    // Create entry with the UUID-based source
-                    let entry = createImportedDictionaryEntry(
-                        id: "\(dictionaryKey)_\(termId)",
-                        term: expression,
-                        reading: reading,
-                        meanings: meanings,
-                        meaningTags: [],
-                        termTags: tags.split(separator: ",").map(String.init),
-                        score: score,
-                        rules: rules,
-                        popularity: popularity,
-                        source: dictionaryKey
-                    )
-                    
-                    entries.append(entry)
+                // Handle popularity stored as string in database
+                let popularity: Double
+                if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
+                    popularity = popDouble
+                } else {
+                    popularity = 0.0
                 }
+                
+                // Split definitions by newline separator
+                let meanings = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
+                
+                // Create entry with the UUID-based source
+                let entry = createImportedDictionaryEntry(
+                    id: "\(dictionaryKey)_\(termId)",
+                    term: expression,
+                    reading: reading,
+                    meanings: meanings,
+                    meaningTags: [],
+                    termTags: tags.split(separator: ",").map(String.init),
+                    score: score,
+                    rules: rules,
+                    popularity: popularity,
+                    source: dictionaryKey
+                )
+                
+                entries.append(entry)
             }
         } catch {
             // Log error but continue
