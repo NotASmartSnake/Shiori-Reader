@@ -89,7 +89,7 @@ class FrequencyManager {
         }
     }
 
-    /// Get the frequency number from the "data" field json string in a term bank.
+    /// Get the frequency data from the "data" field json string in a term bank.
     func decodeFrequencyJson(json jsonData: Data) -> YomitanFrequencyData? {
         let json = try! JSONSerialization.jsonObject(with: jsonData, options: [JSONSerialization.ReadingOptions.fragmentsAllowed])
         

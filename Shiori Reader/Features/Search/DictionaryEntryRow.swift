@@ -68,11 +68,9 @@ struct DictionaryEntryRow: View {
             // Dictionary source badges and frequency data with flow layout
             FlowLayout(spacing: 4) {
                 // Frequency data first
-                if isBCCWJEnabled() {
-                    ForEach(entry.frequencyData, id: \.source) { frequencyData in
-                        getFrequencyBadge(
-                            for: frequencyData.source, frequencyRank: "\(frequencyData.frequency)")
-                    }
+                ForEach(entry.frequencyData, id: \.source) { frequencyData in
+                    getFrequencyBadge(
+                        for: frequencyData.source, frequencyRank: "\(frequencyData.frequency)")
                 }
                 
                 // Show dictionary badges based on source

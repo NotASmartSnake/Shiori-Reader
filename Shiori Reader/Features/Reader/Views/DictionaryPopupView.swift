@@ -158,16 +158,14 @@ struct DictionaryPopupView: View {
                                 }
                                 .padding(.vertical, 4)
                                 
-                                // Display frequency data if available and BCCWJ is enabled
-                                if isBCCWJEnabled() {
-                                    FlowLayout(spacing: 4) {
-                                        ForEach(entry.frequencyData, id: \.source) {frequencyData in
-                                            getFrequencyBadge(for: frequencyData.source, frequencyRank: "\(frequencyData.frequency)")
-                                        }
-                                        Spacer()
+                                // Display frequency data if available
+                                FlowLayout(spacing: 4) {
+                                    ForEach(entry.frequencyData, id: \.source) {frequencyData in
+                                        getFrequencyBadge(for: frequencyData.source, frequencyRank: "\(frequencyData.frequency)")
                                     }
-                                    .padding(.bottom, 4)
+                                    Spacer()
                                 }
+                                .padding(.bottom, 4)
                                 
                                 // Display meanings grouped by source
                                 let entriesBySource = Dictionary(grouping: getAllEntriesForTerm(entry.term, reading: entry.reading, from: matches)) { $0.source }
