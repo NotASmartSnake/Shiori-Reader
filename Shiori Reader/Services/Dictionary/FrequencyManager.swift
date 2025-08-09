@@ -9,6 +9,16 @@ struct FrequencyData {
     let source: String
 }
 
+struct YomitanFrequencyData {
+    let frequency: Int
+    var reading: String?
+    
+    init(frequency: Int, reading: String? = nil) {
+        self.frequency = frequency
+        self.reading = reading
+    }
+}
+
 class FrequencyManager {
     static let shared = FrequencyManager()
     
@@ -80,34 +90,45 @@ class FrequencyManager {
     }
 
     /// Get the frequency number from the "data" field json string in a term bank.
-    func decodeFrequencyJson(json rawJson: String) -> Int? {
-        let jsonData = rawJson.data(using: .utf8)!
-
-        if let jsonFrequency = Int(rawJson) {
-            return jsonFrequency
+    func decodeFrequencyJson(json jsonData: Data) -> YomitanFrequencyData? {
+        let json = try! JSONSerialization.jsonObject(with: jsonData, options: [JSONSerialization.ReadingOptions.fragmentsAllowed])
+        
+        // frequency is just a number
+        if let frequency = json as? NSNumber {
+            return YomitanFrequencyData(frequency: frequency.intValue)
+        }
+        
+        // frequency is a number stored in a string value
+        if let frequencyString = json as? NSString {
+            if let frequency = Int(frequencyString as String) {
+                return YomitanFrequencyData(frequency: frequency)
+            }
         }
 
-        let jsonObj = try? JSONSerialization.jsonObject(with: jsonData, options: [])
-
-        if let jsonObj = jsonObj as? [String: Any] {
+        if let jsonObj = json as? [String: Any] {
+            // frequency is an object with a value and an optional display value
             if let value = jsonObj["value"],
                 let jsonFrequency = value as? NSNumber
             {
-                return jsonFrequency.intValue
+                return YomitanFrequencyData(frequency: jsonFrequency.intValue)
             }
 
+            // frequency is nested in another object with a reading value
             if let jsonFrequency = jsonObj["frequency"] {
-
-                if let jsonFrequencyInt = jsonFrequency as? NSNumber {
-                    return jsonFrequencyInt.intValue
+                let data = try! JSONSerialization.data(withJSONObject: jsonFrequency, options: [JSONSerialization.WritingOptions.fragmentsAllowed])
+                // call this function again to get the inner frequency value
+                let frequency = decodeFrequencyJson(json: data)
+                
+                guard var frequencyData = frequency else {
+                    return nil
                 }
-
-                if let jsonObj = jsonFrequency as? [String: Any],
-                    let value = jsonObj["value"],
-                    let jsonFrequency = value as? NSNumber
-                {
-                    return jsonFrequency.intValue
+                
+                // assign reading data to frequency data
+                if let reading = jsonObj["reading"] as? String {
+                    frequencyData.reading = reading
                 }
+                
+                return frequencyData
             }
         }
 
@@ -115,7 +136,7 @@ class FrequencyManager {
     }
 
     /// Get frequency data from an imported dictionary
-    func getImportedFrequencyData(for word: String, db: DatabaseQueue, dictionaryKey: String)
+    func getImportedFrequencyData(for word: String, with reading: String, db: DatabaseQueue, dictionaryKey: String)
         -> FrequencyData?
     {
         do {
@@ -129,20 +150,26 @@ class FrequencyManager {
                         ORDER BY id
                         """, arguments: [word])
 
-                if let row = rows.first {
+                for row in rows {
                     let term = row["expression"] as! String
                     let mode = row["mode"] as! String
                     let data = row["data"] as! String
 
                     if mode == "freq" {
-                        let frequency = decodeFrequencyJson(json: data)
+                        let jsonData = data.data(using: .utf8)!
+                        let yomitanFrequencyData = decodeFrequencyJson(json: jsonData)
 
-                        if let frequency = frequency {
+                        if let frequency = yomitanFrequencyData {
+                            if let frequencyReading = frequency.reading,
+                               frequencyReading != reading {
+                                continue
+                            }
+                            
                             return FrequencyData(
                                 word: term,
-                                reading: nil,
-                                frequency: frequency,
-                                rank: frequency,
+                                reading: reading,
+                                frequency: frequency.frequency,
+                                rank: frequency.frequency,
                                 source: dictionaryKey
                             )
                         }

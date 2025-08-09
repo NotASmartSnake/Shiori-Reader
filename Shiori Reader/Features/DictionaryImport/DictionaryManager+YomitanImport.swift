@@ -109,7 +109,8 @@ extension DictionaryManager {
         return allEntries
     }
     
-    func lookupImportedFrequencies(word: String) -> [FrequencyData] {
+    /// Lookup frequency data concurrently from all dictionaries
+    func lookupImportedFrequencies(word: String, reading: String) -> [FrequencyData] {
         let startTime = CFAbsoluteTimeGetCurrent()
         let enabledDictionaries = getEnabledDictionaries()
         
@@ -134,7 +135,7 @@ extension DictionaryManager {
             dispatchGroup.enter()
             
             concurrentQueue.async {
-                let frequency = FrequencyManager.shared.getImportedFrequencyData(for: word, db: queue, dictionaryKey: dictionaryKey)
+                let frequency = FrequencyManager.shared.getImportedFrequencyData(for: word, with: reading, db: queue, dictionaryKey: dictionaryKey)
                     
                 resultQueue.async {
                     if let frequency = frequency {
@@ -187,7 +188,7 @@ extension DictionaryManager {
         
         
         // Lookup and add all frequencies to the entry
-        var frequencyData: [FrequencyData] = lookupImportedFrequencies(word: term)
+        var frequencyData: [FrequencyData] = lookupImportedFrequencies(word: term, reading: reading)
         
         if let BCCWJFrequency = FrequencyManager.shared.getBCCWJFrequencyData(for: term), getEnabledDictionaries().contains("bccwj") {
             frequencyData += [BCCWJFrequency]

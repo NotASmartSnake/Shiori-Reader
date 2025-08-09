@@ -98,7 +98,7 @@ class DictionaryManager {
         )
         
         // Lookup and add all frequencies to the entry
-        var frequencyData: [FrequencyData] = lookupImportedFrequencies(word: term)
+        var frequencyData: [FrequencyData] = lookupImportedFrequencies(word: term, reading: reading)
         
         if let BCCWJFrequency = FrequencyManager.shared.getBCCWJFrequencyData(for: term), isBCCWJEnabled() {
             frequencyData += [BCCWJFrequency]
