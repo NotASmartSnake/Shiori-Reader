@@ -7,8 +7,8 @@ struct MainView: View {
     @EnvironmentObject private var libraryManager: LibraryManager
     @EnvironmentObject private var savedWordsManager: SavedWordsManager
     
-    // Add the navigation coordinator
-    @StateObject private var navigationCoordinator = NavigationCoordinator.shared
+    // Tab bar visibility state
+    @State private var isTabBarVisible: Bool = true
     
     // Keyboard observer to detect when keyboard appears/disappears
     @StateObject private var keyboardObserver = KeyboardObserver()
@@ -38,27 +38,20 @@ struct MainView: View {
                 }
             }
 
-            if navigationCoordinator.isTabBarVisible && !keyboardObserver.isKeyboardVisible {
+            if isTabBarVisible && !keyboardObserver.isKeyboardVisible {
                 CustomTabBar(selectedIndex: $selectedIndex)
             }
         }
-        // Change to observe the navigationCoordinator instead
-        .animation(.none, value: navigationCoordinator.isTabBarVisible)
+        .animation(.none, value: isTabBarVisible)
         .animation(.easeInOut(duration: keyboardObserver.animationDuration), value: keyboardObserver.isKeyboardVisible)
+        .onChange(of: isReadingBookState.isReading) { isReading in
+            withAnimation(.none) {
+                isTabBarVisible = !isReading
+            }
+        }
         .onAppear {
             // Lock to portrait when MainView appears
             orientationManager.lockPortrait()
-            
-            // Observe isReading state changes to control tab bar visibility
-            isReadingBookState.$isReading
-                .sink { [weak navigationCoordinator] isReading in
-                    if isReading {
-                        navigationCoordinator?.hideTabBar()
-                    } else {
-                        navigationCoordinator?.showTabBar()
-                    }
-                }
-                .store(in: &navigationCoordinator.cancellables)
         }
     }
 }
