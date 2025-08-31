@@ -14,7 +14,7 @@ struct ReaderSettingsView: View {
     private let themes = ["light", "dark", "sepia"]
     
     // Font size range
-    private let fontSizeRange: ClosedRange<Float> = 0.5...2.5
+    private let fontSizeRange: ClosedRange<Float> = 0.5...3.0
     private let fontSizeStep: Float = 0.1
     
     var body: some View {
