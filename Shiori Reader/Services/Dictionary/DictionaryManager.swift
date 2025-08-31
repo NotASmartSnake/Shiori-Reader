@@ -66,7 +66,7 @@ class DictionaryManager {
         return getEnabledDictionaries().contains("bccwj")
     }
     
-    /// Create dictionary entry with lazy-loaded pitch accents and frequency data
+    /// Create dictionary entry with lazy-loaded pitch accents
     private func createDictionaryEntry(
         id: String,
         term: String,
@@ -97,10 +97,27 @@ class DictionaryManager {
             source: source
         )
         
-        // Add frequency data if available and BCCWJ is enabled
-        if isBCCWJEnabled(), let frequencyData = frequencyManager.getFrequencyData(for: term) {
-            entry.frequencyData = frequencyData
+        // Lookup and add all frequencies to the entry
+        var frequencyData: [FrequencyData] = lookupImportedFrequencies(word: term, reading: reading)
+        
+        if let BCCWJFrequency = FrequencyManager.shared.getBCCWJFrequencyData(for: term), isBCCWJEnabled() {
+            frequencyData += [BCCWJFrequency]
         }
+        
+        // Order frequencies by user's chosen source order
+        let orderedSources = DictionaryColorProvider.shared.getOrderedDictionarySources()
+        frequencyData.sort { (lhs, rhs) -> Bool in
+            guard let lhsIndex = orderedSources.firstIndex(of: lhs.source) else {
+                return false
+            }
+            
+            guard let rhsIndex = orderedSources.firstIndex(of: rhs.source) else {
+                return false
+            }
+            return lhsIndex < rhsIndex
+        }
+        
+        entry.frequencyData = frequencyData
         
         // Pitch accents will be loaded lazily via the computed property
         return entry
@@ -616,17 +633,23 @@ class DictionaryManager {
                 let sql = """
                     SELECT id, expression, reading, term_tags, score, rules, definitions, popularity,
                         (CASE
-                            WHEN definitions LIKE '% \(searchTerm) %' OR definitions LIKE '\(searchTerm) %' OR definitions LIKE '% \(searchTerm)' OR definitions = '\(searchTerm)' THEN 1
-                            WHEN definitions LIKE '%\(searchTerm)%' THEN 2
+                            WHEN definitions LIKE ? OR definitions LIKE ? OR definitions LIKE ? OR definitions = ? THEN 1
+                            WHEN definitions LIKE ? THEN 2
                             ELSE 3
                         END) AS match_quality
                     FROM terms
-                    WHERE definitions LIKE '%\(searchTerm)%'
+                    WHERE definitions LIKE ?
                     ORDER BY match_quality, popularity DESC, sequence
                     LIMIT ?
                     """
                 
-                let rows = try Row.fetchAll(db, sql: sql, arguments: [limit])
+                let spacePrefix = "% \(searchTerm) %"
+                let leftPrefix = "\(searchTerm) %"
+                let rightPrefix = "% \(searchTerm)"
+                let exactMatch = searchTerm
+                let containsMatch = "%\(searchTerm)%"
+                
+                let rows = try Row.fetchAll(db, sql: sql, arguments: [spacePrefix, leftPrefix, rightPrefix, exactMatch, containsMatch, containsMatch, limit])
                 
                 for row in rows {
                     let termId = row["id"] as? Int64 ?? 0
@@ -877,7 +900,7 @@ class DictionaryManager {
         let testWords = ["猫", "日本", "最初", "食べる", "本", "私", "今日"]
         
         for word in testWords {
-            if let frequencyData = frequencyManager.getFrequencyData(for: word) {
+            if let frequencyData = frequencyManager.getBCCWJFrequencyData(for: word) {
                 print("🧪 [FREQUENCY TEST] '\(word)': rank=\(frequencyData.rank), freq=\(frequencyData.frequency), source=\(frequencyData.source)")
             } else {
                 print("🧪 [FREQUENCY TEST] '\(word)': No frequency data found")
@@ -888,7 +911,7 @@ class DictionaryManager {
         print("🧪 [FREQUENCY TEST] Testing with dictionary lookup...")
         let testEntries = lookupWithDeinflection(word: "猫")
         for entry in testEntries {
-            print("🧪 [FREQUENCY TEST] Entry '\(entry.term)' has frequency: \(entry.hasFrequencyData ? entry.frequencyRankString ?? "unknown" : "none")")
+            print("🧪 [FREQUENCY TEST] Entry '\(entry.term)' has frequency: \(entry.hasFrequencyData ? entry.frequencyRankStrings.getOrNil(0) ?? "unknown" : "none")")
         }
     }
     

@@ -9,6 +9,16 @@ struct FrequencyData {
     let source: String
 }
 
+struct YomitanFrequencyData {
+    let frequency: Int
+    var reading: String?
+    
+    init(frequency: Int, reading: String? = nil) {
+        self.frequency = frequency
+        self.reading = reading
+    }
+}
+
 class FrequencyManager {
     static let shared = FrequencyManager()
     
@@ -35,7 +45,7 @@ class FrequencyManager {
     }
     
     /// Get frequency data for a specific word (optimized version)
-    func getFrequencyData(for word: String) -> FrequencyData? {
+    func getBCCWJFrequencyData(for word: String) -> FrequencyData? {
         guard let db = bccwjQueue else { return nil }
         
         do {
@@ -67,13 +77,117 @@ class FrequencyManager {
                             reading: nil,
                             frequency: frequencyValue,
                             rank: frequencyValue,
-                            source: "BCCWJ"
+                            source: "bccwj"
                         )
                     }
                 }
-                
+
                 return nil
             }
+        } catch {
+            return nil
+        }
+    }
+
+    /// Get the frequency data from the "data" field json string in a term bank.
+    func decodeFrequencyJson(json jsonData: Data) -> YomitanFrequencyData? {
+        guard let json = try? JSONSerialization.jsonObject(with: jsonData, options: [JSONSerialization.ReadingOptions.fragmentsAllowed]) else {
+            return nil
+        }
+        
+        // frequency is just a number
+        if let frequency = json as? NSNumber {
+            return YomitanFrequencyData(frequency: frequency.intValue)
+        }
+        
+        // frequency is a number stored in a string value
+        if let frequencyString = json as? NSString {
+            if let frequency = Int(frequencyString as String) {
+                return YomitanFrequencyData(frequency: frequency)
+            }
+        }
+
+        if let jsonObj = json as? [String: Any] {
+            // frequency is an object with a value and an optional display value
+            if let value = jsonObj["value"],
+                let jsonFrequency = value as? NSNumber
+            {
+                return YomitanFrequencyData(frequency: jsonFrequency.intValue)
+            }
+
+            // frequency is nested in another object with a reading value
+            if let jsonFrequency = jsonObj["frequency"] {
+                guard let data = try? JSONSerialization.data(withJSONObject: jsonFrequency, options: [JSONSerialization.WritingOptions.fragmentsAllowed]) else {
+                    return nil
+                }
+                // call this function again to get the inner frequency value
+                let frequency = decodeFrequencyJson(json: data)
+                
+                guard var frequencyData = frequency else {
+                    return nil
+                }
+                
+                // assign reading data to frequency data
+                if let reading = jsonObj["reading"] as? String {
+                    frequencyData.reading = reading
+                }
+                
+                return frequencyData
+            }
+        }
+
+        return nil
+    }
+
+    /// Get frequency data from an imported dictionary
+    func getImportedFrequencyData(for word: String, with reading: String, db: DatabaseQueue, dictionaryKey: String)
+        -> FrequencyData?
+    {
+        var rows: [Row] = []
+        
+        do {
+            try db.read { db in
+                rows = try Row.fetchAll(
+                    db,
+                    sql: """
+                        SELECT id, expression, mode, data, dictionary
+                        FROM term_meta
+                        WHERE expression = ?
+                        ORDER BY id
+                        """, arguments: [word])
+            }
+
+            for row in rows {
+                guard let term = row["expression"] as? String,
+                      let mode = row["mode"] as? String,
+                      let data = row["data"] as? String else {
+                    continue
+                }
+
+                if mode == "freq" {
+                    guard let jsonData = data.data(using: .utf8) else {
+                        continue
+                    }
+                    let yomitanFrequencyData = decodeFrequencyJson(json: jsonData)
+
+                    if let frequency = yomitanFrequencyData {
+                        if let frequencyReading = frequency.reading,
+                           frequencyReading != reading {
+                            continue
+                        }
+                        
+                        return FrequencyData(
+                            word: term,
+                            reading: reading,
+                            frequency: frequency.frequency,
+                            rank: frequency.frequency,
+                            source: dictionaryKey
+                        )
+                    }
+                }
+            }
+
+            return nil
         } catch {
             return nil
         }
@@ -81,7 +195,7 @@ class FrequencyManager {
     
     /// Get frequency rank for display (returns a formatted string)
     func getFrequencyRank(for word: String) -> String? {
-        guard let frequencyData = getFrequencyData(for: word) else { return nil }
+        guard let frequencyData = getBCCWJFrequencyData(for: word) else { return nil }
         
         if frequencyData.rank > 0 {
             return "#\(frequencyData.rank)"
@@ -146,7 +260,7 @@ class FrequencyManager {
                     }
                     
                     // Test using our frequency manager
-                    if let frequencyData = getFrequencyData(for: word) {
+                    if let frequencyData = getBCCWJFrequencyData(for: word) {
                         print("🧪 [BCCWJ TEST] FrequencyManager '\(word)': rank=\(frequencyData.rank), freq=\(frequencyData.frequency)")
                     } else {
                         print("🧪 [BCCWJ TEST] FrequencyManager '\(word)': No frequency data found")

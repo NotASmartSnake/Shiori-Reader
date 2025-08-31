@@ -114,6 +114,14 @@ struct DictionaryDetailView: View {
                             ))
                         }
                     }
+                    
+                    // Bottom spacer to prevent overlap with tab bar
+                    Section {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(height: 30)
+                            .listRowBackground(Color.clear)
+                    }
                 }
                 .navigationTitle("Dictionary Details")
                 .navigationBarTitleDisplayMode(.inline)

@@ -67,15 +67,10 @@ struct DictionaryEntryRow: View {
             
             // Dictionary source badges and frequency data with flow layout
             FlowLayout(spacing: 4) {
-                // Frequency data first (if available and BCCWJ is enabled)
-                if isBCCWJEnabled(), let frequencyRank = entry.frequencyRankString {
-                    Text(frequencyRank)
-                        .font(.caption2)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(Color.green.opacity(0.2))
-                        .foregroundColor(.green)
-                        .cornerRadius(4)
+                // Frequency data first
+                ForEach(entry.frequencyData, id: \.source) { frequencyData in
+                    getFrequencyBadge(
+                        for: frequencyData.source, frequencyRank: "\(frequencyData.frequency)")
                 }
                 
                 // Show dictionary badges based on source
@@ -156,7 +151,32 @@ struct DictionaryEntryRow: View {
                 .cornerRadius(4)
         }
     }
-    
+
+    @ViewBuilder
+    private func getFrequencyBadge(for source: String, frequencyRank: String) -> some View {
+        let color = getDictionaryColor(for: source)
+
+        if source == "bccwj" {
+            Text("BCCWJ: \(frequencyRank)")
+                .font(.caption2)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(Color.green.opacity(0.2))
+                .foregroundColor(.green)
+                .cornerRadius(4)
+        } else if source.hasPrefix("imported_") {
+            let displayName = getImportedDictionaryDisplayName(source: source)
+
+            Text("\(displayName): \(frequencyRank)")
+                .font(.caption2)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        }
+    }
+
     private func getImportedDictionaryDisplayName(source: String) -> String {
         // Extract UUID from source string (format: "imported_UUID")
         let importedId = source.replacingOccurrences(of: "imported_", with: "")

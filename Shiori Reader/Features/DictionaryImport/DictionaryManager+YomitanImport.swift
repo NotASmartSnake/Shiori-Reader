@@ -10,28 +10,40 @@ extension DictionaryManager {
     /// Track whether imported dictionaries have been set up
     private static var importedDictionariesSetup = false
     
+    /// Serial queue for thread-safe access to static collections
+    private static let queueAccessQueue = DispatchQueue(label: "com.shiori.dictionaryQueues", qos: .userInitiated)
+    
     /// Setup imported dictionaries on app launch
     func setupImportedDictionaries() {
-        // Prevent multiple setup calls
-        guard !Self.importedDictionariesSetup else {
-            return
+        Self.queueAccessQueue.sync {
+            // Prevent multiple setup calls
+            guard !Self.importedDictionariesSetup else {
+                return
+            }
+            
+            let importManager = DictionaryImportManager.shared
+            let importedDictionaries = importManager.getImportedDictionaries()
+            
+            for dictionary in importedDictionaries {
+                loadImportedDictionaryUnsafe(dictionary)
+            }
+            
+            if !Self.importedDictionaryQueues.isEmpty {
+                // print("📚 [DICT] Loaded \(Self.importedDictionaryQueues.count) imported dictionaries: \(Array(Self.importedDictionaryQueues.keys).sorted().joined(separator: ", "))")
+            }
+            Self.importedDictionariesSetup = true
         }
-        
-        let importManager = DictionaryImportManager.shared
-        let importedDictionaries = importManager.getImportedDictionaries()
-        
-        for dictionary in importedDictionaries {
-            loadImportedDictionary(dictionary)
-        }
-        
-        if !Self.importedDictionaryQueues.isEmpty {
-            // print("📚 [DICT] Loaded \(Self.importedDictionaryQueues.count) imported dictionaries: \(Array(Self.importedDictionaryQueues.keys).sorted().joined(separator: ", "))")
-        }
-        Self.importedDictionariesSetup = true
     }
     
-    /// Load an imported dictionary into the manager
+    /// Load an imported dictionary into the manager (thread-safe version)
     private func loadImportedDictionary(_ info: ImportedDictionaryInfo) {
+        Self.queueAccessQueue.sync {
+            loadImportedDictionaryUnsafe(info)
+        }
+    }
+    
+    /// Load an imported dictionary into the manager (unsafe - must be called within queueAccessQueue.sync)
+    private func loadImportedDictionaryUnsafe(_ info: ImportedDictionaryInfo) {
         do {
             let databaseURL = info.databaseURL
             
@@ -71,8 +83,10 @@ extension DictionaryManager {
         let enabledDictionaries = getEnabledDictionaries()
         
         // Filter enabled dictionaries upfront
-        let enabledQueues = Self.importedDictionaryQueues.filter { dictionaryKey, _ in
-            enabledDictionaries.contains(dictionaryKey)
+        let enabledQueues = Self.queueAccessQueue.sync {
+            return Self.importedDictionaryQueues.filter { dictionaryKey, _ in
+                enabledDictionaries.contains(dictionaryKey)
+            }
         }
         
         // If no enabled imported dictionaries, return early
@@ -106,9 +120,56 @@ extension DictionaryManager {
         let endTime = CFAbsoluteTimeGetCurrent()
         let duration = (endTime - startTime) * 1000
         
-        
         return allEntries
     }
+    
+    /// Lookup frequency data concurrently from all dictionaries
+        func lookupImportedFrequencies(word: String, reading: String) -> [FrequencyData] {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            let enabledDictionaries = getEnabledDictionaries()
+            
+            // Filter enabled dictionaries upfront
+            let enabledQueues = Self.queueAccessQueue.sync {
+                return Self.importedDictionaryQueues.filter { dictionaryKey, _ in
+                    enabledDictionaries.contains(dictionaryKey)
+                }
+            }
+            
+            // If no enabled imported dictionaries, return early
+            guard !enabledQueues.isEmpty else {
+                return []
+            }
+            
+            // Use DispatchGroup for concurrent processing
+            let dispatchGroup = DispatchGroup()
+            let concurrentQueue = DispatchQueue(label: "com.shiori.frequencyLookup.concurrent", attributes: .concurrent)
+            let resultQueue = DispatchQueue(label: "com.shiori.frequencyLookup.results")
+            
+            var allFrequencies: [FrequencyData] = []
+            
+            for (dictionaryKey, queue) in enabledQueues {
+                dispatchGroup.enter()
+                
+                concurrentQueue.async {
+                    let frequency = FrequencyManager.shared.getImportedFrequencyData(for: word, with: reading, db: queue, dictionaryKey: dictionaryKey)
+                        
+                    resultQueue.async {
+                        if let frequency = frequency {
+                            allFrequencies.append(frequency)
+                        }
+                        dispatchGroup.leave()
+                    }
+                }
+            }
+            
+            // Wait for all lookups to complete
+            dispatchGroup.wait()
+            
+            let endTime = CFAbsoluteTimeGetCurrent()
+            let duration = (endTime - startTime) * 1000
+            
+            return allFrequencies
+        }
     
     /// Create dictionary entry for imported dictionaries (public version)
     func createImportedDictionaryEntry(
@@ -141,10 +202,27 @@ extension DictionaryManager {
             source: source
         )
         
-        // Try to add frequency data if available
-        if let frequencyData = FrequencyManager.shared.getFrequencyData(for: term) {
-            entry.frequencyData = frequencyData
+        // Lookup and add all frequencies to the entry
+        var frequencyData: [FrequencyData] = lookupImportedFrequencies(word: term, reading: reading)
+        
+        if let BCCWJFrequency = FrequencyManager.shared.getBCCWJFrequencyData(for: term), getEnabledDictionaries().contains("bccwj") {
+            frequencyData += [BCCWJFrequency]
         }
+        
+        // Order frequencies by user's chosen source order
+        let orderedSources = DictionaryColorProvider.shared.getOrderedDictionarySources()
+        frequencyData.sort { (lhs, rhs) -> Bool in
+            guard let lhsIndex = orderedSources.firstIndex(of: lhs.source) else {
+                return false
+            }
+            
+            guard let rhsIndex = orderedSources.firstIndex(of: rhs.source) else {
+                return false
+            }
+            return lhsIndex < rhsIndex
+        }
+        
+        entry.frequencyData = frequencyData
         
         return entry
     }
@@ -157,53 +235,54 @@ extension DictionaryManager {
     ) -> [DictionaryEntry] {
         
         var entries: [DictionaryEntry] = []
+        var rows: [Row] = []
         
         do {
             try queue.read { db in
                 // Simple query - same as built-in dictionaries
-                let rows = try Row.fetchAll(db, sql: """
+                rows = try Row.fetchAll(db, sql: """
                     SELECT id, expression, reading, term_tags, score, rules, definitions, popularity
                     FROM terms
                     WHERE expression = ? OR reading = ?
                     ORDER BY id
                     """, arguments: [word, word])
+            }
+            
+            for row in rows {
+                let termId = row["id"] as? Int64 ?? 0
+                let expression = row["expression"] as? String ?? ""
+                let reading = row["reading"] as? String ?? ""
+                let tags = row["term_tags"] as? String ?? ""
+                let score = row["score"] as? String
+                let rules = row["rules"] as? String
+                let definitionsText = row["definitions"] as? String ?? ""
                 
-                for row in rows {
-                    let termId = row["id"] as? Int64 ?? 0
-                    let expression = row["expression"] as? String ?? ""
-                    let reading = row["reading"] as? String ?? ""
-                    let tags = row["term_tags"] as? String ?? ""
-                    let score = row["score"] as? String
-                    let rules = row["rules"] as? String
-                    let definitionsText = row["definitions"] as? String ?? ""
-                    
-                    // Handle popularity stored as string in database
-                    let popularity: Double
-                    if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
-                        popularity = popDouble
-                    } else {
-                        popularity = 0.0
-                    }
-                    
-                    // Split definitions by newline separator
-                    let meanings = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
-                    
-                    // Create entry with the UUID-based source
-                    let entry = createImportedDictionaryEntry(
-                        id: "\(dictionaryKey)_\(termId)",
-                        term: expression,
-                        reading: reading,
-                        meanings: meanings,
-                        meaningTags: [],
-                        termTags: tags.split(separator: ",").map(String.init),
-                        score: score,
-                        rules: rules,
-                        popularity: popularity,
-                        source: dictionaryKey
-                    )
-                    
-                    entries.append(entry)
+                // Handle popularity stored as string in database
+                let popularity: Double
+                if let popString = row["popularity"] as? String, let popDouble = Double(popString) {
+                    popularity = popDouble
+                } else {
+                    popularity = 0.0
                 }
+                
+                // Split definitions by newline separator
+                let meanings = definitionsText.split(separator: "\n").map(String.init).filter { !$0.isEmpty }
+                
+                // Create entry with the UUID-based source
+                let entry = createImportedDictionaryEntry(
+                    id: "\(dictionaryKey)_\(termId)",
+                    term: expression,
+                    reading: reading,
+                    meanings: meanings,
+                    meaningTags: [],
+                    termTags: tags.split(separator: ",").map(String.init),
+                    score: score,
+                    rules: rules,
+                    popularity: popularity,
+                    source: dictionaryKey
+                )
+                
+                entries.append(entry)
             }
         } catch {
             // Log error but continue
@@ -217,8 +296,13 @@ extension DictionaryManager {
         var allEntries: [DictionaryEntry] = []
         let enabledDictionaries = getAllEnabledDictionaries()
         
-        for (dictionaryKey, queue) in Self.importedDictionaryQueues {
-            guard enabledDictionaries.contains(dictionaryKey) else { continue }
+        let enabledQueues = Self.queueAccessQueue.sync {
+            return Self.importedDictionaryQueues.filter { dictionaryKey, _ in
+                enabledDictionaries.contains(dictionaryKey)
+            }
+        }
+        
+        for (dictionaryKey, queue) in enabledQueues {
             
             let entries = searchImportedDictionaryByPrefix(
                 prefix: prefix,
@@ -295,7 +379,9 @@ extension DictionaryManager {
     
     /// Debug property to check loaded imported dictionaries
     var loadedImportedDictionaryNames: [String] {
-        return Array(Self.importedDictionaryQueues.keys).sorted()
+        return Self.queueAccessQueue.sync {
+            return Array(Self.importedDictionaryQueues.keys).sorted()
+        }
     }
 }
 
@@ -306,15 +392,17 @@ extension DictionaryManager {
     /// Reload imported dictionaries (call this when new dictionaries are imported)
     func reloadImportedDictionaries() {
         
-        // Clear existing imported dictionary queues to release connections
-        for (title, queue) in Self.importedDictionaryQueues {
-            // Close database connections explicitly
-            // Note: GRDB DatabaseQueue closes automatically when deallocated
+        Self.queueAccessQueue.sync {
+            // Clear existing imported dictionary queues to release connections
+            for (title, queue) in Self.importedDictionaryQueues {
+                // Close database connections explicitly
+                // Note: GRDB DatabaseQueue closes automatically when deallocated
+            }
+            Self.importedDictionaryQueues.removeAll()
+            
+            // Reset setup flag to allow re-setup
+            Self.importedDictionariesSetup = false
         }
-        Self.importedDictionaryQueues.removeAll()
-        
-        // Reset setup flag to allow re-setup
-        Self.importedDictionariesSetup = false
         
         // Small delay to ensure connections are fully released
         Thread.sleep(forTimeInterval: 0.05)

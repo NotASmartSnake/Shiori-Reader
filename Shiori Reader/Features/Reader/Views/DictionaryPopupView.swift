@@ -158,16 +158,12 @@ struct DictionaryPopupView: View {
                                 }
                                 .padding(.vertical, 4)
                                 
-                                // Display frequency data if available and BCCWJ is enabled
-                                if isBCCWJEnabled(), let frequencyRank = entry.frequencyRankString {
-                                    HStack {
-                                        Text(frequencyRank)
-                                            .font(.caption2)
-                                            .padding(.horizontal, 4)
-                                            .padding(.vertical, 1)
-                                            .background(Color.green.opacity(0.2))
-                                            .foregroundColor(.green)
-                                            .cornerRadius(4)
+                                // Display frequency data if available
+                                if !entry.frequencyData.isEmpty {
+                                    FlowLayout(spacing: 4) {
+                                        ForEach(entry.frequencyData, id: \.source) {frequencyData in
+                                            getFrequencyBadge(for: frequencyData.source, frequencyRank: "\(frequencyData.frequency)")
+                                        }
                                         Spacer()
                                     }
                                     .padding(.bottom, 4)
@@ -712,6 +708,31 @@ struct DictionaryPopupView: View {
     
     private func getAllEntriesForTerm(_ term: String, reading: String, from matches: [DictionaryMatch]) -> [DictionaryEntry] {
         return matches.flatMap { $0.entries }.filter { $0.term == term && $0.reading == reading }
+    }
+    
+    @ViewBuilder
+    private func getFrequencyBadge(for source: String, frequencyRank: String) -> some View {
+        let color = getDictionaryColor(for: source)
+        
+        if source == "bccwj" {
+            Text("BCCWJ: \(frequencyRank)")
+                .font(.caption2)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(Color.green.opacity(0.2))
+                .foregroundColor(.green)
+                .cornerRadius(4)
+        } else if source.hasPrefix("imported_") {
+            let displayName = getImportedDictionaryDisplayName(source: source)
+            
+            Text("\(displayName): \(frequencyRank)")
+                .font(.caption2)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(color.opacity(0.2))
+                .foregroundColor(color)
+                .cornerRadius(4)
+        }
     }
     
     @ViewBuilder
