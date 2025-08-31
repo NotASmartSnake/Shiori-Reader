@@ -218,7 +218,7 @@ struct DictionaryPopupCardView: View {
                                     .padding(.vertical, 4)
                             }
                             .contentShape(Rectangle())
-                            .onLongPressGesture {
+                            .onLongPressGesture(minimumDuration: 0.3) {
                                 let impact = UIImpactFeedbackGenerator(style: .medium)
                                 impact.impactOccurred()
                                 
