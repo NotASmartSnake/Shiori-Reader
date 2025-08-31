@@ -29,7 +29,7 @@ class SQLiteYomitanDictionary {
             // Insert data without nested transactions
             try self.insertTermsDirectly(db, terms: data.terms, progressCallback: progressCallback)
             try self.insertTagsDirectly(db, tags: data.tags)
-            try self.insertTermMetaDirectly(db, termMeta: data.termMeta)
+            try self.insertTermMetaDirectly(db, termMeta: data.termMeta, progressCallback: progressCallback)
             
             // Create indexes for better performance
             try self.createIndexes(db)
@@ -175,7 +175,14 @@ class SQLiteYomitanDictionary {
         }
     }
     
-    private func insertTermMetaDirectly(_ db: Database, termMeta: [ProcessedYomitanTermMeta]) throws {
+    private func insertTermMetaDirectly(
+        _ db: Database,
+        termMeta: [ProcessedYomitanTermMeta],
+        progressCallback: ProgressCallback?
+    ) throws {
+        let totalMeta = termMeta.count
+        var processedMeta = 0
+        
         for meta in termMeta {
             try db.execute(
                 sql: """
@@ -190,6 +197,12 @@ class SQLiteYomitanDictionary {
                     meta.dictionary
                 ]
             )
+            processedMeta += 1
+            
+            // Report progress every 100 entries or at the end
+            if processedMeta % 100 == 0 || processedMeta == totalMeta {
+                progressCallback?(processedMeta, totalMeta)
+            }
         }
     }
     
