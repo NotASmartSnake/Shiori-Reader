@@ -91,7 +91,9 @@ class FrequencyManager {
 
     /// Get the frequency data from the "data" field json string in a term bank.
     func decodeFrequencyJson(json jsonData: Data) -> YomitanFrequencyData? {
-        let json = try! JSONSerialization.jsonObject(with: jsonData, options: [JSONSerialization.ReadingOptions.fragmentsAllowed])
+        guard let json = try? JSONSerialization.jsonObject(with: jsonData, options: [JSONSerialization.ReadingOptions.fragmentsAllowed]) else {
+            return nil
+        }
         
         // frequency is just a number
         if let frequency = json as? NSNumber {
@@ -115,7 +117,9 @@ class FrequencyManager {
 
             // frequency is nested in another object with a reading value
             if let jsonFrequency = jsonObj["frequency"] {
-                let data = try! JSONSerialization.data(withJSONObject: jsonFrequency, options: [JSONSerialization.WritingOptions.fragmentsAllowed])
+                guard let data = try? JSONSerialization.data(withJSONObject: jsonFrequency, options: [JSONSerialization.WritingOptions.fragmentsAllowed]) else {
+                    return nil
+                }
                 // call this function again to get the inner frequency value
                 let frequency = decodeFrequencyJson(json: data)
                 
@@ -154,12 +158,16 @@ class FrequencyManager {
             }
 
             for row in rows {
-                let term = row["expression"] as! String
-                let mode = row["mode"] as! String
-                let data = row["data"] as! String
+                guard let term = row["expression"] as? String,
+                      let mode = row["mode"] as? String,
+                      let data = row["data"] as? String else {
+                    continue
+                }
 
                 if mode == "freq" {
-                    let jsonData = data.data(using: .utf8)!
+                    guard let jsonData = data.data(using: .utf8) else {
+                        continue
+                    }
                     let yomitanFrequencyData = decodeFrequencyJson(json: jsonData)
 
                     if let frequency = yomitanFrequencyData {

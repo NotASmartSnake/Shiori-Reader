@@ -633,17 +633,23 @@ class DictionaryManager {
                 let sql = """
                     SELECT id, expression, reading, term_tags, score, rules, definitions, popularity,
                         (CASE
-                            WHEN definitions LIKE '% \(searchTerm) %' OR definitions LIKE '\(searchTerm) %' OR definitions LIKE '% \(searchTerm)' OR definitions = '\(searchTerm)' THEN 1
-                            WHEN definitions LIKE '%\(searchTerm)%' THEN 2
+                            WHEN definitions LIKE ? OR definitions LIKE ? OR definitions LIKE ? OR definitions = ? THEN 1
+                            WHEN definitions LIKE ? THEN 2
                             ELSE 3
                         END) AS match_quality
                     FROM terms
-                    WHERE definitions LIKE '%\(searchTerm)%'
+                    WHERE definitions LIKE ?
                     ORDER BY match_quality, popularity DESC, sequence
                     LIMIT ?
                     """
                 
-                let rows = try Row.fetchAll(db, sql: sql, arguments: [limit])
+                let spacePrefix = "% \(searchTerm) %"
+                let leftPrefix = "\(searchTerm) %"
+                let rightPrefix = "% \(searchTerm)"
+                let exactMatch = searchTerm
+                let containsMatch = "%\(searchTerm)%"
+                
+                let rows = try Row.fetchAll(db, sql: sql, arguments: [spacePrefix, leftPrefix, rightPrefix, exactMatch, containsMatch, containsMatch, limit])
                 
                 for row in rows {
                     let termId = row["id"] as? Int64 ?? 0

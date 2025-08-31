@@ -10,28 +10,40 @@ extension DictionaryManager {
     /// Track whether imported dictionaries have been set up
     private static var importedDictionariesSetup = false
     
+    /// Serial queue for thread-safe access to static collections
+    private static let queueAccessQueue = DispatchQueue(label: "com.shiori.dictionaryQueues", qos: .userInitiated)
+    
     /// Setup imported dictionaries on app launch
     func setupImportedDictionaries() {
-        // Prevent multiple setup calls
-        guard !Self.importedDictionariesSetup else {
-            return
+        Self.queueAccessQueue.sync {
+            // Prevent multiple setup calls
+            guard !Self.importedDictionariesSetup else {
+                return
+            }
+            
+            let importManager = DictionaryImportManager.shared
+            let importedDictionaries = importManager.getImportedDictionaries()
+            
+            for dictionary in importedDictionaries {
+                loadImportedDictionaryUnsafe(dictionary)
+            }
+            
+            if !Self.importedDictionaryQueues.isEmpty {
+                // print("📚 [DICT] Loaded \(Self.importedDictionaryQueues.count) imported dictionaries: \(Array(Self.importedDictionaryQueues.keys).sorted().joined(separator: ", "))")
+            }
+            Self.importedDictionariesSetup = true
         }
-        
-        let importManager = DictionaryImportManager.shared
-        let importedDictionaries = importManager.getImportedDictionaries()
-        
-        for dictionary in importedDictionaries {
-            loadImportedDictionary(dictionary)
-        }
-        
-        if !Self.importedDictionaryQueues.isEmpty {
-            // print("📚 [DICT] Loaded \(Self.importedDictionaryQueues.count) imported dictionaries: \(Array(Self.importedDictionaryQueues.keys).sorted().joined(separator: ", "))")
-        }
-        Self.importedDictionariesSetup = true
     }
     
-    /// Load an imported dictionary into the manager
+    /// Load an imported dictionary into the manager (thread-safe version)
     private func loadImportedDictionary(_ info: ImportedDictionaryInfo) {
+        Self.queueAccessQueue.sync {
+            loadImportedDictionaryUnsafe(info)
+        }
+    }
+    
+    /// Load an imported dictionary into the manager (unsafe - must be called within queueAccessQueue.sync)
+    private func loadImportedDictionaryUnsafe(_ info: ImportedDictionaryInfo) {
         do {
             let databaseURL = info.databaseURL
             
@@ -71,8 +83,10 @@ extension DictionaryManager {
         let enabledDictionaries = getEnabledDictionaries()
         
         // Filter enabled dictionaries upfront
-        let enabledQueues = Self.importedDictionaryQueues.filter { dictionaryKey, _ in
-            enabledDictionaries.contains(dictionaryKey)
+        let enabledQueues = Self.queueAccessQueue.sync {
+            return Self.importedDictionaryQueues.filter { dictionaryKey, _ in
+                enabledDictionaries.contains(dictionaryKey)
+            }
         }
         
         // If no enabled imported dictionaries, return early
@@ -115,8 +129,10 @@ extension DictionaryManager {
             let enabledDictionaries = getEnabledDictionaries()
             
             // Filter enabled dictionaries upfront
-            let enabledQueues = Self.importedDictionaryQueues.filter { dictionaryKey, _ in
-                enabledDictionaries.contains(dictionaryKey)
+            let enabledQueues = Self.queueAccessQueue.sync {
+                return Self.importedDictionaryQueues.filter { dictionaryKey, _ in
+                    enabledDictionaries.contains(dictionaryKey)
+                }
             }
             
             // If no enabled imported dictionaries, return early
@@ -280,8 +296,13 @@ extension DictionaryManager {
         var allEntries: [DictionaryEntry] = []
         let enabledDictionaries = getAllEnabledDictionaries()
         
-        for (dictionaryKey, queue) in Self.importedDictionaryQueues {
-            guard enabledDictionaries.contains(dictionaryKey) else { continue }
+        let enabledQueues = Self.queueAccessQueue.sync {
+            return Self.importedDictionaryQueues.filter { dictionaryKey, _ in
+                enabledDictionaries.contains(dictionaryKey)
+            }
+        }
+        
+        for (dictionaryKey, queue) in enabledQueues {
             
             let entries = searchImportedDictionaryByPrefix(
                 prefix: prefix,
@@ -358,7 +379,9 @@ extension DictionaryManager {
     
     /// Debug property to check loaded imported dictionaries
     var loadedImportedDictionaryNames: [String] {
-        return Array(Self.importedDictionaryQueues.keys).sorted()
+        return Self.queueAccessQueue.sync {
+            return Array(Self.importedDictionaryQueues.keys).sorted()
+        }
     }
 }
 
@@ -369,15 +392,17 @@ extension DictionaryManager {
     /// Reload imported dictionaries (call this when new dictionaries are imported)
     func reloadImportedDictionaries() {
         
-        // Clear existing imported dictionary queues to release connections
-        for (title, queue) in Self.importedDictionaryQueues {
-            // Close database connections explicitly
-            // Note: GRDB DatabaseQueue closes automatically when deallocated
+        Self.queueAccessQueue.sync {
+            // Clear existing imported dictionary queues to release connections
+            for (title, queue) in Self.importedDictionaryQueues {
+                // Close database connections explicitly
+                // Note: GRDB DatabaseQueue closes automatically when deallocated
+            }
+            Self.importedDictionaryQueues.removeAll()
+            
+            // Reset setup flag to allow re-setup
+            Self.importedDictionariesSetup = false
         }
-        Self.importedDictionaryQueues.removeAll()
-        
-        // Reset setup flag to allow re-setup
-        Self.importedDictionariesSetup = false
         
         // Small delay to ensure connections are fully released
         Thread.sleep(forTimeInterval: 0.05)
