@@ -3,12 +3,17 @@ import SwiftUI
 
 struct SavedWordDetailView: View {
     @EnvironmentObject var wordManager: SavedWordsManager
-    @State private var editedWord: SavedWord
+    let wordId: UUID
     @Environment(\.presentationMode) var presentationMode
     @State private var showDeleteConfirmation = false
     @State private var isEditing = false
     @State private var showAnkiSuccess = false
     @State private var showingAnkiSettings = false
+    @State private var editedDefinitionText: String = ""
+    @State private var editedSentenceText: String = ""
+    @State private var editedWordText: String = ""
+    @State private var editedReadingText: String = ""
+    @State private var originalWord: SavedWord?
     
     // Create a date formatter for displaying the date added
     private let dateFormatter: DateFormatter = {
@@ -19,14 +24,24 @@ struct SavedWordDetailView: View {
     }()
     
     init(word: SavedWord) {
-        self._editedWord = State(initialValue: word)
+        self.wordId = word.id
+        self._editedDefinitionText = State(initialValue: word.definitions.joined(separator: "\n"))
+        self._editedSentenceText = State(initialValue: word.sentence)
+        self._editedWordText = State(initialValue: word.word)
+        self._editedReadingText = State(initialValue: word.reading)
+    }
+    
+    // Computed property to get current word from manager
+    private var currentWord: SavedWord? {
+        wordManager.savedWords.first { $0.id == wordId }
     }
     
     var body: some View {
         ZStack {
             Color("BackgroundColor").ignoresSafeArea()
             
-            ScrollView {
+            if let editedWord = currentWord {
+                ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // Source book and date added info
                     HStack {
@@ -43,6 +58,14 @@ struct SavedWordDetailView: View {
                         Spacer()
                         
                         Button(action: {
+                            if !isEditing {
+                                // Store original state and refresh the text fields when starting to edit
+                                originalWord = editedWord
+                                editedDefinitionText = editedWord.definitions.joined(separator: "\n")
+                                editedSentenceText = editedWord.sentence
+                                editedWordText = editedWord.word
+                                editedReadingText = editedWord.reading
+                            }
                             isEditing.toggle()
                         }) {
                             Text(isEditing ? "Done" : "Edit")
@@ -64,7 +87,7 @@ struct SavedWordDetailView: View {
                             .foregroundColor(.gray)
                         
                         if isEditing {
-                            TextField("Word", text: $editedWord.word)
+                            TextField("Word", text: $editedWordText)
                                 .font(.title)
                                 .padding()
                                 .background(Color(.systemGray6))
@@ -85,7 +108,7 @@ struct SavedWordDetailView: View {
                             .foregroundColor(.gray)
                         
                         if isEditing {
-                            TextField("Reading", text: $editedWord.reading)
+                            TextField("Reading", text: $editedReadingText)
                                 .font(.title2)
                                 .padding()
                                 .background(Color(.systemGray6))
@@ -151,19 +174,14 @@ struct SavedWordDetailView: View {
                         
                         if isEditing {
                             ZStack(alignment: .topLeading) {
-                                TextEditor(text: Binding(
-                                    get: { editedWord.definitions.joined(separator: "\n") },
-                                    set: { newValue in
-                                        editedWord.definitions = newValue.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-                                    }
-                                ))
+                                TextEditor(text: $editedDefinitionText)
                                     .padding()
                                     .frame(minHeight: 100)
                                     .background(Color(.systemGray6))
                                     .cornerRadius(8)
                                     .disableAutocorrection(true)
                                 
-                                if editedWord.definitions.isEmpty {
+                                if editedDefinitionText.isEmpty {
                                     Text("Enter definition")
                                         .foregroundColor(.gray)
                                         .padding(25)
@@ -228,14 +246,14 @@ struct SavedWordDetailView: View {
                         
                         if isEditing {
                             ZStack(alignment: .topLeading) {
-                                TextEditor(text: $editedWord.sentence)
+                                TextEditor(text: $editedSentenceText)
                                     .padding()
                                     .frame(minHeight: 120)
                                     .background(Color(.systemGray6))
                                     .cornerRadius(8)
                                     .disableAutocorrection(true)
                                 
-                                if editedWord.sentence.isEmpty {
+                                if editedSentenceText.isEmpty {
                                     Text("Enter example sentence")
                                         .foregroundColor(.gray)
                                         .padding(25)
@@ -250,18 +268,70 @@ struct SavedWordDetailView: View {
                     .padding(.horizontal)
                     
                     if isEditing {
-                        // Save button when in edit mode
-                        Button(action: {
-                            saveChanges()
-                            isEditing = false
-                        }) {
-                            Text("Save Changes")
-                                .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
+                        // Save and Cancel buttons when in edit mode
+                        VStack(spacing: 10) {
+                            Button(action: {
+                                print("🔍 Save button pressed")
+                                print("🔍 Definition text: '\(editedDefinitionText)'")
+                                print("🔍 Sentence text: '\(editedSentenceText)'")
+                                print("🔍 Current word before update: '\(editedWordText)'")
+                                
+                                // Create a new SavedWord with updated fields
+                                let newDefinitions = parseDefinitionsFromText(editedDefinitionText)
+                                
+                                let updatedWord = SavedWord(
+                                    id: editedWord.id,
+                                    word: editedWordText,
+                                    reading: editedReadingText,
+                                    definitions: newDefinitions,
+                                    sentence: editedSentenceText,
+                                    sourceBook: editedWord.sourceBook,
+                                    timeAdded: editedWord.timeAdded,
+                                    bookId: editedWord.bookId,
+                                    pitchAccents: editedWord.pitchAccents
+                                )
+                                
+                                print("🔍 New word definitions: \(updatedWord.definitions)")
+                                print("🔍 New word sentence: '\(updatedWord.sentence)'")
+                                
+                                isEditing = false
+                                
+                                // Save to manager - this will automatically update the UI since currentWord is computed from manager's published array
+                                wordManager.updateWord(updated: updatedWord)
+                                
+                                // Update text editor states to match the saved data
+                                editedDefinitionText = updatedWord.definitions.joined(separator: "\n")
+                                editedSentenceText = updatedWord.sentence
+                                editedWordText = updatedWord.word
+                                editedReadingText = updatedWord.reading
+                            }) {
+                                Text("Save Changes")
+                                    .fontWeight(.semibold)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.blue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                            }
+                            
+                            Button(action: {
+                                // Revert to original state
+                                if let original = originalWord {
+                                    editedDefinitionText = original.definitions.joined(separator: "\n")
+                                    editedSentenceText = original.sentence
+                                    editedWordText = original.word
+                                    editedReadingText = original.reading
+                                }
+                                isEditing = false
+                            }) {
+                                Text("Cancel")
+                                    .fontWeight(.semibold)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.gray.opacity(0.1))
+                                    .foregroundColor(.gray)
+                                    .cornerRadius(10)
+                            }
                         }
                         .padding(.horizontal)
                         .padding(.top, 20)
@@ -314,6 +384,12 @@ struct SavedWordDetailView: View {
                         )
                     }
                 }
+            }
+        } else {
+                // Fallback when word is not found
+                Text("Word not found")
+                    .font(.title)
+                    .foregroundColor(.gray)
             }
         }
         .navigationTitle("Edit Word")
@@ -372,6 +448,59 @@ struct SavedWordDetailView: View {
     
     // MARK: - Helper Functions
     
+    private func parseDefinitionsFromText(_ text: String) -> [String] {
+        print("🔍 Parsing definitions from text: '\(text)'")
+        
+        // Split by known dictionary titles - add more complete list
+        let knownDictionaries = [
+            "JMdict", "旺文社国語辞典", "JpKorNaver", "新明解国語辞典", 
+            "大辞林", "明鏡国語辞典", "ハイブリッド新辞林", "旺文社", 
+            "JMnedict", "広辞苑第六版"
+        ]
+        
+        var definitions: [String] = []
+        var currentDefinition = ""
+        let lines = text.components(separatedBy: "\n")
+        
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Skip empty lines
+            if trimmedLine.isEmpty {
+                continue
+            }
+            
+            // Check if this line starts a new dictionary section
+            let isNewDictionary = knownDictionaries.contains { dict in 
+                trimmedLine == dict || trimmedLine.hasPrefix(dict + " ") || trimmedLine.hasPrefix(dict + "\n")
+            }
+            
+            if isNewDictionary {
+                // Save the previous definition if it exists
+                if !currentDefinition.isEmpty {
+                    definitions.append(currentDefinition.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+                // Start new definition
+                currentDefinition = trimmedLine
+            } else {
+                // Continue current definition
+                if !currentDefinition.isEmpty {
+                    currentDefinition += "\n" + line
+                } else {
+                    currentDefinition = line
+                }
+            }
+        }
+        
+        // Don't forget the last definition
+        if !currentDefinition.isEmpty {
+            definitions.append(currentDefinition.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        
+        print("🔍 Parsed definitions: \(definitions)")
+        return definitions.filter { !$0.isEmpty }
+    }
+    
     private func pitchAccentColor(for pattern: Int) -> Color {
         switch pattern {
         case 0:
@@ -425,16 +554,15 @@ struct SavedWordDetailView: View {
     
     // MARK: - Actions
     
-    private func saveChanges() {
-        wordManager.updateWord(updated: editedWord)
-    }
     
     private func deleteWord() {
-        wordManager.deleteWord(with: editedWord.id)
+        wordManager.deleteWord(with: wordId)
         presentationMode.wrappedValue.dismiss()
     }
     
     private func exportToAnki() {
+        guard let word = currentWord else { return }
+        
         // Get the root view controller to present from
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first,
@@ -451,7 +579,7 @@ struct SavedWordDetailView: View {
         // Reconstruct dictionary entries from saved formatted definitions
         var reconstructedEntries: [DictionaryEntry] = []
         
-        for (index, definitionSection) in editedWord.definitions.enumerated() {
+        for (index, definitionSection) in word.definitions.enumerated() {
             let lines = definitionSection.components(separatedBy: "\n")
             
             if lines.count > 1 && isValidDictionarySource(lines[0]) {
@@ -476,9 +604,9 @@ struct SavedWordDetailView: View {
                 
                 // Create a reconstructed dictionary entry
                 var entry = DictionaryEntry(
-                    id: "\(editedWord.word)_\(editedWord.reading)_\(sourceId)_\(index)",
-                    term: editedWord.word,
-                    reading: editedWord.reading,
+                    id: "\(word.word)_\(word.reading)_\(sourceId)_\(index)",
+                    term: word.word,
+                    reading: word.reading,
                     meanings: definitions,
                     meaningTags: [],
                     termTags: [],
@@ -489,7 +617,7 @@ struct SavedWordDetailView: View {
                 )
                 
                 // Set pitch accent data if available
-                entry.pitchAccents = editedWord.pitchAccents
+                entry.pitchAccents = word.pitchAccents
                 
                 reconstructedEntries.append(entry)
             }
@@ -498,11 +626,11 @@ struct SavedWordDetailView: View {
         if !reconstructedEntries.isEmpty {
             // Use reconstructed entries with the same flow as popup views
             AnkiExportService.shared.exportWordToAnki(
-                word: editedWord.word,
-                reading: editedWord.reading,
+                word: word.word,
+                reading: word.reading,
                 entries: reconstructedEntries,
-                sentence: editedWord.sentence,
-                pitchAccents: editedWord.pitchAccents,
+                sentence: word.sentence,
+                pitchAccents: word.pitchAccents,
                 sourceView: topViewController,
                 onSaveToVocab: nil, // Already saved
                 completion: { success in
@@ -522,14 +650,14 @@ struct SavedWordDetailView: View {
             )
         } else {
             // Fallback - use simple definition format
-            let ankiDefinition = editedWord.definitions.joined(separator: "<br>")
+            let ankiDefinition = word.definitions.joined(separator: "<br>")
             
             AnkiExportService.shared.addVocabularyCard(
-                word: editedWord.word,
-                reading: editedWord.reading,
+                word: word.word,
+                reading: word.reading,
                 definition: ankiDefinition,
-                sentence: editedWord.sentence,
-                pitchAccents: editedWord.pitchAccents,
+                sentence: word.sentence,
+                pitchAccents: word.pitchAccents,
                 sourceView: topViewController,
                 onSaveToVocab: nil, // Already saved
                 completion: { success in

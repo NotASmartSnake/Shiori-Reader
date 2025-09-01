@@ -33,9 +33,20 @@ class SavedWordRepository {
     
     // Update an existing saved word
     func updateSavedWord(_ savedWord: SavedWord) {
-        guard let entity = coreDataManager.getSavedWord(by: savedWord.id) else { return }
+        print("🔍 Repository: Updating word with ID: \(savedWord.id)")
+        print("🔍 Repository: Word: '\(savedWord.word)'")
+        print("🔍 Repository: Definitions: \(savedWord.definitions)")
+        print("🔍 Repository: Sentence: '\(savedWord.sentence)'")
+        
+        guard let entity = coreDataManager.getSavedWord(by: savedWord.id) else { 
+            print("🔍 Repository: ERROR - Could not find entity with ID: \(savedWord.id)")
+            return 
+        }
+        
+        print("🔍 Repository: Found entity, updating...")
         savedWord.updateEntity(entity)
         coreDataManager.saveContext()
+        print("🔍 Repository: Update completed and context saved")
     }
     
     // Delete a saved word

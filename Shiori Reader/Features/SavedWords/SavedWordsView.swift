@@ -90,7 +90,7 @@ struct SavedWordsView: View {
                         List {
                             ForEach(filteredWords) { word in
                                 NavigationLink(destination: SavedWordDetailView(word: word)) {
-                                    SavedWordRow(word: word)
+                                    SavedWordRow(wordId: word.id)
                                 }
                             }
                             .onDelete { indexSet in
@@ -171,31 +171,37 @@ struct SavedWordsView: View {
 }
 
 struct SavedWordRow: View {
-    let word: SavedWord
+    let wordId: UUID
+    @EnvironmentObject var wordManager: SavedWordsManager
+    
+    private var word: SavedWord? {
+        wordManager.savedWords.first { $0.id == wordId }
+    }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(word.word)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                if !word.reading.isEmpty && word.reading != word.word {
-                    Text("「\(word.reading)」")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+        if let word = word {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text(word.word)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    if !word.reading.isEmpty && word.reading != word.word {
+                        Text("「\(word.reading)」")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Text(word.sourceBook)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(4)
                 }
-                
-                Spacer()
-                
-                Text(word.sourceBook)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(4)
-            }
             
             // Display first definition with proper formatting
             if let firstDefinition = word.definitions.first {
@@ -222,6 +228,12 @@ struct SavedWordRow: View {
             }
         }
         .padding(.vertical, 4)
+        } else {
+            // Fallback when word is not found
+            Text("Word not found")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+        }
     }
     
     /// Check if a line is a valid dictionary source title

@@ -26,8 +26,11 @@ struct PitchAccentGraphView: View {
         let mora = JapanesePitchAccentUtils.extractMora(from: textToAnalyze)
         let pattern = JapanesePitchAccentUtils.generatePitchPattern(moraCount: mora.count, pitchValue: pitchValue)
         
-        // Ensure width includes the last circle properly
-        let graphWidth = max(CGFloat(max(mora.count, pattern.count) - 1) * stepWidth + marginLR * 2, 80)
+        // Ensure width includes the last circle properly - add safety checks
+        let moraCount = max(mora.count, 0)
+        let patternCount = max(pattern.count, 0)
+        let maxCount = max(moraCount, patternCount)
+        let graphWidth = max(CGFloat(max(maxCount - 1, 0)) * stepWidth + marginLR * 2, 80)
         
         return ZStack(alignment: .topLeading) {
             // Background canvas for lines and dots only (no text)
@@ -47,10 +50,13 @@ struct PitchAccentGraphView: View {
                         let dy = currentPoint.y - prevPoint.y
                         let distance = sqrt(dx * dx + dy * dy)
                         
-                        if distance > 0 {
+                        if distance > 0 && distance.isFinite {
                             // Normalize direction vector
                             let unitX = dx / distance
                             let unitY = dy / distance
+                            
+                            // Additional safety check for unit vectors
+                            guard unitX.isFinite && unitY.isFinite else { continue }
                             
                             // Calculate start and end points at circle borders
                             let startPoint = CGPoint(

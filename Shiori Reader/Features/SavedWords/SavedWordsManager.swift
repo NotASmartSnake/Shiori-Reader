@@ -28,11 +28,22 @@ class SavedWordsManager: ObservableObject {
     }
     
     func updateWord(updated: SavedWord) {
+        print("🔍 Manager: Updating word - received definitions: \(updated.definitions)")
+        print("🔍 Manager: Before repository update")
         repository.updateSavedWord(updated)
+        print("🔍 Manager: After repository update")
+        
         if let index = savedWords.firstIndex(where: { $0.id == updated.id }) {
+            print("🔍 Manager: Found word at index \(index)")
+            print("🔍 Manager: Old definitions: \(savedWords[index].definitions)")
             savedWords[index] = updated
+            print("🔍 Manager: New definitions: \(savedWords[index].definitions)")
+            print("🔍 Manager: In-memory array updated")
+        } else {
+            print("🔍 Manager: ERROR - Could not find word in savedWords array with ID: \(updated.id)")
         }
     }
+    
     
     func deleteWord(at indexSet: IndexSet) {
         for index in indexSet {
