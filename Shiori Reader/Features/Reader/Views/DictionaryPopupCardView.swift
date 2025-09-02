@@ -118,6 +118,19 @@ struct DictionaryPopupCardView: View {
                                     
                                     // Action buttons
                                     HStack(spacing: 10) {
+                                        // TTS audio button
+                                        Button(action: {
+                                            TTSService.shared.speakJapanese(term: entry.term, reading: entry.reading)
+                                        }) {
+                                            Image(systemName: "speaker.2")
+                                                .foregroundColor(.blue)
+                                                .frame(width: 24, height: 24)
+                                                .padding(8)
+                                                .background(Color.blue.opacity(0.1))
+                                                .cornerRadius(8)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        
                                         // Save to Vocabulary button
                                         Button(action: {
                                             handleSaveWordToVocabulary(entry)
@@ -126,6 +139,7 @@ struct DictionaryPopupCardView: View {
                                             let isWordSaved = wordsManager.isWordSaved(entry.term, reading: entry.reading)
                                             Image(systemName: isWordSaved ? "bookmark.fill" : "bookmark")
                                                 .foregroundColor(.blue)
+                                                .frame(width: 24, height: 24)
                                                 .padding(8)
                                                 .background(Color.blue.opacity(0.1))
                                                 .cornerRadius(8)
@@ -138,6 +152,7 @@ struct DictionaryPopupCardView: View {
                                         }) {
                                             Image(systemName: "plus.rectangle.on.rectangle")
                                                 .foregroundColor(.blue)
+                                                .frame(width: 24, height: 24)
                                                 .padding(8)
                                                 .background(Color.blue.opacity(0.1))
                                                 .cornerRadius(8)
