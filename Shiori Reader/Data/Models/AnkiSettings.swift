@@ -12,10 +12,14 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
     var sentenceField: String
     var wordWithReadingField: String
     var pitchAccentField: String
+    var frequencyField: String
     var pitchAccentGraphColor: String
     var pitchAccentTextColor: String
     var tags: String
     var additionalFields: [AdditionalField]
+    
+    // Frequency export settings
+    var frequencyDictionarySource: String
     
     // Cached Anki data
     var cachedDecks: [String]
@@ -32,10 +36,12 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
          sentenceField: String = "Sentence",
          wordWithReadingField: String = "Word with Reading",
          pitchAccentField: String = "Pitch Accent",
+         frequencyField: String = "Frequency",
          pitchAccentGraphColor: String = "black",
          pitchAccentTextColor: String = "black",
          tags: String = "shiori-reader",
          additionalFields: [AdditionalField] = [],
+         frequencyDictionarySource: String = "bccwj",
          cachedDecks: [String] = [],
          cachedNoteTypes: [String: [String]] = [:]) {
         self.id = id
@@ -47,10 +53,12 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         self.sentenceField = sentenceField
         self.wordWithReadingField = wordWithReadingField
         self.pitchAccentField = pitchAccentField
+        self.frequencyField = frequencyField
         self.pitchAccentGraphColor = pitchAccentGraphColor
         self.pitchAccentTextColor = pitchAccentTextColor
         self.tags = tags
         self.additionalFields = additionalFields
+        self.frequencyDictionarySource = frequencyDictionarySource
         self.cachedDecks = cachedDecks
         self.cachedNoteTypes = cachedNoteTypes
     }
@@ -66,9 +74,11 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         self.sentenceField = entity.sentenceField ?? "Sentence"
         self.wordWithReadingField = entity.wordWithReadingField ?? "Word with Reading"
         self.pitchAccentField = entity.pitchAccentField ?? "Pitch Accent"
+        self.frequencyField = entity.frequencyField ?? "Frequency"
         self.pitchAccentGraphColor = entity.pitchAccentGraphColor ?? "black"
         self.pitchAccentTextColor = entity.pitchAccentTextColor ?? "black"
         self.tags = entity.tags ?? "shiori-reader"
+        self.frequencyDictionarySource = entity.frequencyDictionarySource ?? "bccwj"
         
         // Convert related AdditionalFieldEntity objects to AdditionalField structs
         if let fields = entity.additionalFields as? Set<AdditionalFieldEntity> {
@@ -111,6 +121,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
             "sentence": sentenceField,
             "wordWithReading": wordWithReadingField,
             "pitchAccent": pitchAccentField,
+            "frequency": frequencyField,
             "pitchAccentGraphColor": pitchAccentGraphColor,
             "pitchAccentTextColor": pitchAccentTextColor
         ]
@@ -165,10 +176,12 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
             lhs.sentenceField == rhs.sentenceField &&
             lhs.wordWithReadingField == rhs.wordWithReadingField &&
             lhs.pitchAccentField == rhs.pitchAccentField &&
+            lhs.frequencyField == rhs.frequencyField &&
             lhs.pitchAccentGraphColor == rhs.pitchAccentGraphColor &&
             lhs.pitchAccentTextColor == rhs.pitchAccentTextColor &&
             lhs.tags == rhs.tags &&
             lhs.additionalFields == rhs.additionalFields &&
+            lhs.frequencyDictionarySource == rhs.frequencyDictionarySource &&
             lhs.cachedDecks == rhs.cachedDecks &&
             lhs.cachedNoteTypes == rhs.cachedNoteTypes
     }
@@ -185,9 +198,11 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         entity.sentenceField = sentenceField
         entity.wordWithReadingField = wordWithReadingField
         entity.pitchAccentField = pitchAccentField
+        entity.frequencyField = frequencyField
         entity.pitchAccentGraphColor = pitchAccentGraphColor
         entity.pitchAccentTextColor = pitchAccentTextColor
         entity.tags = tags
+        entity.frequencyDictionarySource = frequencyDictionarySource
         
         // Handle additional fields
         // First, remove old fields that aren't in the model anymore

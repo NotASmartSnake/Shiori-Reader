@@ -119,6 +119,51 @@ struct AnkiSettingsView: View {
                 .fixedSize()
             }
             .padding(.vertical, 6)
+            
+            // Frequency dictionary setting
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Frequency Dictionary")
+                        .font(.body)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Text("Choose which frequency dictionary to use when exporting frequency data to Anki cards.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(nil)
+                        .truncationMode(.tail)
+                }
+                
+                Spacer()
+                
+                Menu {
+                    ForEach(viewModel.getAvailableFrequencyDictionaries(), id: \.id) { dictionary in
+                        Button(action: {
+                            viewModel.settings.frequencyDictionarySource = dictionary.id
+                        }) {
+                            HStack {
+                                Text(dictionary.name)
+                                if dictionary.id == viewModel.settings.frequencyDictionarySource {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        let selectedDictionary = viewModel.getAvailableFrequencyDictionaries().first(where: { $0.id == viewModel.settings.frequencyDictionarySource })
+                        Text(selectedDictionary?.name ?? "BCCWJ (Built-in)")
+                            .foregroundColor(.blue)
+                            .font(.body)
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+                }
+                .fixedSize()
+            }
+            .padding(.vertical, 6)
         }
     }
     
@@ -280,6 +325,16 @@ struct AnkiSettingsView: View {
                 binding: Binding(
                     get: { viewModel.settings.pitchAccentField },
                     set: { viewModel.updateFieldMapping(fieldType: "pitchAccent", fieldName: $0) }
+                ),
+                fields: viewModel.selectedNoteTypeFields
+            )
+            
+            // Frequency Field
+            fieldPickerRow(
+                title: "Frequency Field",
+                binding: Binding(
+                    get: { viewModel.settings.frequencyField },
+                    set: { viewModel.updateFieldMapping(fieldType: "frequency", fieldName: $0) }
                 ),
                 fields: viewModel.selectedNoteTypeFields
             )

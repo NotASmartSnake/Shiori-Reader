@@ -193,6 +193,9 @@ class AnkiExportService {
         // Generate pitch accent HTML if available
         let pitchAccentHTML = generatePitchAccentHTML(word: word, reading: reading, pitchAccents: pitchAccents, settings: settings)
         
+        // Get frequency data if enabled
+        let frequencyText = getFrequencyText(word: word, reading: reading, settings: settings)
+        
         // Create base query items
         var queryItems = [
             URLQueryItem(name: "type", value: settings.noteType),
@@ -207,7 +210,8 @@ class AnkiExportService {
             "definition": definition,
             "sentence": sentence,
             "wordWithReading": wordWithReading,
-            "pitchAccent": pitchAccentHTML ?? ""
+            "pitchAccent": pitchAccentHTML ?? "",
+            "frequency": frequencyText
         ]
         
         // Dictionary to collect all field values, allowing concatenation for duplicate field names
@@ -228,6 +232,7 @@ class AnkiExportService {
         if let pitchHTML = pitchAccentHTML {
             addFieldValue(fieldName: settings.pitchAccentField, value: pitchHTML)
         }
+        addFieldValue(fieldName: settings.frequencyField, value: frequencyText)
         
         // Add additional fields
         for additionalField in settings.additionalFields {
@@ -294,6 +299,41 @@ class AnkiExportService {
         
         // Wrap in a centered horizontal container div
         return "<div style='display: flex; align-items: center; justify-content: center; gap: 3px; line-height: 1; margin: 0; padding: 0;'>\(htmlParts.joined())</div>"
+    }
+    
+    // Get frequency information for a word/reading pair
+    private func getFrequencyText(word: String, reading: String, settings: AnkiSettings) -> String {
+        // Return empty string if frequency field is not mapped
+        guard !settings.frequencyField.isEmpty else { return "" }
+        
+        let source = settings.frequencyDictionarySource
+        
+        if source == "bccwj" {
+            // Use built-in BCCWJ frequency
+            if let frequencyData = FrequencyManager.shared.getBCCWJFrequencyData(for: word) {
+                return "\(frequencyData.frequency)"
+            }
+        } else if source.hasPrefix("imported_") {
+            // Use imported frequency dictionary
+            let importedId = source.replacingOccurrences(of: "imported_", with: "")
+            if let uuid = UUID(uuidString: importedId),
+               let dictionary = DictionaryImportManager.shared.getImportedDictionaries().first(where: { $0.id == uuid }) {
+                
+                // Get database for this imported dictionary
+                if let databaseQueue = DictionaryManager.shared.getDatabaseQueue(for: source) {
+                    if let frequencyData = FrequencyManager.shared.getImportedFrequencyData(
+                        for: word,
+                        with: reading,
+                        db: databaseQueue,
+                        dictionaryKey: source
+                    ) {
+                        return "\(frequencyData.frequency)"
+                    }
+                }
+            }
+        }
+        
+        return ""
     }
     
     // MARK: - Helper Methods

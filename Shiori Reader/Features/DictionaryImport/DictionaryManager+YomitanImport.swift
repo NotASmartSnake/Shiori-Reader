@@ -411,4 +411,29 @@ extension DictionaryManager {
         setupImportedDictionaries()
         
     }
+    
+    /// Get database queue for a specific imported dictionary by key
+    func getDatabaseQueue(for dictionaryKey: String) -> DatabaseQueue? {
+        return Self.queueAccessQueue.sync {
+            return Self.importedDictionaryQueues[dictionaryKey]
+        }
+    }
+    
+    /// Check if an imported dictionary contains frequency data
+    func dictionaryContainsFrequencyData(dictionaryKey: String) -> Bool {
+        guard let queue = getDatabaseQueue(for: dictionaryKey) else { return false }
+        
+        do {
+            return try queue.read { db in
+                let count = try Int.fetchOne(db, sql: """
+                    SELECT COUNT(*) FROM term_meta 
+                    WHERE mode = 'freq' 
+                    LIMIT 1
+                    """) ?? 0
+                return count > 0
+            }
+        } catch {
+            return false
+        }
+    }
 }

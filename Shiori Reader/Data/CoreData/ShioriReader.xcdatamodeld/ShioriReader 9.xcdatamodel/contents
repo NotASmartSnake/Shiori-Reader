@@ -11,6 +11,8 @@
         <attribute name="cachedNoteTypesData" optional="YES" attributeType="Binary"/>
         <attribute name="deckName" optional="YES" attributeType="String"/>
         <attribute name="definitionField" optional="YES" attributeType="String"/>
+        <attribute name="frequencyDictionarySource" optional="YES" attributeType="String" defaultValueString="bccwj"/>
+        <attribute name="frequencyField" optional="YES" attributeType="String" defaultValueString="Frequency"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="noteType" optional="YES" attributeType="String"/>
         <attribute name="pitchAccentField" optional="YES" attributeType="String"/>

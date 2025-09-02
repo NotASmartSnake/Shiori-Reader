@@ -164,6 +164,8 @@ class AnkiSettingsViewModel: ObservableObject {
             updatedSettings.wordWithReadingField = fieldName
         case "pitchAccent":
             updatedSettings.pitchAccentField = fieldName
+        case "frequency":
+            updatedSettings.frequencyField = fieldName
         default:
             break
         }
@@ -188,7 +190,31 @@ class AnkiSettingsViewModel: ObservableObject {
         case "sentence": return "Sentence Field"
         case "wordWithReading": return "Word with Reading Field"
         case "pitchAccent": return "Pitch Accent Field"
+        case "frequency": return "Frequency Field"
         default: return "Field"
         }
+    }
+    
+    // MARK: - Frequency Dictionary Methods
+    
+    func getAvailableFrequencyDictionaries() -> [(id: String, name: String)] {
+        var availableFrequencyDictionaries: [(id: String, name: String)] = []
+        
+        // Add built-in BCCWJ dictionary (always available for frequency)
+        availableFrequencyDictionaries.append((id: "bccwj", name: "BCCWJ (Built-in)"))
+        
+        // Add only imported dictionaries that contain frequency data
+        let importedDictionaries = DictionaryImportManager.shared.getImportedDictionaries()
+        let dictionaryManager = DictionaryManager.shared
+        
+        for dictionary in importedDictionaries {
+            let dictionaryId = "imported_\(dictionary.id.uuidString)"
+            // Only include dictionaries that actually contain frequency data
+            if dictionaryManager.dictionaryContainsFrequencyData(dictionaryKey: dictionaryId) {
+                availableFrequencyDictionaries.append((id: dictionaryId, name: dictionary.title))
+            }
+        }
+        
+        return availableFrequencyDictionaries
     }
 }
