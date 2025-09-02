@@ -20,11 +20,37 @@ extension UIDevice {
 struct BookGrid: View {
     @ObservedObject var isReadingBook: IsReadingBook
     @Binding var lastViewedBookPath: String?
+    let sortOption: SortOption
     @EnvironmentObject private var libraryManager: LibraryManager
     
-    // Access books directly from libraryManager instead of as parameter
+    // Access books directly from libraryManager and sort them
     private var books: [Book] {
-        libraryManager.books
+        let allBooks = libraryManager.books
+        switch sortOption {
+        case .recent:
+            return allBooks.sorted { book1, book2 in
+                // Sort by last opened date, with books that have never been opened at the end
+                guard let date1 = book1.lastOpenedDate else { return false }
+                guard let date2 = book2.lastOpenedDate else { return true }
+                return date1 > date2
+            }
+        case .title:
+            return allBooks.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .author:
+            return allBooks.sorted { book1, book2 in
+                let author1 = book1.author ?? ""
+                let author2 = book2.author ?? ""
+                if author1.isEmpty && author2.isEmpty {
+                    return book1.title.localizedCaseInsensitiveCompare(book2.title) == .orderedAscending
+                } else if author1.isEmpty {
+                    return false
+                } else if author2.isEmpty {
+                    return true
+                } else {
+                    return author1.localizedCaseInsensitiveCompare(author2) == .orderedAscending
+                }
+            }
+        }
     }
 
     // Define layout properties locally

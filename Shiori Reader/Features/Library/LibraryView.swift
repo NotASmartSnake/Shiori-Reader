@@ -5,6 +5,23 @@ enum ViewMode: String, CaseIterable {
     case list = "list"
 }
 
+enum SortOption: String, CaseIterable {
+    case recent = "recent"
+    case title = "title"
+    case author = "author"
+    
+    var displayName: String {
+        switch self {
+        case .recent:
+            return "Recent"
+        case .title:
+            return "Title"
+        case .author:
+            return "Author"
+        }
+    }
+}
+
 struct LibraryView: View {
     @EnvironmentObject var isReadingBook: IsReadingBook
     @EnvironmentObject private var libraryManager: LibraryManager
@@ -13,6 +30,7 @@ struct LibraryView: View {
     @State private var importStatus: ImportStatus = .idle
     @State private var showImportStatusOverlay = false
     @State private var viewMode: ViewMode = ViewMode(rawValue: UserDefaults.standard.string(forKey: "libraryViewMode") ?? "grid") ?? .grid
+    @State private var sortOption: SortOption = SortOption(rawValue: UserDefaults.standard.string(forKey: "librarySortOption") ?? "recent") ?? .recent
 
     var body: some View {
         NavigationStack {
@@ -32,12 +50,14 @@ struct LibraryView: View {
                             case .grid:
                                 BookGrid(
                                     isReadingBook: isReadingBook,
-                                    lastViewedBookPath: $lastViewedBookPath
+                                    lastViewedBookPath: $lastViewedBookPath,
+                                    sortOption: sortOption
                                 )
                             case .list:
                                 BookList(
                                     isReadingBook: isReadingBook,
-                                    lastViewedBookPath: $lastViewedBookPath
+                                    lastViewedBookPath: $lastViewedBookPath,
+                                    sortOption: sortOption
                                 )
                             }
                             Spacer(minLength: 60)
@@ -66,6 +86,27 @@ struct LibraryView: View {
                                 UserDefaults.standard.set(viewMode.rawValue, forKey: "libraryViewMode")
                             }) {
                                 Label("List View", systemImage: viewMode == .list ? "checkmark" : "list.bullet")
+                            }
+                            
+                            Section("Sort by...") {
+                                Button(action: {
+                                    sortOption = .recent
+                                    UserDefaults.standard.set(sortOption.rawValue, forKey: "librarySortOption")
+                                }) {
+                                    Label("Recent", systemImage: sortOption == .recent ? "checkmark" : "clock")
+                                }
+                                Button(action: {
+                                    sortOption = .title
+                                    UserDefaults.standard.set(sortOption.rawValue, forKey: "librarySortOption")
+                                }) {
+                                    Label("Title", systemImage: sortOption == .title ? "checkmark" : "textformat")
+                                }
+                                Button(action: {
+                                    sortOption = .author
+                                    UserDefaults.standard.set(sortOption.rawValue, forKey: "librarySortOption")
+                                }) {
+                                    Label("Author", systemImage: sortOption == .author ? "checkmark" : "person")
+                                }
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
