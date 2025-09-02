@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum ViewMode: String, CaseIterable {
+    case grid = "grid"
+    case list = "list"
+}
+
 struct LibraryView: View {
     @EnvironmentObject var isReadingBook: IsReadingBook
     @EnvironmentObject private var libraryManager: LibraryManager
@@ -7,6 +12,7 @@ struct LibraryView: View {
     @State private var showDocumentPicker = false
     @State private var importStatus: ImportStatus = .idle
     @State private var showImportStatusOverlay = false
+    @State private var viewMode: ViewMode = ViewMode(rawValue: UserDefaults.standard.string(forKey: "libraryViewMode") ?? "grid") ?? .grid
 
     var body: some View {
         NavigationStack {
@@ -22,10 +28,18 @@ struct LibraryView: View {
                 } else {
                     ScrollView {
                         VStack {
-                            BookGrid(
-                                isReadingBook: isReadingBook,
-                                lastViewedBookPath: $lastViewedBookPath
-                            )
+                            switch viewMode {
+                            case .grid:
+                                BookGrid(
+                                    isReadingBook: isReadingBook,
+                                    lastViewedBookPath: $lastViewedBookPath
+                                )
+                            case .list:
+                                BookList(
+                                    isReadingBook: isReadingBook,
+                                    lastViewedBookPath: $lastViewedBookPath
+                                )
+                            }
                             Spacer(minLength: 60)
                         }
                     }
@@ -39,8 +53,28 @@ struct LibraryView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { showDocumentPicker = true }) {
-                        Image(systemName: "plus").imageScale(.large)
+                    HStack(spacing: 16) {
+                        Menu {
+                            Button(action: { 
+                                viewMode = .grid
+                                UserDefaults.standard.set(viewMode.rawValue, forKey: "libraryViewMode")
+                            }) {
+                                Label("Grid View", systemImage: viewMode == .grid ? "checkmark" : "square.grid.3x3")
+                            }
+                            Button(action: { 
+                                viewMode = .list
+                                UserDefaults.standard.set(viewMode.rawValue, forKey: "libraryViewMode")
+                            }) {
+                                Label("List View", systemImage: viewMode == .list ? "checkmark" : "list.bullet")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .imageScale(.large)
+                        }
+                        
+                        Button(action: { showDocumentPicker = true }) {
+                            Image(systemName: "plus").imageScale(.large)
+                        }
                     }
                 }
             }
