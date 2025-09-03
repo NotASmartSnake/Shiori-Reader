@@ -61,76 +61,90 @@ struct BookListRow: View {
     @EnvironmentObject private var savedWordsManager: SavedWordsManager
     
     var body: some View {
-        HStack(spacing: 12) {
-            // Book cover on the left (small)
-            NavigationLink(destination:
-                ReaderView(book: book)
-                .environmentObject(savedWordsManager)
-                .onAppear {
-                    isReadingBook.setReading(true)
-                    lastViewedBookPath = book.filePath
-                }
-                .onDisappear {
-                    isReadingBook.setReading(false)
-                }
-            ) {
+        NavigationLink(destination:
+            ReaderView(book: book)
+            .environmentObject(savedWordsManager)
+            .onAppear {
+                isReadingBook.setReading(true)
+                lastViewedBookPath = book.filePath
+            }
+            .onDisappear {
+                isReadingBook.setReading(false)
+            }
+        ) {
+            HStack(spacing: 12) {
+                // Book cover on the left (small)
                 BookCoverImage(book: book)
                     .frame(width: 60, height: 90)
-            }
-            .buttonStyle(.plain)
-            
-            // Book information - vertically centered
-            VStack(alignment: .leading, spacing: 2) {
-                // Title in bold
-                Text(book.title)
-                    .font(.body)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
                 
-                // Author in grey (if available)
-                if let author = book.author, !author.isEmpty {
-                    Text(author)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                        .lineLimit(1)
-                }
-                
-                // Reading progress in grey
-                Text(String(format: "%d%%", Int(book.readingProgress * 100)))
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-            }
-            
-            Spacer()
-            
-            // Three dots menu at bottom right
-            VStack {
-                Spacer()
-                
-                Menu {
-                    Button(action: {
-                        showingRenameDialog = true
-                        newTitle = book.title
-                    }) {
-                        Label("Rename", systemImage: "pencil")
+                // Book information - vertically centered
+                VStack(alignment: .leading, spacing: 2) {
+                    // Title in bold
+                    Text(book.title)
+                        .font(.body)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    
+                    // Author in grey (if available)
+                    if let author = book.author, !author.isEmpty {
+                        Text(author)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .lineLimit(1)
                     }
                     
-                    Button(role: .destructive, action: {
-                        showingDeleteConfirmation = true
-                    }) {
-                        Label("Remove", systemImage: "trash")
+                    // Reading progress in grey
+                    Text(String(format: "%d%%", Int(book.readingProgress * 100)))
+                        .font(.caption2)
+                        .foregroundColor(.gray)
+                }
+                
+                Spacer()
+                
+                // Three dots menu at bottom right
+                VStack {
+                    Spacer()
+                    
+                    Menu {
+                        Button(action: {
+                            showingRenameDialog = true
+                            newTitle = book.title
+                        }) {
+                            Label("Rename", systemImage: "pencil")
+                        }
+                        
+                        Button(role: .destructive, action: {
+                            showingDeleteConfirmation = true
+                        }) {
+                            Label("Remove", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .foregroundStyle(.gray)
+                            .padding(8)
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundStyle(.gray)
-                        .padding(8)
                 }
             }
+            .padding(.vertical, 12)
         }
-        .padding(.vertical, 12)
+        .buttonStyle(.plain)
         .contentShape(Rectangle())
+        .contextMenu {
+            Button(action: {
+                showingRenameDialog = true
+                newTitle = book.title
+            }) {
+                Label("Rename", systemImage: "pencil")
+            }
+            
+            Button(role: .destructive, action: {
+                showingDeleteConfirmation = true
+            }) {
+                Label("Remove", systemImage: "trash")
+            }
+        }
         .alert("Rename Book", isPresented: $showingRenameDialog) {
             TextField("Title", text: $newTitle)
             Button("Cancel", role: .cancel) { }
