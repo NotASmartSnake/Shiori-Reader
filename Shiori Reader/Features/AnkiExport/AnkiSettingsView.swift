@@ -77,14 +77,14 @@ struct AnkiSettingsView: View {
                 Spacer()
                 
                 Toggle("", isOn: Binding(
-                    get: { 
+                    get: {
                         // Return true if no value has been set (first time), otherwise return stored value
                         if UserDefaults.standard.object(forKey: "showDefinitionSelectionPopup") == nil {
                             return true // Default to enabled
                         }
                         return UserDefaults.standard.bool(forKey: "showDefinitionSelectionPopup")
                     },
-                    set: { 
+                    set: {
                         UserDefaults.standard.set($0, forKey: "showDefinitionSelectionPopup")
                     }
                 ))
@@ -120,11 +120,39 @@ struct AnkiSettingsView: View {
             }
             .padding(.vertical, 6)
             
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Harmonic Frequencies")
+                        .font(.body)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Text("Use a harmonic average of all enabled frequencies when exporting frequency data to Anki.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(nil)
+                        .truncationMode(.tail)
+                }
+                
+                Spacer()
+                
+                Toggle("", isOn: Binding(
+                    get: {
+                        return viewModel.settings.usingHarmonicFrequency
+                    },
+                    set: {
+                        viewModel.settings.usingHarmonicFrequency = $0
+                    }
+                ))
+                .fixedSize()
+            }
+            
             // Frequency dictionary setting
             HStack(alignment: .top) {
+                let isDisabled = viewModel.settings.usingHarmonicFrequency
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Frequency Dictionary")
                         .font(.body)
+                        .foregroundColor(isDisabled ? .gray : .primary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                     Text("Choose which frequency dictionary to use when exporting frequency data to Anki cards.")
@@ -154,16 +182,18 @@ struct AnkiSettingsView: View {
                     HStack {
                         let selectedDictionary = viewModel.getAvailableFrequencyDictionaries().first(where: { $0.id == viewModel.settings.frequencyDictionarySource })
                         Text(selectedDictionary?.name ?? "BCCWJ (Built-in)")
-                            .foregroundColor(.blue)
+                            .foregroundColor(isDisabled ? .gray :.blue)
                             .font(.body)
                         Image(systemName: "chevron.down")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(isDisabled ? .gray :.blue)
                     }
                 }
+                .disabled(isDisabled)
                 .fixedSize()
             }
             .padding(.vertical, 6)
+            
         }
     }
     

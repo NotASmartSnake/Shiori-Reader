@@ -307,6 +307,21 @@ class AnkiExportService {
         guard !settings.frequencyField.isEmpty else { return "" }
         
         let source = settings.frequencyDictionarySource
+
+        if settings.usingHarmonicFrequency {
+            // Get all available frequencies
+            var allFrequencies = DictionaryManager.shared.lookupImportedFrequencies(word: word, reading: reading)
+
+            // append BBCWJ frequencies
+            if let frequencyData = FrequencyManager.shared.getBCCWJFrequencyData(for: word) {
+                allFrequencies.append(frequencyData)
+            }
+            
+            let frequencyNums = allFrequencies.map { $0.frequency }
+
+            // Return the harmonic mean of all the frequencies
+            return "\(harmonicMean(of: frequencyNums))"
+        }
         
         if source == "bccwj" {
             // Use built-in BCCWJ frequency
@@ -337,6 +352,15 @@ class AnkiExportService {
     }
     
     // MARK: - Helper Methods
+
+    /// Calculate the harmonic mean of a list of values.
+    private func harmonicMean(of values: [Int]) -> Int {
+        let n = Float(values.count)
+        let reciprocals: [Float] = values.map { 1.0 / Float($0) }
+        let sum = reciprocals.reduce(0.0, +)
+
+        return Int(n / sum)
+    }
     
     /// Group dictionary entries by source and extract their definitions
     private func getDefinitionsBySource(from entries: [DictionaryEntry]) -> [String: [String]] {

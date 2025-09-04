@@ -19,6 +19,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
     var additionalFields: [AdditionalField]
     
     // Frequency export settings
+    var usingHarmonicFrequency: Bool
     var frequencyDictionarySource: String
     
     // Cached Anki data
@@ -41,6 +42,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
          pitchAccentTextColor: String = "black",
          tags: String = "shiori-reader",
          additionalFields: [AdditionalField] = [],
+         usingHarmonicFrequency: Bool = false,
          frequencyDictionarySource: String = "bccwj",
          cachedDecks: [String] = [],
          cachedNoteTypes: [String: [String]] = [:]) {
@@ -59,6 +61,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         self.tags = tags
         self.additionalFields = additionalFields
         self.frequencyDictionarySource = frequencyDictionarySource
+        self.usingHarmonicFrequency = usingHarmonicFrequency
         self.cachedDecks = cachedDecks
         self.cachedNoteTypes = cachedNoteTypes
     }
@@ -79,6 +82,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         self.pitchAccentTextColor = entity.pitchAccentTextColor ?? "black"
         self.tags = entity.tags ?? "shiori-reader"
         self.frequencyDictionarySource = entity.frequencyDictionarySource ?? "bccwj"
+        self.usingHarmonicFrequency = entity.usingHarmonicFrequency
         
         // Convert related AdditionalFieldEntity objects to AdditionalField structs
         if let fields = entity.additionalFields as? Set<AdditionalFieldEntity> {
@@ -182,6 +186,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
             lhs.tags == rhs.tags &&
             lhs.additionalFields == rhs.additionalFields &&
             lhs.frequencyDictionarySource == rhs.frequencyDictionarySource &&
+            lhs.usingHarmonicFrequency == rhs.usingHarmonicFrequency &&
             lhs.cachedDecks == rhs.cachedDecks &&
             lhs.cachedNoteTypes == rhs.cachedNoteTypes
     }
@@ -203,6 +208,7 @@ struct AnkiSettings: Identifiable, Equatable, Hashable {
         entity.pitchAccentTextColor = pitchAccentTextColor
         entity.tags = tags
         entity.frequencyDictionarySource = frequencyDictionarySource
+        entity.usingHarmonicFrequency = usingHarmonicFrequency
         
         // Handle additional fields
         // First, remove old fields that aren't in the model anymore
